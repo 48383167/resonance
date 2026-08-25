@@ -1,0 +1,10 @@
+services:
+  resonance:
+    build: .
+    container_name: resonance
+    ports:
+      - "4000:4000"
+    volumes:
+      # 数据库与媒体文件持久化（极简备份：直接拷贝本目录下的 database.sqlite）
+      - ./data:/data
+    restart: unless-stopped

@@ -1,0 +1,12 @@
+node_modules/
+dist/
+database.sqlite
+database.sqlite-*
+backups/
+.npm-cache/
+.smoke-data/
+media/*
+!media/.gitkeep
+*.log
+.DS_Store
+.idea/
