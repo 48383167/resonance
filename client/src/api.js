@@ -16,7 +16,12 @@ async function request(method, url, body, isForm) {
     if (location.pathname !== '/login' && location.pathname !== '/register') location.href = '/login'
   }
   const json = await res.json().catch(() => ({ ok: false, error: '服务器响应异常' }))
-  if (!json.ok) throw new Error(json.error || `请求失败 (${res.status})`)
+  if (!json.ok) {
+    // 兼容迁移期两种 error 形态：旧路由字符串，新路由 { code, message }
+    const err = json.error
+    const msg = typeof err === 'string' ? err : (err && err.message) || `请求失败 (${res.status})`
+    throw new Error(msg)
+  }
   return json.data
 }
 

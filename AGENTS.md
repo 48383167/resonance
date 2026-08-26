@@ -1,65 +1,119 @@
-# AGENTS.md
+# Resonance 项目开发规范
 
-Behavioral guidelines to reduce common LLM coding mistakes. Merge with project-specific instructions as needed.
+## 项目定位
 
-**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+《共鸣 Resonance》是一个双人恋爱日记与情侣空间应用。
 
-## 1. Think Before Coding
+核心业务数据围绕 Couple 双人空间进行隔离。
 
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
+## 技术栈
 
-Before implementing:
-- State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
+### 后端
 
-## 2. Simplicity First
+- Node.js
+- Express 4
+- ESM
+- node:sqlite
+- WAL
+- Socket.IO
+- JWT
+- Multer
+- JavaScript
 
-**Minimum code that solves the problem. Nothing speculative.**
+禁止 TypeScript。
 
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
+### 前端
 
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+- Vue 3.5
+- Vue Router
+- Vite 6
+- Tailwind CSS v4
+- animejs
+- JavaScript
 
-## 3. Surgical Changes
+禁止 TypeScript。
 
-**Touch only what you must. Clean up only your own mess.**
+## 后端架构
 
-When editing existing code:
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it - don't delete it.
+Route
+↓
+Controller
+↓
+Service
+↓
+Repository
+↓
+Database
 
-When your changes create orphans:
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
+## API 响应规范
 
-The test: Every changed line should trace directly to the user's request.
+成功：
 
-## 4. Goal-Driven Execution
+{
+"ok": true,
+"data": {}
+}
 
-**Define success criteria. Loop until verified.**
+失败（error 为对象，code 机器可读，message 人类可读）：
 
-Transform tasks into verifiable goals:
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
+{
+"ok": false,
+"error": {
+"code": "DIARY_NOT_FOUND",
+"message": "日记不存在"
+}
+}
 
-For multi-step tasks, state a brief plan:
-```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-3. [Step] → verify: [check]
-```
+迁移期兼容：旧路由可能仍返回字符串 error（{ "ok": false, "error": "提示" }），
+前端解析时须兼容两种形态。新代码一律使用对象形态，
+禁止再引入 { code, message, data } 包装。
 
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
+## API 变更原则
 
----
+涉及前后端的新功能：
 
-**These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
+1. 先定义 API Contract。
+2. API 路径统一。
+3. 请求参数统一。
+4. 响应字段统一。
+5. 前端不得猜测字段。
+6. 后端修改 API 时必须同步检查前端。
+
+## 双人空间权限
+
+所有 Couple 私有资源必须进行权限校验。
+
+禁止仅通过资源 ID 获取数据。
+
+必须验证：
+
+当前用户
+↓
+Couple
+↓
+资源所属 Couple
+
+## Socket.IO
+
+事件命名：
+
+业务:动作
+
+例如：
+
+diary:created
+diary:updated
+diary:deleted
+
+moment:created
+letter:received
+
+## 目录职责
+
+server/ 仅放后端代码。
+
+client/ 仅放前端代码。
+
+跨端接口文档放：
+
+docs/api/
