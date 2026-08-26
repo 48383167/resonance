@@ -66,7 +66,7 @@ defineExpose({ clearDraft })
       </span>
     </div>
     <textarea v-model="text" @input="handleInput" :disabled="disabled"
-      class="w-full resize-none rounded-xl bg-white/5 p-4 outline-none focus:ring-2 focus:ring-violet-400/40 disabled:opacity-50"
+      class="focus-ring-accent w-full resize-none rounded-xl bg-white/5 p-4 outline-none disabled:opacity-50"
       :placeholder="placeholder" rows="8" />
     <div class="mt-3 flex items-center justify-between">
       <span class="text-xs text-white/40">

@@ -82,7 +82,7 @@ const dateText = (iso) => (iso ? new Date(iso).toLocaleString('zh-CN', { month: 
     <div v-else class="glass p-6">
       <div class="flex flex-wrap items-center gap-2 text-xs">
         <span class="rounded-full bg-white/10 px-3 py-1 text-white/60">{{ COLUMNS[wish.status] }}</span>
-        <span class="rounded-full bg-violet-400/15 px-3 py-1 text-violet-200">{{ cat(wish.category).icon }} {{ cat(wish.category).label }}</span>
+        <span class="rounded-full bg-accent-soft px-3 py-1 text-accent">{{ cat(wish.category).icon }} {{ cat(wish.category).label }}</span>
         <span class="rounded-full bg-white/10 px-3 py-1 text-white/60">{{ prio(wish.priority).icon }} {{ prio(wish.priority).label }}</span>
       </div>
 
@@ -92,7 +92,7 @@ const dateText = (iso) => (iso ? new Date(iso).toLocaleString('zh-CN', { month: 
 
       <div class="mt-6 space-y-1 text-xs text-white/40">
         <div>by {{ wish.proposer?.nickname }} · 提出于 {{ dateText(wish.created_at) }}</div>
-        <div v-if="wish.status === 'doing' && wish.started_at" class="text-sky-300/70">🔥 {{ dateText(wish.started_at) }} 开始</div>
+        <div v-if="wish.status === 'doing' && wish.started_at" class="text-accent-2">🔥 {{ dateText(wish.started_at) }} 开始</div>
         <div v-if="wish.status === 'done' && wish.completed_at" class="text-emerald-300/70">✓ {{ dateText(wish.completed_at) }} 完成</div>
       </div>
 

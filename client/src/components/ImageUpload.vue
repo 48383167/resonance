@@ -124,7 +124,7 @@ function remove(i) {
         <!-- 名称与操作 -->
         <div class="min-w-0 flex-1">
           <p class="truncate text-sm text-white/80">{{ nameOf(u) }}</p>
-          <button type="button" class="mt-0.5 text-xs text-sky-300/80 hover:text-sky-300 hover:underline"
+          <button type="button" class="mt-0.5 text-xs text-accent-2 hover-text-accent-2 hover:underline"
             @click="preview(u)">点击预览</button>
         </div>
         <button type="button" title="移除"
@@ -141,7 +141,7 @@ function remove(i) {
         <span>{{ t.progress }}%</span>
       </div>
       <div class="mt-1 h-1 overflow-hidden rounded-full bg-white/10">
-        <div class="h-full rounded-full transition-all" style="background: linear-gradient(90deg,#d8a7ff,#7ec8ff)"
+        <div class="h-full rounded-full transition-all" style="background: linear-gradient(90deg,var(--accent),var(--accent-2))"
           :style="{ width: `${t.progress}%` }" />
       </div>
     </div>
@@ -151,7 +151,7 @@ function remove(i) {
       @change="handleFiles($event.target.files)" />
     <button type="button"
       class="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-3 text-sm transition-colors"
-      :class="dragging ? 'border-violet-300 bg-violet-400/15 text-violet-200' : 'border-white/25 text-white/55 hover:border-white/40 hover:text-white/80'"
+          :class="dragging ? 'border-accent bg-accent-soft text-accent' : 'border-white/25 text-white/55 hover:border-white/40 hover:text-white/80'"
       @click="fileInput.click()"
       @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="onDrop">
       <span class="text-base">📎</span>

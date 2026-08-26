@@ -1,8 +1,9 @@
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { toast } from '../stores/toast'
+import { currentTheme } from '../stores/theme'
 
 // 地图选点组件：点击地图选坐标 + 一键定位；v-model 为 { lat, lng, location }
 const props = defineProps({
@@ -21,8 +22,12 @@ function emitPatch(patch) {
 
 function placeMarker(latlng) {
   if (marker) marker.remove()
-  marker = L.circleMarker(latlng, { radius: 7, color: '#d8a7ff', fillColor: '#d8a7ff', fillOpacity: 0.8 }).addTo(map)
+  marker = L.circleMarker(latlng, { radius: 7, color: currentTheme.primaryColor, fillColor: currentTheme.primaryColor, fillOpacity: 0.8 }).addTo(map)
 }
+
+watch(() => currentTheme.primaryColor, () => {
+  if (marker) placeMarker(marker.getLatLng())
+})
 
 // 反向地理编码：坐标 → 具体地名
 async function reverseGeocode(lat, lng) {
@@ -82,7 +87,7 @@ async function useMyLocation() {
   <div>
     <div class="mb-1 flex items-center justify-between">
       <span class="text-xs text-white/50">地图选点（足迹会画在恋爱地图上）</span>
-      <button type="button" class="text-xs text-sky-300 hover:underline disabled:opacity-50" :disabled="locating"
+      <button type="button" class="text-xs text-accent-2 hover:underline disabled:opacity-50" :disabled="locating"
         @click="useMyLocation">
         {{ locating ? '定位中…' : '📍 用我的位置' }}
       </button>

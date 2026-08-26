@@ -102,7 +102,7 @@ async function save() {
       <div class="flex flex-wrap gap-2">
         <button v-for="m in MOODS" :key="m.key" type="button" @click="mood = m.key"
           class="rounded-full px-3.5 py-1.5 text-sm transition-all"
-          :class="mood === m.key ? 'bg-violet-400/30 ring-1 ring-violet-300' : 'bg-white/5 hover:bg-white/10'">
+          :class="mood === m.key ? 'bg-accent-soft ring-1 ring-accent' : 'bg-white/5 hover:bg-white/10'">
           {{ m.emoji }} {{ m.label }}
         </button>
       </div>

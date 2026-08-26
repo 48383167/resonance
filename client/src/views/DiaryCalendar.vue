@@ -83,11 +83,11 @@ const todayStr = (() => {
           <button v-if="c" class="relative flex h-full w-full flex-col items-center justify-center rounded-xl transition-colors"
             :class="[c === todayStr ? 'ring-1 ring-amber-300/60' : '',
               byDate[c]
-                ? (c === selectedDate ? 'bg-violet-400/30 ring-1 ring-violet-300' : 'bg-white/5 hover:bg-white/10')
+                ? (c === selectedDate ? 'bg-accent-soft ring-1 ring-accent' : 'bg-white/5 hover:bg-white/10')
                 : 'text-white/35 hover:bg-white/5']"
             @click="byDate[c] && (selectedDate = c)">
             <span :class="c === todayStr ? 'text-amber-200' : ''">{{ Number(c.slice(8)) }}</span>
-            <span v-if="byDate[c]" class="mt-0.5 h-1.5 w-1.5 rounded-full bg-violet-300" />
+                <span v-if="byDate[c]" class="mt-0.5 h-1.5 w-1.5 rounded-full bg-accent" />
           </button>
         </div>
       </div>

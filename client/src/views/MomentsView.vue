@@ -130,9 +130,9 @@ const dateText = (m) => (m.moment_date || m.created_at.slice(0, 10))
         <div class="flex items-start justify-between gap-3">
           <div class="flex flex-wrap items-center gap-2 text-sm">
             <span class="text-lg">{{ moodOf(m.mood).emoji }}</span>
-            <span class="text-violet-200">{{ m.author?.nickname || 'Ta' }}</span>
+            <span class="text-accent">{{ m.author?.nickname || 'Ta' }}</span>
             <span class="text-xs text-white/40">· {{ dateText(m) }}</span>
-            <span v-if="m.location" class="text-xs text-sky-200/80">📍 {{ m.location }}</span>
+            <span v-if="m.location" class="text-xs text-accent-2">📍 {{ m.location }}</span>
           </div>
           <div class="flex gap-3 text-xs">
             <button class="text-white/50 transition-colors hover:text-white" @click="router.push(`/moments/${m.id}/edit`)">编辑</button>

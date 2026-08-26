@@ -24,14 +24,14 @@ watch(
 <template>
   <div class="relative inline-flex items-center justify-center" :style="{ width: size + 'px', height: size + 'px' }">
     <div ref="ringRef" class="absolute inset-0 rounded-full border"
-      :style="{ borderColor: online ? 'rgba(126,200,255,0.9)' : 'rgba(255,255,255,0.25)' }" />
+      :style="{ borderColor: online ? 'rgb(var(--accent-2-rgb) / 0.9)' : 'rgba(255,255,255,0.25)' }" />
     <div ref="coreRef" class="breath rounded-full"
       :style="{
         width: '62%', height: '62%',
         background: online
-          ? 'radial-gradient(circle, rgba(126,200,255,0.95), rgba(126,200,255,0.25))'
-          : 'radial-gradient(circle, rgba(216,167,255,0.8), rgba(216,167,255,0.15))',
-        boxShadow: online ? '0 0 24px rgba(126,200,255,0.8)' : '0 0 20px rgba(216,167,255,0.5)',
+          ? 'radial-gradient(circle, rgb(var(--accent-2-rgb) / 0.95), rgb(var(--accent-2-rgb) / 0.25))'
+          : 'radial-gradient(circle, rgb(var(--accent-rgb) / 0.8), rgb(var(--accent-rgb) / 0.15))',
+        boxShadow: online ? '0 0 24px rgb(var(--accent-2-rgb) / 0.8)' : '0 0 20px rgb(var(--accent-rgb) / 0.5)',
       }" />
   </div>
 </template>

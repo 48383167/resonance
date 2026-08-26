@@ -38,10 +38,10 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
     </button>
     <Transition name="dd">
       <div v-if="open"
-        class="absolute z-30 mt-1.5 max-h-56 w-full overflow-y-auto rounded-xl border border-white/15 bg-[#1c1630]/95 p-1 shadow-2xl backdrop-blur-xl">
+         class="theme-popup absolute z-30 mt-1.5 max-h-56 w-full overflow-y-auto rounded-xl border border-white/15 p-1 shadow-2xl backdrop-blur-xl">
         <button v-for="o in options" :key="o.value" type="button"
           class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/10"
-          :class="o.value === modelValue ? 'bg-violet-400/20 text-violet-200' : 'text-white/80'"
+          :class="o.value === modelValue ? 'bg-accent-soft text-accent' : 'text-white/80'"
           @click="pick(o)">
           <span v-if="o.icon">{{ o.icon }}</span>{{ o.label }}
         </button>

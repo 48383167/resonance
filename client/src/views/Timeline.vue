@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api'
 import { openLightbox } from '../stores/lightbox'
+import { currentTheme } from '../stores/theme'
 
 const router = useRouter()
 const data = ref(null)
@@ -22,7 +23,7 @@ const KINDS = [
 ]
 
 const META = {
-  entry: { color: '#d8a7ff' },
+  entry: { color: 'accent' },
   moment: { color: '#ffd9a0' },
   letter: { color: '#ffb3d1' },
   wish: { color: '#ffcd78' },
@@ -33,6 +34,7 @@ const META = {
 
 const MOODS = { normal: '😌', happy: '😄', sweet: '🥰', missed: '🥺', angry: '😠', sad: '😢' }
 const moodEmoji = (m) => MOODS[m] || '😌'
+const metaColor = (kind) => META[kind].color === 'accent' ? currentTheme.primaryColor : META[kind].color
 
 const filtered = computed(() => {
   const list = data.value?.events || []
@@ -110,7 +112,7 @@ const anniversaryTypeLabel = (t) => ({ first_meet: '初遇', together: '在一�
     <div class="mt-4 flex flex-wrap gap-2">
       <button v-for="k in KINDS" :key="k.key" @click="fKind = k.key"
         class="rounded-full px-3 py-1 text-xs transition-all"
-        :class="fKind === k.key ? 'bg-violet-400/30 ring-1 ring-violet-300' : 'bg-white/5 text-white/60 hover:bg-white/10'">
+         :class="fKind === k.key ? 'bg-accent-soft ring-1 ring-accent' : 'bg-white/5 text-white/60 hover:bg-white/10'">
         {{ k.label }}
         <span v-if="k.key" class="ml-1 opacity-60">{{ kindCounts[k.key] }}</span>
         <span v-else class="ml-1 opacity-60">{{ (data?.events || []).length }}</span>
@@ -128,7 +130,7 @@ const anniversaryTypeLabel = (t) => ({ first_meet: '初遇', together: '在一�
     <div v-else class="relative mt-6 pb-8">
       <!-- 发光主线 -->
       <div class="absolute bottom-0 left-[13px] top-0 w-0.5 md:left-1/2 md:-translate-x-1/2"
-        style="background: linear-gradient(180deg, transparent, #d8a7ff 12%, #7ec8ff 88%, transparent); box-shadow: 0 0 12px rgba(216,167,255,0.5)" />
+        style="background: linear-gradient(180deg, transparent, var(--accent) 12%, var(--accent-2) 88%, transparent); box-shadow: 0 0 12px rgb(var(--accent-rgb) / 0.5)" />
 
       <div v-for="(g, gIdx) in groups" :key="g.date" class="relative">
         <!-- 日期分组 -->
@@ -144,8 +146,8 @@ const anniversaryTypeLabel = (t) => ({ first_meet: '初遇', together: '在一�
           :style="{ animationDelay: `${Math.min(i, 10) * 60}ms` }">
           <!-- 节点：仅保留类型图标（清爽悬浮于主线上） -->
           <div class="absolute left-[13px] top-4 z-10 -translate-x-1/2 md:left-1/2">
-            <span class="flex h-8 w-8 items-center justify-center rounded-full text-sm shadow-lg ring-2 ring-[#070a18]"
-              :style="{ background: `linear-gradient(135deg, ${META[e.kind].color}55, ${META[e.kind].color}22)`, boxShadow: `0 0 14px ${META[e.kind].color}88` }">
+            <span class="flex h-8 w-8 items-center justify-center rounded-full text-sm shadow-lg ring-2 ring-ambient"
+              :style="{ background: `linear-gradient(135deg, ${metaColor(e.kind)}55, ${metaColor(e.kind)}22)`, boxShadow: `0 0 14px ${metaColor(e.kind)}88` }">
               {{ {
                 entry: '📔', moment: moodEmoji(e.mood), letter: '💌', wish: '🧭', capsule: e.unlocked ? '⏳' : '🔒',
                 anniversary: '📅', photo: '📷',
@@ -192,7 +194,7 @@ const anniversaryTypeLabel = (t) => ({ first_meet: '初遇', together: '在一�
                 <span v-if="e.kind === 'wish' && e.proposer">by {{ e.proposer }}</span>
                 <span v-if="e.kind === 'capsule'">解锁于 {{ e.unlockDate }}</span>
                 <router-link v-if="e.kind === 'entry'" :to="`/entry/${e.entryId}`"
-                  class="ml-auto text-violet-300 hover:underline" @click.stop>查看详情 →</router-link>
+                  class="ml-auto text-accent hover:underline" @click.stop>查看详情 →</router-link>
               </div>
             </article>
           </div>

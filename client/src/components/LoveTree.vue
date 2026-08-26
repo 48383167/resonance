@@ -53,7 +53,7 @@ const flowers = computed(() => ({ seed: 0, sprout: 0, sapling: 0, blossom: 5, lu
     <div class="mt-1 text-sm text-white/70">{{ label }}</div>
     <div class="mt-2 h-2 w-40 overflow-hidden rounded-full bg-white/10">
       <div class="h-full rounded-full transition-all duration-700"
-        style="background: linear-gradient(90deg, #d8a7ff, #7ec8ff)" :style="{ width: `${Math.round(progress * 100)}%` }" />
+        style="background: linear-gradient(90deg, var(--accent), var(--accent-2))" :style="{ width: `${Math.round(progress * 100)}%` }" />
     </div>
     <div class="mt-1 text-xs text-white/45">共同记录 {{ total }} 次 · 下一阶段还需 {{ Math.max(0, nextAt - total) }} 次</div>
   </div>

@@ -28,9 +28,9 @@ watch(() => props.open, (open) => {
           <!-- 页头 -->
           <div v-if="title"
             class="flex items-center justify-between border-b border-white/10 px-6 py-4"
-            style="background: linear-gradient(135deg, rgba(216,167,255,0.10), rgba(126,200,255,0.08))">
+            style="background: linear-gradient(135deg, rgb(var(--accent-rgb) / 0.10), rgb(var(--accent-2-rgb) / 0.08))">
             <h3 class="serif flex items-center gap-2 text-lg font-semibold">
-              <span class="h-4 w-1 rounded-full" style="background: linear-gradient(180deg,#d8a7ff,#7ec8ff)" />
+              <span class="h-4 w-1 rounded-full" style="background: linear-gradient(180deg,var(--accent),var(--accent-2))" />
               {{ title }}
             </h3>
             <button class="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-lg transition-colors hover:bg-white/20"

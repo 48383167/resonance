@@ -78,18 +78,18 @@ async function remove(w) {
                 <span v-if="w.priority >= 2" title="非常想">⭐ </span>{{ w.title }}
               </span>
               <div class="flex gap-1.5 text-xs">
-                <button v-if="col.key !== 'done'" class="text-sky-300/80 hover:text-sky-300" title="下一阶段" @click.stop="move(w, 1)">→</button>
+                <button v-if="col.key !== 'done'" class="text-accent-2 hover-text-accent-2" title="下一阶段" @click.stop="move(w, 1)">→</button>
                 <button v-if="col.key !== 'todo'" class="text-white/40 hover:text-white" title="上一阶段" @click.stop="move(w, -1)">←</button>
               </div>
             </div>
             <p v-if="w.description" class="mt-1 text-xs text-white/45">{{ w.description }}</p>
             <div class="mt-2 flex items-center justify-between text-xs">
-              <span class="rounded-full bg-violet-400/15 px-2 py-0.5 text-violet-200">{{ catLabel(w.category) }}</span>
+              <span class="rounded-full bg-accent-soft px-2 py-0.5 text-accent">{{ catLabel(w.category) }}</span>
               <span class="text-white/40">by {{ w.proposer?.nickname }} · {{ dateOf(w.created_at) }} 提出</span>
             </div>
             <!-- 阶段时间节点：进行中记开始时间，完成记完成时间 -->
             <div class="mt-1.5 flex items-center justify-between text-[11px]">
-              <span v-if="col.key === 'doing' && w.started_at" class="text-sky-300/70">
+              <span v-if="col.key === 'doing' && w.started_at" class="text-accent-2">
                 🔥 {{ dateOf(w.started_at) }} 开始
               </span>
               <span v-else-if="col.key === 'done' && w.completed_at" class="text-emerald-300/70">

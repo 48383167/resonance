@@ -53,8 +53,8 @@ const countText = (a) => {
     <div class="space-y-3">
       <div v-for="a in items" :key="a.id" class="glass flex items-center gap-4 p-4"
         :class="a.isToday ? 'ring-1 ring-amber-300/50' : ''">
-        <div class="flex h-12 w-12 flex-col items-center justify-center rounded-xl bg-violet-400/15">
-          <span class="text-lg font-bold text-violet-200">{{ a.date.slice(8, 10) }}</span>
+        <div class="flex h-12 w-12 flex-col items-center justify-center rounded-xl bg-accent-soft">
+          <span class="text-lg font-bold text-accent">{{ a.date.slice(8, 10) }}</span>
           <span class="text-[10px] text-white/50">{{ a.date.slice(5, 7) }}月</span>
         </div>
         <div class="flex-1">

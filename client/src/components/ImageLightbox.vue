@@ -15,7 +15,7 @@ watch(() => lightbox.open, (open) => {
 
 <template>
   <Transition name="lb">
-    <div v-if="lightbox.open" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-6"
+    <div v-if="lightbox.open" class="theme-inverse fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-6"
       @click.self="closeLightbox">
       <button class="absolute right-5 top-5 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xl hover:bg-white/20"
         @click="closeLightbox">×</button>

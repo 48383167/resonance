@@ -75,7 +75,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
     </button>
     <Transition name="dp">
       <div v-if="open"
-        class="absolute left-0 top-full z-30 mt-1.5 w-72 rounded-xl border border-white/15 bg-[#1c1630]/95 p-3 shadow-2xl backdrop-blur-xl">
+         class="theme-popup absolute left-0 top-full z-30 mt-1.5 w-72 rounded-xl border border-white/15 p-3 shadow-2xl backdrop-blur-xl">
         <div class="mb-2 flex items-center justify-between">
           <button type="button" class="flex h-7 w-7 items-center justify-center rounded-lg text-white/60 hover:bg-white/10 hover:text-white"
             @click="shift(-1)">‹</button>
@@ -88,9 +88,9 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
           <button v-for="(day, i) in cells" :key="i" type="button" :disabled="!day"
             class="aspect-square rounded-lg text-[13px] transition-colors"
             :class="[
-              day ? 'text-white/80 hover:bg-violet-400/25' : '',
-              day === modelValue ? '!bg-violet-400/40 font-semibold !text-violet-100 ring-1 ring-violet-300' : '',
-              day === todayStr && day !== modelValue ? 'ring-1 ring-sky-300/50' : '',
+              day ? 'text-white/80 hover:bg-accent-soft' : '',
+              day === modelValue ? 'bg-accent-soft font-semibold text-accent ring-1 ring-accent' : '',
+              day === todayStr && day !== modelValue ? 'ring-1 ring-accent-2' : '',
             ]"
             @click="pick(day)">
             {{ day ? Number(day.slice(8)) : '' }}

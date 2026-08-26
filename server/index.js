@@ -20,6 +20,7 @@ import anniversaryRoutes from './routes/anniversaries.js'
 import shareRoutes from './routes/share.js'
 import miscRoutes from './routes/misc.js'
 import musicRoutes from './routes/music.js'
+import themeRoutes from './routes/theme.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PORT = process.env.PORT || 4000
@@ -28,8 +29,13 @@ const app = express()
 const server = http.createServer(app)
 const io = new Server(server, { cors: { origin: '*' } })
 app.set('io', io)
+app.disable('etag')
 
 app.use(express.json({ limit: '1mb' }))
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store')
+  next()
+})
 
 // 上传的图片（瞬间/相册/胶囊配图）
 app.use('/media', express.static(MEDIA_DIR))
@@ -47,6 +53,7 @@ app.use('/api/capsules', capsuleRoutes)
 app.use('/api/anniversaries', anniversaryRoutes)
 app.use('/api/share', shareRoutes)
 app.use('/api/music', musicRoutes)
+app.use('/api/users/me/theme', themeRoutes)
 app.use('/api', miscRoutes)
 
 // 生产模式：托管前端构建产物（Vite 单页应用）

@@ -1,5 +1,6 @@
 <script setup>
 import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { currentTheme } from '../stores/theme'
 
 // 环境底片背景：时间/天气 → 渐变 + WebGL 风格粒子（Canvas 模拟）
 const props = defineProps({
@@ -56,19 +57,27 @@ function draw(ctx, w, h, kind) {
     if (p.x < -10) p.x = w + 10
     ctx.beginPath()
     if (kind === 'rain') {
-      ctx.strokeStyle = `rgba(190,215,235,${p.alpha * 0.7})`
+      ctx.strokeStyle = rgba(currentTheme.secondaryColor, p.alpha * 0.7)
       ctx.lineWidth = 1
       ctx.moveTo(p.x, p.y)
       ctx.lineTo(p.x - 3, p.y - 10)
       ctx.stroke()
     } else {
-      ctx.fillStyle = `rgba(235,225,255,${p.alpha})`
+      ctx.fillStyle = rgba(currentTheme.primaryColor, p.alpha)
       ctx.shadowBlur = 12
-      ctx.shadowColor = 'rgba(216,167,255,0.8)'
+      ctx.shadowColor = rgba(currentTheme.primaryColor, 0.8)
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
       ctx.fill()
     }
   }
+}
+
+function rgba(hex, alpha) {
+  const n = Number.parseInt(hex.slice(1), 16)
+  const r = (n >> 16) & 255
+  const g = (n >> 8) & 255
+  const b = n & 255
+  return `rgba(${r},${g},${b},${alpha})`
 }
 
 function loop() {
@@ -103,6 +112,7 @@ onUnmounted(() => {
       background: `linear-gradient(160deg, ${colors[0]}, ${colors[1]} 55%, ${colors[2]})`,
     }" />
     <canvas ref="canvasRef" class="absolute inset-0 h-full w-full" />
-    <div class="absolute inset-0" style="background: radial-gradient(ellipse at 50% 0%, transparent 40%, rgba(0,0,0,0.45) 100%)" />
+    <div class="theme-aura pointer-events-none absolute inset-0" />
+    <div class="theme-vignette absolute inset-0" />
   </div>
 </template>

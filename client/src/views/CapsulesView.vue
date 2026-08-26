@@ -63,8 +63,8 @@ const unlockText = (c) => {
         <div class="flex items-center justify-between">
           <span class="text-sm text-white/70">{{ c.title || '无题胶囊' }}</span>
           <span class="rounded-full px-2.5 py-0.5 text-xs"
-            :class="c.isUnlocked ? 'bg-emerald-400/20 text-emerald-200'
-              : (c.unlock_date === todayStr() ? 'bg-sky-400/25 text-sky-200' : 'bg-amber-400/15 text-amber-200')">
+              :class="c.isUnlocked ? 'bg-emerald-400/20 text-emerald-200'
+                : (c.unlock_date === todayStr() ? 'bg-sky-400/25 text-sky-200' : 'bg-amber-400/15 text-amber-200')">
             {{ c.isUnlocked ? '🔓' : '🔒' }} {{ unlockText(c) }}
           </span>
         </div>

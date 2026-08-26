@@ -60,13 +60,13 @@ async function doRegister() {
       <!-- 已配对完成 -->
       <div v-if="userCount >= 2" class="mt-6 text-center text-sm text-white/60">
         <p>这间小屋已经住满两个人啦 🏠</p>
-        <router-link to="/login" class="mt-3 inline-block text-violet-300 hover:underline">去登录</router-link>
+        <router-link to="/login" class="mt-3 inline-block text-accent hover:underline">去登录</router-link>
       </div>
 
       <!-- 注册表单 -->
       <div v-else-if="userCount !== -1" class="mt-6 space-y-4">
         <p v-if="userCount === 0" class="text-xs text-amber-200/80">你是第一个人：注册后生成配对码，等 Ta 凭码加入。</p>
-        <p v-else class="text-xs text-sky-200/80">填上 Ta 给你的配对码，注册即完成配对。</p>
+        <p v-else class="text-xs text-accent-2">填上 Ta 给你的配对码，注册即完成配对。</p>
         <div>
           <label class="mb-1 block text-xs text-white/50">用户名</label>
           <input v-model="username" class="input-dark" placeholder="3-20 位字母/数字/下划线" autocomplete="username" />
@@ -101,7 +101,7 @@ async function doRegister() {
         </button>
         <p v-if="error" class="text-sm text-rose-300">{{ error }}</p>
         <div class="text-center text-sm text-white/50">
-          已有账号？<router-link to="/login" class="text-violet-300 hover:underline">去登录</router-link>
+          已有账号？<router-link to="/login" class="text-accent hover:underline">去登录</router-link>
         </div>
       </div>
     </div>

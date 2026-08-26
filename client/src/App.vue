@@ -1,6 +1,6 @@
 <script setup>
-import { onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import AmbientBackground from './components/AmbientBackground.vue'
 import MouseTrail from './components/MouseTrail.vue'
 import ImageLightbox from './components/ImageLightbox.vue'
@@ -9,11 +9,16 @@ import MusicPlayer from './components/MusicPlayer.vue'
 import { session, initSession, logout } from './stores/session'
 import { socket } from './socket'
 import { toasts, toast } from './stores/toast'
-import { paletteFor } from './composables/useAmbient'
+import { currentTheme, loadTheme, resetTheme } from './stores/theme'
 
 const router = useRouter()
-const hour = new Date().getHours()
-const bgColors = paletteFor(hour, null)
+const route = useRoute()
+const shellColors = computed(() => currentTheme.pageColors)
+
+watch(() => [session.me?.id, route.meta.auth], ([userId, isPrivateRoute]) => {
+  if (userId && isPrivateRoute) loadTheme(userId)
+  else resetTheme()
+}, { immediate: true })
 
 function doLogout() {
   logout()
@@ -40,7 +45,7 @@ onUnmounted(() => {
 
 <template>
   <MouseTrail />
-  <AmbientBackground :colors="bgColors" :opacity="0.5" />
+  <AmbientBackground :colors="shellColors" :opacity="0.5" />
   <ImageLightbox />
   <ConfirmDialog />
   <MusicPlayer v-if="session.me" />
@@ -67,10 +72,10 @@ onUnmounted(() => {
     <!-- 全局通知 -->
     <div class="pointer-events-none fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-2">
       <TransitionGroup name="toast">
-        <div v-for="t in toasts" :key="t.id"
-          class="glass pointer-events-auto flex items-center gap-2 px-4 py-2.5 text-sm shadow-xl">
-          <span class="h-2 w-2 rounded-full"
-            :style="t.type === 'info' ? 'background:#7ec8ff' : 'background:#d8a7ff'" />
+          <div v-for="t in toasts" :key="t.id"
+           class="glass pointer-events-auto flex items-center gap-2 px-4 py-2.5 text-sm shadow-xl">
+           <span class="h-2 w-2 rounded-full"
+            :style="{ background: t.type === 'info' ? 'var(--accent-2)' : 'var(--accent)' }" />
           {{ t.message }}
         </div>
       </TransitionGroup>

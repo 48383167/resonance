@@ -100,7 +100,7 @@ onUnmounted(() => {
         <div class="mt-3 flex items-center justify-center gap-4">
           <button class="text-lg text-white/70 transition-colors hover:text-white" title="上一首" @click="prev">⏮</button>
           <button class="flex h-10 w-10 items-center justify-center rounded-full text-sm transition-transform hover:scale-105"
-            style="background: linear-gradient(135deg, #d8a7ff, #7ec8ff); color: #1a1030" @click="toggle">
+            style="background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-contrast)" @click="toggle">
             {{ playing ? '⏸' : '▶' }}
           </button>
           <button class="text-lg text-white/70 transition-colors hover:text-white" title="下一首" @click="next">⏭</button>
@@ -111,7 +111,7 @@ onUnmounted(() => {
     <!-- 悬浮按钮 -->
     <button class="flex h-12 w-12 items-center justify-center rounded-full text-xl shadow-lg transition-transform hover:scale-110"
       :class="playing ? 'opacity-100' : 'opacity-80'"
-      style="background: linear-gradient(135deg, #d8a7ff, #7ec8ff); box-shadow: 0 6px 24px rgba(216,167,255,0.4)"
+      style="background: linear-gradient(135deg, var(--accent), var(--accent-2)); box-shadow: 0 6px 24px rgb(var(--accent-rgb) / 0.4)"
       :title="playing ? '暂停背景音乐' : '播放甜蜜背景音乐'" @click="toggle">
       {{ loading ? '…' : (playing ? '🎵' : '♪') }}
     </button>

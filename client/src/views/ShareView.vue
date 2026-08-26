@@ -53,7 +53,7 @@ const dateText = (m) => (m.moment_date || m.created_at.slice(0, 10))
         <div class="text-lg">
           <span class="font-semibold">{{ data.users[0]?.nickname }}</span>
           <span class="mx-2 text-white/40">×</span>
-          <span class="font-semibold text-violet-200">{{ data.users[1]?.nickname }}</span>
+          <span class="font-semibold text-accent">{{ data.users[1]?.nickname }}</span>
         </div>
         <div class="mt-1 text-xs text-white/50">
           相识 {{ data.daysTogether }} 天 · 记录 {{ data.stats.moments }} 个瞬间 · {{ data.stats.entries }} 篇日记

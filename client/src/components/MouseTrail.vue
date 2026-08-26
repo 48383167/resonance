@@ -4,7 +4,8 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { currentTheme } from '../stores/theme'
 
 const canvasEl = ref(null)
 let ctx = null
@@ -14,8 +15,9 @@ let animationFrameId = null
 let lastPos = { x: -100, y: -100 }
 let currentPos = { x: -100, y: -100 }
 
-// 配置粒子颜色 (主题色：紫 & 蓝)
-const colors = ['#d8a7ff', '#7ec8ff', '#ffffff']
+watch(() => [currentTheme.primaryColor, currentTheme.secondaryColor], () => {
+  particles = []
+})
 
 function createParticle(x, y) {
   // 随机分布在鼠标附近
@@ -25,7 +27,7 @@ function createParticle(x, y) {
     x: x + offsetX,
     y: y + offsetY,
     size: Math.random() * 2.5 + 0.5,
-    color: colors[Math.floor(Math.random() * colors.length)],
+    color: [currentTheme.primaryColor, currentTheme.secondaryColor, '#ffffff'][Math.floor(Math.random() * 3)],
     vx: (Math.random() - 0.5) * 1.5,
     vy: (Math.random() - 0.5) * 1.5 - 0.5, // 微微向上飘
     life: 1,
@@ -52,10 +54,7 @@ function render() {
       ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
       // 根据生命周期调整透明度
       const alpha = Math.max(0, p.life).toFixed(2)
-      // RGBA
-      const colorRoot = p.color === '#ffffff' ? '255,255,255' : 
-                        p.color === '#d8a7ff' ? '216,167,255' : '126,200,255'
-      ctx.fillStyle = `rgba(${colorRoot}, ${alpha})`
+      ctx.fillStyle = rgba(p.color, alpha)
       ctx.fill()
     }
   }
@@ -64,6 +63,14 @@ function render() {
   particles = particles.filter(p => p.life > 0)
   
   animationFrameId = requestAnimationFrame(render)
+}
+
+function rgba(hex, alpha) {
+  const n = Number.parseInt(hex.slice(1), 16)
+  const r = (n >> 16) & 255
+  const g = (n >> 8) & 255
+  const b = n & 255
+  return `rgba(${r},${g},${b},${alpha})`
 }
 
 function handleMouseMove(e) {

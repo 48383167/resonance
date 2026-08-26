@@ -1,9 +1,10 @@
 <script setup>
-import { onMounted, onUnmounted, ref, computed } from 'vue'
+import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { api } from '../api'
+import { currentTheme } from '../stores/theme'
 
 // 恋爱地图：足迹标记 + 轨迹连线 + 统计（Leaflet + OpenStreetMap，免 Key）
 const router = useRouter()
@@ -11,6 +12,7 @@ const mapEl = ref(null)
 const points = ref([])
 let map = null
 let polyline = null
+let overlayLayers = []
 
 const stats = computed(() => {
   const places = new Set(points.value.map((p) => p.location).filter(Boolean))
@@ -28,7 +30,10 @@ onMounted(async () => {
 })
 
 function renderMarkers() {
-  if (!map || !points.value.length) return
+  if (!map) return
+  overlayLayers.forEach((layer) => layer.remove())
+  overlayLayers = []
+  if (!points.value.length) return
   const latlngs = []
   for (const p of points.value) {
     const ll = [p.latitude, p.longitude]
@@ -38,15 +43,26 @@ function renderMarkers() {
         <b>${p.author?.nickname || 'Ta'} · ${p.moment_date || p.created_at.slice(0, 10)}</b>
         <p style="margin:4px 0 0">${p.content.length > 60 ? p.content.slice(0, 60) + '…' : p.content}</p>
       </div>`
-    L.circleMarker(ll, { radius: 8, color: '#d8a7ff', weight: 2, fillColor: '#7a3b8f', fillOpacity: 0.9 })
-      .addTo(map)
-      .bindPopup(popup)
+    const marker = L.circleMarker(ll, {
+      radius: 8,
+      color: currentTheme.primaryColor,
+      weight: 2,
+      fillColor: currentTheme.secondaryColor,
+      fillOpacity: 0.9,
+    }).addTo(map).bindPopup(popup)
+    overlayLayers.push(marker)
   }
-  polyline = L.polyline(latlngs, { color: '#7ec8ff', weight: 3, opacity: 0.7, dashArray: '6 8' }).addTo(map)
+  polyline = L.polyline(latlngs, { color: currentTheme.secondaryColor, weight: 3, opacity: 0.7, dashArray: '6 8' }).addTo(map)
+  overlayLayers.push(polyline)
   map.fitBounds(L.latLngBounds(latlngs).pad(0.3))
 }
 
-onUnmounted(() => { if (map) { map.remove(); map = null } })
+watch(() => [currentTheme.primaryColor, currentTheme.secondaryColor], renderMarkers)
+
+onUnmounted(() => {
+  overlayLayers = []
+  if (map) { map.remove(); map = null }
+})
 </script>
 
 <template>
@@ -60,8 +76,8 @@ onUnmounted(() => { if (map) { map.remove(); map = null } })
     </div>
 
     <div class="glass flex items-center gap-6 p-4 text-sm">
-      <div><b class="text-xl text-violet-200">{{ stats.count }}</b> <span class="text-white/50">处足迹</span></div>
-      <div><b class="text-xl text-sky-200">{{ stats.places }}</b> <span class="text-white/50">个地点</span></div>
+      <div><b class="text-xl text-accent">{{ stats.count }}</b> <span class="text-white/50">处足迹</span></div>
+      <div><b class="text-xl text-accent-2">{{ stats.places }}</b> <span class="text-white/50">个地点</span></div>
       <div class="ml-auto text-xs text-white/40">瓦片 © OpenStreetMap</div>
     </div>
 

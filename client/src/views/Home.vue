@@ -15,16 +15,16 @@ const tree = ref(null)
 const greeting = useGreeting()
 
 const modules = [
-  { name: 'timeline', icon: '🕰️', label: '时光时间线', desc: '我们的点点滴滴', color: 'rgba(216,167,255,0.25)' },
-  { name: 'diary-list', icon: '📔', label: '日记', desc: '全部日记列表', color: 'rgba(126,200,255,0.22)' },
-  { name: 'moments', icon: '✨', label: '恋爱瞬间', desc: '此刻的心情与地点', color: 'rgba(255,217,160,0.22)' },
-  { name: 'map', icon: '🗺️', label: '恋爱地图', desc: '一起走过的足迹', color: 'rgba(126,200,255,0.22)' },
-  { name: 'letters', icon: '💌', label: '情书', desc: '写给 Ta 的话', color: 'rgba(255,179,209,0.22)' },
-  { name: 'albums', icon: '📷', label: '相册', desc: '照片与回忆', color: 'rgba(140,220,190,0.2)' },
-  { name: 'wishes', icon: '🧭', label: '心愿清单', desc: '一起完成的事', color: 'rgba(255,205,120,0.2)' },
-  { name: 'capsules', icon: '⏳', label: '时间胶囊', desc: '寄给未来的话', color: 'rgba(160,180,255,0.22)' },
-  { name: 'anniversaries', icon: '📅', label: '纪念日', desc: '重要的日子', color: 'rgba(255,150,160,0.2)' },
-  { name: 'diary', icon: '🗓️', label: '日记日历', desc: '按日期回顾', color: 'rgba(120,220,255,0.18)' },
+  { name: 'timeline', icon: '🕰️', label: '时光时间线', desc: '我们的点点滴滴', color: 'rgb(var(--accent-rgb) / 0.25)' },
+  { name: 'diary-list', icon: '📔', label: '日记', desc: '全部日记列表', color: 'rgb(var(--accent-2-rgb) / 0.22)' },
+  { name: 'moments', icon: '✨', label: '恋爱瞬间', desc: '此刻的心情与地点', color: 'rgb(var(--accent-rgb) / 0.22)' },
+  { name: 'map', icon: '🗺️', label: '恋爱地图', desc: '一起走过的足迹', color: 'rgb(var(--accent-2-rgb) / 0.22)' },
+  { name: 'letters', icon: '💌', label: '情书', desc: '写给 Ta 的话', color: 'rgb(var(--accent-rgb) / 0.22)' },
+  { name: 'albums', icon: '📷', label: '相册', desc: '照片与回忆', color: 'rgb(var(--accent-2-rgb) / 0.2)' },
+  { name: 'wishes', icon: '🧭', label: '心愿清单', desc: '一起完成的事', color: 'rgb(var(--accent-rgb) / 0.2)' },
+  { name: 'capsules', icon: '⏳', label: '时间胶囊', desc: '寄给未来的话', color: 'rgb(var(--accent-2-rgb) / 0.22)' },
+  { name: 'anniversaries', icon: '📅', label: '纪念日', desc: '重要的日子', color: 'rgb(var(--accent-rgb) / 0.2)' },
+  { name: 'diary', icon: '🗓️', label: '日记日历', desc: '按日期回顾', color: 'rgb(var(--accent-2-rgb) / 0.18)' },
 ]
 
 async function load() {
@@ -78,7 +78,7 @@ const statCards = (s) => [
           <div class="flex items-center gap-2 text-lg">
             <span class="font-semibold">{{ dash.me.nickname }}</span>
             <span class="text-white/40">×</span>
-            <span class="font-semibold text-violet-200">{{ dash.partner?.nickname || '…' }}</span>
+            <span class="font-semibold text-accent">{{ dash.partner?.nickname || '…' }}</span>
           </div>
           <div class="mt-0.5 text-xs text-white/50">
             <template v-if="dash.partner">
@@ -97,7 +97,7 @@ const statCards = (s) => [
     <!-- 未配对：展示配对码 -->
     <div v-if="!dash.partner" class="glass p-5 text-center">
       <p class="text-sm text-white/60">等 Ta 注册时填写配对码，即可完成配对：</p>
-      <div class="serif mt-2 text-2xl font-bold tracking-[0.4em] text-violet-200">{{ dash.inviteCode }}</div>
+      <div class="serif mt-2 text-2xl font-bold tracking-[0.4em] text-accent">{{ dash.inviteCode }}</div>
       <button class="btn-ghost mt-3" @click="copyInvite">复制配对码</button>
     </div>
 
@@ -112,13 +112,13 @@ const statCards = (s) => [
           class="glass flex cursor-pointer flex-col items-center justify-center p-4 text-center transition-all hover:-translate-y-0.5 hover:bg-white/10"
           @click="router.push(c.route)">
           <div class="text-sm opacity-70">{{ c.icon }}</div>
-          <div class="mt-1 text-2xl font-bold text-violet-200">{{ c.value }}</div>
+          <div class="mt-1 text-2xl font-bold text-accent">{{ c.value }}</div>
           <div class="mt-1 text-xs text-white/50">{{ c.label }} →</div>
         </div>
         <div class="glass col-span-2 flex cursor-pointer items-center justify-center p-4 transition-all hover:-translate-y-0.5 hover:bg-white/10"
           title="查看未读情书" @click="router.push('/letters')">
           <div class="text-center">
-            <div class="text-2xl font-bold text-sky-200">{{ dash.stats.unreadLetters }}</div>
+            <div class="text-2xl font-bold text-accent-2">{{ dash.stats.unreadLetters }}</div>
             <div class="mt-1 text-xs text-white/50">未读情书 →</div>
           </div>
         </div>

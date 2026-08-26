@@ -113,7 +113,7 @@ const named = computed(() => (entry.value?.contents || []).map((c) => ({
         <video v-for="u in entry.media.filter((x) => mediaTypeOf(x) === 'video')" :key="u" :src="u"
           class="max-h-72 w-full rounded-xl" controls />
         <a v-for="u in entry.media.filter((x) => mediaTypeOf(x) === 'file')" :key="u" :href="u" target="_blank"
-          class="flex items-center gap-2 rounded-xl bg-white/5 px-4 py-2.5 text-sm text-sky-200 hover:bg-white/10">
+          class="flex items-center gap-2 rounded-xl bg-white/5 px-4 py-2.5 text-sm text-accent-2 hover:bg-white/10">
           📄 {{ decodeURIComponent(u.split('/').pop()) }}
         </a>
       </div>

@@ -26,7 +26,7 @@ function pick(w) {
   <div class="flex flex-wrap gap-2">
     <button v-for="w in WEATHERS" :key="w.code" type="button"
       class="rounded-full px-3.5 py-1.5 text-sm transition-all"
-      :class="modelValue === w.code ? 'bg-violet-400/30 ring-1 ring-violet-300' : 'bg-white/5 hover:bg-white/10'"
+      :class="modelValue === w.code ? 'bg-accent-soft ring-1 ring-accent' : 'bg-white/5 hover:bg-white/10'"
       @click="pick(w)">
       {{ w.emoji }} {{ w.label }}
     </button>

@@ -166,7 +166,7 @@ const displayCover = computed(() => album.value.cover_url || photos.value[0]?.ur
               placeholder="这张照片背后的故事…" />
             <div class="flex justify-end gap-3 text-xs">
               <button class="text-white/45 hover:text-white" @click="cancelStory">取消</button>
-              <button class="text-sky-300 hover:text-sky-200" @click="saveStory">保存故事</button>
+              <button class="text-accent-2 hover-text-accent-2" @click="saveStory">保存故事</button>
             </div>
           </div>
           <!-- 普通展示 -->

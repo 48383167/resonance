@@ -1,4 +1,4 @@
-// 端到端冒烟测试：注册/登录 → 日记 → 全模块 → 分享 → 导出
+// 端到端冒烟测试：注册/登录 → 用户主题隔离 → 日记 → 全模块 → 分享 → 导出
 // 前置：服务端已启动（建议 RESONANCE_DATA_DIR 指向临时目录，避免污染真实数据）
 const BASE = process.env.RESONANCE_BASE || 'http://localhost:4000'
 let failed = 0
@@ -53,7 +53,52 @@ assert('新密码可登录', loginA2.ok === true)
 const tokenA = loginA2.data.token
 const tokenB = regB.data.token
 
-console.log('== 2. 日记 ==')
+await http('POST', '/api/share/create', { password: '', expireDays: 0 }, tokenA)
+const shareProbe = await fetch(BASE + '/api/share/current', { headers: { Authorization: `Bearer ${tokenA}` } })
+const shareEtag = shareProbe.headers.get('etag')
+await shareProbe.arrayBuffer()
+const conditionalShare = await fetch(BASE + '/api/share/current', {
+  headers: { Authorization: `Bearer ${tokenA}`, ...(shareEtag ? { 'If-None-Match': shareEtag } : {}) },
+})
+assert('动态接口不返回无响应体的 304', conditionalShare.status !== 304)
+await conditionalShare.arrayBuffer()
+await http('DELETE', '/api/share/current', null, tokenA)
+
+console.log('== 2. 用户独立主题 ==')
+const themeA0 = await http('GET', '/api/users/me/theme', null, tokenA)
+const themeB0 = await http('GET', '/api/users/me/theme', null, tokenB)
+assert('两个用户都有默认主题', themeA0.ok && themeB0.ok && themeA0.data.themeKey === 'starlight'
+  && themeB0.data.themeKey === 'starlight' && themeA0.data.updatedAt === null)
+const themeA = await http('PUT', '/api/users/me/theme', {
+  themeKey: 'rose-dusk', primaryColor: '#ff9fba', secondaryColor: '#ffcfad', ambientColor: '#170b18',
+}, tokenA)
+const themeBAfterA = await http('GET', '/api/users/me/theme', null, tokenB)
+assert('A 修改主题不影响 B', themeA.ok && themeA.data.primaryColor === '#ff9fba'
+  && themeBAfterA.data.primaryColor === '#d8a7ff')
+const themeB = await http('PUT', '/api/users/me/theme', {
+  themeKey: 'seafoam', primaryColor: '#82e6d0', secondaryColor: '#7db8ff', ambientColor: '#07171a',
+}, tokenB)
+const themeAAfterB = await http('GET', '/api/users/me/theme', null, tokenA)
+assert('B 修改主题不影响 A', themeB.ok && themeB.data.primaryColor === '#82e6d0'
+  && themeAAfterB.data.primaryColor === '#ff9fba')
+const brightTheme = await http('PUT', '/api/users/me/theme', {
+  themeKey: 'peach-morning', primaryColor: '#f0a0a6', secondaryColor: '#f4bd9e', ambientColor: '#fff0e6',
+  appearanceMode: 'light', surfaceColor: '#fffaf7', surfaceStrongColor: '#ffffff',
+  textColor: '#302b43', mutedTextColor: '#6e667b', borderColor: '#8d789d',
+}, tokenA)
+assert('明亮预置主题可保存', brightTheme.ok && brightTheme.data.themeKey === 'peach-morning'
+  && brightTheme.data.appearanceMode === 'light' && brightTheme.data.surfaceColor === '#fffaf7')
+const invalidTheme = await http('PUT', '/api/users/me/theme', {
+  themeKey: 'custom', primaryColor: 'red', secondaryColor: '#7db8ff', ambientColor: '#07171a',
+}, tokenA)
+assert('非法主题颜色被拒绝', invalidTheme.ok === false)
+const unreadableTheme = await http('PUT', '/api/users/me/theme', {
+  themeKey: 'custom', primaryColor: '#000000', secondaryColor: '#ffffff', ambientColor: '#ffffff',
+}, tokenA)
+assert('任意颜色组合可保存', unreadableTheme.ok && unreadableTheme.data.primaryColor === '#000000'
+  && unreadableTheme.data.secondaryColor === '#ffffff' && unreadableTheme.data.ambientColor === '#ffffff')
+
+console.log('== 3. 日记 ==')
 const solo = await http('POST', '/api/entries/solo',
   { title: '夜航', content: '窗外的雨声像你说话的语气。', typingSpeed: 58, deleteCount: 3, pauseDuration: 1200, weatherCode: 61, timeColorHex: '#0b1d3a', media: ['/media/a.jpg', '/media/b.mp4'] }, tokenA)
 assert('写日记成功（含情绪墨水与附件）', solo.ok === true && solo.data.contents.length === 1
@@ -70,7 +115,7 @@ const del = await http('DELETE', `/api/entries/${temp.data.id}`, null, tokenA)
 const afterDel = await http('GET', '/api/entries', null, tokenA)
 assert('删除日记成功', del.ok === true && afterDel.data.length === 1)
 
-console.log('== 3. 恋爱瞬间与地图 ==')
+console.log('== 4. 恋爱瞬间与地图 ==')
 const m1 = await http('POST', '/api/moments', {
   content: '西湖边的晚风', mood: 'sweet', location: '杭州西湖', longitude: 120.15, latitude: 30.24, momentDate: '2026-08-20',
 }, tokenA)
@@ -88,13 +133,13 @@ assert('地图数据含坐标且按时间升序', mMap.data.length === 2 && mMap
 const mUpd = await http('PUT', `/api/moments/${m1.data.id}`, { content: '西湖边的晚风（改）' }, tokenA)
 assert('编辑瞬间', mUpd.data.content.includes('（改）'))
 
-console.log('== 4. 情书 ==')
+console.log('== 5. 情书 ==')
 const letter = await http('POST', '/api/letters', { title: '给你', content: '今晚月色真美。', isSecret: true }, tokenA)
 assert('写情书', letter.ok)
 const lRead = await http('GET', `/api/letters/${letter.data.id}`, null, tokenB)
 assert('对方查看后标记已读', lRead.data.is_read === 1)
 
-console.log('== 5. 相册 ==')
+console.log('== 6. 相册 ==')
 const album = await http('POST', '/api/albums', { name: '第一次旅行', description: '杭州' }, tokenA)
 assert('创建相册', album.ok)
 const ap = await http('POST', `/api/albums/${album.data.id}/photos`, { url: '/media/fake.jpg', caption: '合影' }, tokenB)
@@ -114,7 +159,7 @@ assert('修改相册信息', updAlbum.data.name.includes('改') && updAlbum.data
 const story = await http('PUT', `/api/albums/${album.data.id}/photos/${page1.data.items[0].id}`, { caption: '湖边的合影' }, tokenA)
 assert('为照片写故事', story.ok && story.data.caption === '湖边的合影')
 
-console.log('== 6. 心愿清单 ==')
+console.log('== 7. 心愿清单 ==')
 const wish = await http('POST', '/api/wishes', { title: '一起看极光', category: 'travel', priority: 2 }, tokenA)
 assert('许愿', wish.ok && wish.data.status === 'todo')
 const wishMoved = await http('PUT', `/api/wishes/${wish.data.id}/status`, { status: 'doing' }, tokenB)
@@ -124,7 +169,7 @@ assert('完成记录完成时间', wishDone.data.status === 'done' && Boolean(wi
 const wishBack = await http('PUT', `/api/wishes/${wish.data.id}/status`, { status: 'doing' }, tokenA)
 assert('撤回后清空完成时间', wishBack.data.status === 'doing' && wishBack.data.completed_at == null)
 
-console.log('== 7. 时间胶囊 ==')
+console.log('== 8. 时间胶囊 ==')
 const capFuture = await http('POST', '/api/capsules', { title: '给一年后', content: '一年后的我们好吗', unlockDate: '2027-08-24' }, tokenA)
 const capPast = await http('POST', '/api/capsules', { title: '昨日', content: '已经可以打开了', unlockDate: '2026-08-01' }, tokenB)
 assert('密封两枚胶囊', capFuture.ok && capPast.ok)
@@ -134,13 +179,13 @@ const p = caps.data.find((c) => c.title === '昨日')
 assert('未到期内容被遮蔽', f && f.isUnlocked === 0 && f.content.includes('***'))
 assert('已到期内容可见', p && p.isUnlocked === 1 && p.content === '已经可以打开了')
 
-console.log('== 8. 纪念日 ==')
+console.log('== 9. 纪念日 ==')
 const localNow = new Date()
 const localToday = `${localNow.getFullYear()}-${String(localNow.getMonth() + 1).padStart(2, '0')}-${String(localNow.getDate()).padStart(2, '0')}`
 const ann = await http('POST', '/api/anniversaries', { title: '在一起', type: 'together', date: localToday }, tokenA)
 assert('添加纪念日且今天纪念', ann.ok && ann.data.isToday === true)
 
-console.log('== 9. 分享链接 ==')
+console.log('== 10. 分享链接 ==')
 const share = await http('POST', '/api/share/create', { password: 'honey', expireDays: 7 }, tokenA)
 assert('创建带密码分享', share.ok && share.data.token)
 const noPw = await http('GET', `/api/public/share/${share.data.token}`)
@@ -153,7 +198,7 @@ const shareOff = await http('DELETE', '/api/share/current', null, tokenA)
 const afterOff = await http('GET', `/api/public/share/${share.data.token}`)
 assert('停用后访问 404', afterOff.ok === false)
 
-console.log('== 10. 上传 / 聚合 / 日历 ==')
+console.log('== 11. 上传 / 聚合 / 日历 ==')
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64')
 const fd = new FormData()
 fd.append('file', new Blob([png], { type: 'image/png' }), 't.png')
@@ -172,7 +217,7 @@ const kinds = new Set(tl.data.events.map((e) => e.kind))
 assert('时光时间线聚合多种类型且倒序', tl.ok && kinds.has('entry') && kinds.has('moment') && kinds.has('letter')
   && tl.data.events[0].ts >= tl.data.events[tl.data.events.length - 1].ts)
 
-console.log('== 11. 导出时光机 ==')
+console.log('== 12. 导出时光机 ==')
 const exp = await fetch(BASE + '/api/export')
 const buf = await exp.arrayBuffer()
 assert('导出 zip 非空', exp.status === 200 && buf.byteLength > 0, `bytes=${buf.byteLength}`)

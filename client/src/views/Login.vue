@@ -70,7 +70,7 @@ async function doLogin() {
         <div class="text-center text-sm text-white/50">
           <template v-if="registeredCount === 0">还没有账号？</template>
           <template v-else>想加入 Ta？</template>
-          <router-link to="/register" class="text-violet-300 hover:underline">注册</router-link>
+          <router-link to="/register" class="text-accent hover:underline">注册</router-link>
         </div>
       </div>
     </div>

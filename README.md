@@ -76,6 +76,7 @@ npm run backup       # 将 database.sqlite 拷贝为 backups/database-YYYY-MM-DD
 | `POST` | `/api/upload` | 图片上传（multipart，返回 /media URL） |
 | `GET` | `/api/dashboard`、`/api/tree/state` | 首页聚合 / 恋爱树 |
 | `PUT` | `/api/users/me` | 修改昵称/头像 |
+| `GET/PUT` | `/api/users/me/theme` | 当前用户独立主题色配置 |
 | `POST/GET/DELETE` | `/api/share/create`、`/api/share/current` | 分享链接管理 |
 | `GET` | `/api/public/observatory`、`/api/public/share/:token` | 公开观测台 / 只读分享（可选密码） |
 | `GET` | `/api/export` | 导出时光机 zip |
@@ -92,15 +93,17 @@ npm run backup       # 将 database.sqlite 拷贝为 backups/database-YYYY-MM-DD
 ```
 server/           Express + Socket.io + node:sqlite
   routes/         auth / entries / moments / letters / albums / wishes /
-                  capsules / anniversaries / share / misc / observatory / export
+                  capsules / anniversaries / share / theme / misc / observatory / export
   db.js           建表与数据访问（全部模块）
   security.js     scrypt 密码哈希 + JWT
   socket.js       WebSocket 事件（token 认证）
 client/           Vue 3 + Vite + TailwindCSS + Leaflet
   src/views/      登录 / 注册 / 首页 / 时光时间线 / 写日记 / 日记详情 /
-                  瞬间 / 地图 / 情书 / 相册 / 心愿 / 胶囊 / 纪念日 / 日历 / 设置 / 分享 / 观测台
+                   瞬间 / 地图 / 情书 / 相册 / 心愿 / 胶囊 / 纪念日 / 日历 / 设置 / 分享 / 观测台
+  src/theme/      预置主题目录
+  src/stores/     会话 / 通知 / 弹窗 / 图片灯箱 / 用户主题状态
   src/components/ 呼吸灯 / 情绪编辑器 / 揭幕动画 / 环境底片 / 恋爱树 / 图片上传
 scripts/
   backup.js       日期戳备份
-  smoke.mjs       端到端冒烟测试（43 项断言）
+  smoke.mjs       端到端冒烟测试（含用户主题隔离）
 ```

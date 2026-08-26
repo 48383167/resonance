@@ -23,8 +23,7 @@ const dateText = computed(() => new Date(props.entry.created_at).toLocaleString(
     @click="emit('open', entry.id)">
     <div class="flex items-start justify-between gap-3">
       <div class="flex flex-wrap items-center gap-2">
-        <span class="rounded-full px-2.5 py-0.5 text-xs"
-          style="background: rgba(126,200,255,0.2); color: #7ec8ff">日记</span>
+        <span class="rounded-full bg-accent-2-soft px-2.5 py-0.5 text-xs text-accent-2">日记</span>
         <span v-if="entry.weather_code != null" class="rounded-full bg-white/5 px-2.5 py-0.5 text-xs text-white/50">
           {{ weatherLabel(entry.weather_code) }}
         </span>

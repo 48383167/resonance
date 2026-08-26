@@ -8,6 +8,7 @@ async function request(method, url, body, isForm) {
   const res = await fetch(url, {
     method,
     headers,
+    cache: 'no-store',
     body: body ? (isForm ? body : JSON.stringify(body)) : undefined,
   })
   if (res.status === 401 && !url.startsWith('/api/auth/') && !url.startsWith('/api/public/')) {
