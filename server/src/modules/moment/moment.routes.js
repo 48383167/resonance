@@ -1,0 +1,15 @@
+import express from 'express'
+import * as momentController from './moment.controller.js'
+import { requireAuth } from '../../middleware/auth.middleware.js'
+
+const router = express.Router()
+
+router.get('/', requireAuth, momentController.list)
+// 地图需在 /:id 之前注册
+router.get('/map', requireAuth, momentController.listMap)
+router.get('/:id', requireAuth, momentController.detail)
+router.post('/', requireAuth, momentController.create)
+router.put('/:id', requireAuth, momentController.update)
+router.delete('/:id', requireAuth, momentController.remove)
+
+export default router

@@ -1,0 +1,32 @@
+import { randomUUID } from 'node:crypto'
+import { db } from '../../config/database.js'
+
+function newId(prefix) {
+  return prefix + '_' + randomUUID().slice(0, 12)
+}
+
+export function findById(id) {
+  return db.prepare('SELECT * FROM anniversaries WHERE id = ?').get(id)
+}
+
+export function list() {
+  return db.prepare('SELECT * FROM anniversaries ORDER BY date ASC').all()
+}
+
+export function create({ title, type, date, description }) {
+  const id = newId('ann')
+  db.prepare('INSERT INTO anniversaries (id, title, type, date, description) VALUES (?, ?, ?, ?, ?)')
+    .run(id, title, type || 'custom', date, description || '')
+  return findById(id)
+}
+
+export function update(id, { title, type, date, description }) {
+  db.prepare(
+    'UPDATE anniversaries SET title = COALESCE(?, title), type = COALESCE(?, type), date = COALESCE(?, date), description = COALESCE(?, description) WHERE id = ?'
+  ).run(title ?? null, type ?? null, date ?? null, description ?? null, id)
+  return findById(id)
+}
+
+export function remove(id) {
+  db.prepare('DELETE FROM anniversaries WHERE id = ?').run(id)
+}

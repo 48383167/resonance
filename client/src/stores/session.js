@@ -1,5 +1,5 @@
 import { reactive } from 'vue'
-import { api } from '../api'
+import { getMe } from '../modules/auth/auth.api.js'
 import { authSocket, socketDisconnect } from '../socket'
 
 // 全局会话：token 由 localStorage 持久化，会话内保存本人 / 伴侣 / 在线状态
@@ -27,7 +27,7 @@ export async function initSession() {
   const t = localStorage.getItem('resonance.token')
   if (!t) return
   try {
-    const { me, partner, inviteCode } = await api.get('/api/auth/me')
+    const { me, partner, inviteCode } = await getMe()
     session.userId = me.id
     session.me = me
     session.partner = partner
