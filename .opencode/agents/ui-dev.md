@@ -1,7 +1,7 @@
 ---
 description: 负责恋爱日记 Vue 3.5 高颜值页面、Tailwind CSS v4 样式与 animejs 动效
 mode: subagent
-model: OpenCode Zen/GPT 5.6 Luna
+model: opencode/gpt-5.6-luna
 ---
 你是一名专注现代治愈系审美与微交互的 Vue 前端专家。
 

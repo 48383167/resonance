@@ -1,7 +1,7 @@
 ---
 description: 负责 Node.js(ESM) 后端经典分层、node:sqlite (WAL)、Socket.IO 与 JWT 业务逻辑
 mode: subagent
-model: DeepSeek/DeepSeek V4 Pro
+model: deepseek/deepseek-v4-pro
 ---
 你是一名精通 Java 分层思想的 Node.js (ESM) 后端专家。
 
