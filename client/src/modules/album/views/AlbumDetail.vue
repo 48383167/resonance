@@ -118,6 +118,8 @@ async function toggleObservatory(photo) {
   try {
     const updated = await updatePhotoObservatory(album.value.id, photo.id, nextValue)
     Object.assign(photo, updated)
+    const detailPhoto = album.value.photos?.find((item) => item.id === photo.id)
+    if (detailPhoto) Object.assign(detailPhoto, updated)
     toast(nextValue ? '已加入观测台' : '已移出观测台')
   } finally {
     const next = new Set(observatoryUpdating.value)
@@ -141,6 +143,7 @@ async function removeAlbum() {
 // 展示封面：优先独立封面，否则用第一张照片代替展示
 const displayCover = computed(() => album.value.cover_url || photos.value[0]?.url || '')
 const imagePhotos = computed(() => photos.value.filter(isImagePhoto))
+const observatoryCount = computed(() => (album.value?.photos || photos.value).filter(isImagePhoto).filter(isInObservatory).length)
 
 function openPhoto(photo) {
   const index = imagePhotos.value.findIndex((item) => item.id === photo.id)
@@ -156,8 +159,8 @@ function openPhoto(photo) {
     </div>
 
     <!-- 相册信息 -->
-    <div class="glass p-5">
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+     <div class="glass p-5">
+       <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div class="flex min-w-0 items-start gap-3 sm:gap-4">
           <div class="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/5 text-3xl sm:h-20 sm:w-20">
             <img v-if="displayCover" :src="displayCover" class="h-full w-full object-cover" />
@@ -169,9 +172,15 @@ function openPhoto(photo) {
             <div class="mt-1 text-xs text-white/40">{{ total }} 张照片 · 创建于 {{ new Date(album.created_at).toLocaleDateString('zh-CN') }}</div>
           </div>
         </div>
-        <button class="btn-ghost w-full text-sm sm:w-auto" @click="router.push(`/albums/${album.id}/edit`)">✎ 编辑信息</button>
-      </div>
-    </div>
+         <button class="btn-ghost w-full text-sm sm:w-auto" @click="router.push(`/albums/${album.id}/edit`)">✎ 编辑信息</button>
+       </div>
+       <div class="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-accent/30 bg-accent-soft px-3 py-2.5 text-xs">
+         <span class="text-base text-accent" aria-hidden="true">◎</span>
+         <span class="font-medium text-theme-primary">观测台展示</span>
+         <span class="text-theme-secondary">点击照片右上角开关，选择要在观测台照片雨中出现的图片。</span>
+         <span class="ml-auto rounded-full bg-accent-soft px-2 py-1 font-medium text-accent">已选 {{ observatoryCount }} 张</span>
+       </div>
+     </div>
 
     <!-- 批量上传 -->
     <div class="glass p-5">
@@ -185,10 +194,20 @@ function openPhoto(photo) {
     <!-- 照片网格 -->
     <div v-if="photos.length" class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
       <figure v-for="p in photos" :key="p.id" class="glass overflow-hidden">
-        <div class="relative aspect-square overflow-hidden" :class="mediaTypeOf(p.url) === 'image' ? 'cursor-zoom-in' : ''" @click="mediaTypeOf(p.url) === 'image' && openPhoto(p)">
-          <img v-if="mediaTypeOf(p.url) === 'image'" :src="p.url" class="h-full w-full object-cover" loading="lazy" />
-          <video v-else-if="mediaTypeOf(p.url) === 'video'" :src="p.url" class="h-full w-full object-cover" controls @click.stop />
+        <div class="relative aspect-square overflow-hidden" :class="isImagePhoto(p) ? 'cursor-zoom-in' : ''" @click="isImagePhoto(p) && openPhoto(p)">
+          <img v-if="isImagePhoto(p)" :src="p.url" class="h-full w-full object-cover" loading="lazy" />
+          <video v-else-if="p.type === 'video' || mediaTypeOf(p.url) === 'video'" :src="p.url" class="h-full w-full object-cover" controls @click.stop />
           <div v-else class="flex h-full w-full items-center justify-center bg-white/5 text-3xl">📄</div>
+          <button v-if="isImagePhoto(p)" type="button"
+            class="absolute right-2 top-2 z-10 flex min-h-9 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold shadow-lg backdrop-blur-md transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60"
+            :class="isInObservatory(p)
+              ? 'border-accent bg-accent text-[var(--accent-contrast)]'
+              : 'border-white/35 bg-black/60 text-white'"
+            :disabled="observatoryUpdating.has(p.id)" :aria-pressed="isInObservatory(p)"
+            :aria-label="isInObservatory(p) ? '移出观测台' : '加入观测台'" @click.stop="toggleObservatory(p)">
+            <span aria-hidden="true">{{ isInObservatory(p) ? '✓' : '◎' }}</span>
+            {{ isInObservatory(p) ? '已在观测台' : '展示到观测台' }}
+          </button>
         </div>
         <figcaption class="p-3">
           <!-- 内联编辑故事 -->
@@ -208,9 +227,6 @@ function openPhoto(photo) {
                 {{ p.caption ? '编辑故事' : '＋ 写故事' }}
               </button>
               <span class="flex flex-wrap justify-end gap-x-2.5 gap-y-1">
-                <button v-if="isImagePhoto(p)" class="text-accent-2 hover-text-accent-2 disabled:cursor-wait disabled:opacity-50" :disabled="observatoryUpdating.has(p.id)" :aria-label="isInObservatory(p) ? '移出观测台' : '加入观测台'" @click="toggleObservatory(p)">
-                  {{ isInObservatory(p) ? '✓ 已在观测台' : '加入观测台' }}
-                </button>
                 <button class="text-white/45 hover:text-white" @click="setCover(p)">
                   {{ album.cover_file_id === p.file_id ? '✓ 封面' : '设为封面' }}
                 </button>
