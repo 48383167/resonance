@@ -44,7 +44,7 @@ onMounted(async () => {
     content.value = m.content
     mood.value = m.mood || 'normal'
     momentDate.value = m.moment_date || ''
-    photos.value = [...(m.photos || [])]
+    photos.value = (m.photos || []).map((p) => ({ id: p.id, url: p.url, type: p.type, name: p.name }))
     point.value = {
       lat: m.latitude ?? null,
       lng: m.longitude ?? null,
@@ -73,7 +73,7 @@ async function save() {
     momentDate: momentDate.value || null,
     longitude: point.value.lat != null ? point.value.lng : null,
     latitude: point.value.lat,
-    photos: photos.value,
+    photos: photos.value.filter((p) => p?.id).map((p) => p.id),
   }
   try {
     if (editingId) await updateMoment(editingId, payload)

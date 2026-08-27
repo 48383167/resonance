@@ -70,7 +70,7 @@ const dateText = (m) => (m.moment_date || m.created_at.slice(0, 10))
             </div>
             <p class="mt-2 text-sm whitespace-pre-wrap">{{ m.content }}</p>
             <div v-if="m.photos?.length" class="mt-2 flex flex-wrap gap-2">
-              <img v-for="u in m.photos" :key="u" :src="u" class="h-20 w-20 rounded-lg object-cover" loading="lazy" />
+              <img v-for="(u, i) in m.photos" :key="u.id || u.url || i" :src="u.url" class="h-20 w-20 rounded-lg object-cover" loading="lazy" />
             </div>
           </article>
         </div>

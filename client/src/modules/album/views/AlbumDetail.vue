@@ -57,8 +57,9 @@ onUnmounted(() => observer?.disconnect())
 async function addUploaded() {
   if (!uploadUrls.value.length) return
   const count = uploadUrls.value.length
-  for (const url of uploadUrls.value) {
-    await addPhoto(album.value.id, url)
+  for (const u of uploadUrls.value) {
+    if (!u?.id) continue
+    await addPhoto(album.value.id, { fileId: u.id })
   }
   uploadUrls.value = []
   await loadPhotos(true)
@@ -77,7 +78,7 @@ async function removePhoto(p) {
 }
 
 async function setCover(p) {
-  album.value = await setCoverApi(album.value.id, p.url)
+  album.value = await setCoverApi(album.value.id, { fileId: p.file_id })
   toast('封面已更新')
 }
 
@@ -178,7 +179,7 @@ const displayCover = computed(() => album.value.cover_url || photos.value[0]?.ur
               </button>
               <span class="flex gap-2.5">
                 <button class="text-white/45 hover:text-white" @click="setCover(p)">
-                  {{ album.cover_url === p.url ? '✓ 封面' : '设为封面' }}
+                  {{ album.cover_file_id === p.file_id ? '✓ 封面' : '设为封面' }}
                 </button>
                 <button class="text-rose-300/70 hover:text-rose-300" @click="removePhoto(p)">删除</button>
               </span>

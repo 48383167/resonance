@@ -1,4 +1,5 @@
 import { db } from '../../config/database.js'
+import { resolveUrl } from '../file/file.service.js'
 
 // 跨模块聚合查询：Dashboard / 恋爱树 / 分享页 / 时间线共用
 export function stats() {
@@ -18,5 +19,9 @@ export function stats() {
 }
 
 export function listUsers() {
-  return db.prepare('SELECT id, username, nickname, avatar_url, pair_code, paired_at FROM users ORDER BY paired_at ASC').all()
+  return db.prepare('SELECT id, username, nickname, avatar_url, avatar_file_id, pair_code, paired_at FROM users ORDER BY paired_at ASC').all()
+    .map((u) => {
+      u.avatar_url = u.avatar_file_id ? resolveUrl(u.avatar_file_id) : (u.avatar_url || '')
+      return u
+    })
 }

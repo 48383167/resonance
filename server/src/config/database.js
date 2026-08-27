@@ -32,7 +32,8 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT UNIQUE,
     password_hash TEXT,
     nickname TEXT NOT NULL,
-    avatar_url TEXT,
+    avatar_url TEXT DEFAULT '',          -- 已作废：改用 avatar_file_id
+    avatar_file_id TEXT,                 -- 文件表 ID（files.id）
     pair_code TEXT,
     paired_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
@@ -94,7 +95,8 @@ CREATE TABLE IF NOT EXISTS moments (
 CREATE TABLE IF NOT EXISTS moment_photos (
     id TEXT PRIMARY KEY,
     moment_id TEXT NOT NULL,
-    url TEXT NOT NULL,
+    url TEXT DEFAULT '',             -- 已作废：改用 file_id
+    file_id TEXT,                    -- 文件表 ID（files.id）
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
@@ -113,7 +115,8 @@ CREATE TABLE IF NOT EXISTS love_letters (
 CREATE TABLE IF NOT EXISTS albums (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
-    cover_url TEXT DEFAULT '',
+    cover_url TEXT DEFAULT '',       -- 已作废：改用 cover_file_id
+    cover_file_id TEXT,              -- 文件表 ID（files.id）
     description TEXT DEFAULT '',
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
@@ -121,7 +124,8 @@ CREATE TABLE IF NOT EXISTS albums (
 CREATE TABLE IF NOT EXISTS album_photos (
     id TEXT PRIMARY KEY,
     album_id TEXT NOT NULL,
-    url TEXT NOT NULL,
+    url TEXT DEFAULT '',             -- 已作废：改用 file_id
+    file_id TEXT,                    -- 文件表 ID（files.id）
     caption TEXT DEFAULT '',
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
@@ -145,7 +149,8 @@ CREATE TABLE IF NOT EXISTS time_capsules (
     author_id TEXT NOT NULL,
     title TEXT DEFAULT '',
     content TEXT NOT NULL,
-    photo_url TEXT DEFAULT '',
+    photo_url TEXT DEFAULT '',       -- 已作废：改用 photo_file_id
+    photo_file_id TEXT,              -- 文件表 ID（files.id）
     unlock_date TEXT NOT NULL,       -- YYYY-MM-DD
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
@@ -157,6 +162,22 @@ CREATE TABLE IF NOT EXISTS anniversaries (
     type TEXT DEFAULT 'custom',      -- first_meet/together/birthday/custom
     date TEXT NOT NULL,              -- YYYY-MM-DD
     description TEXT DEFAULT '',
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+-- 文件表：每个文件的元信息（ID 为雪花 ID 十进制字符串，见 common/utils/snowflake.js）
+-- path 为相对 MEDIA_DIR 的路径（yyyy/MM/dd/哈希名.ext），对外 URL = /media/{path}
+-- 软删除 + 墓碑：删除时物理文件移入 .trash，status 置 0，原 URL 立即失效且文件可恢复
+CREATE TABLE IF NOT EXISTS files (
+    id TEXT PRIMARY KEY,
+    user_id TEXT,                    -- 上传者（null = 系统/迁移）
+    path TEXT NOT NULL,              -- 相对存储路径
+    size INTEGER DEFAULT 0,
+    mime TEXT DEFAULT '',
+    original_name TEXT DEFAULT '',
+    status INTEGER DEFAULT 1,        -- 1=正常 0=已删除（墓碑）
+    deleted_at TEXT,
+    trash_path TEXT,                 -- 墓碑路径（相对 .trash）
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
@@ -172,8 +193,13 @@ CREATE TABLE IF NOT EXISTS share_tokens (
 );
 `)
 
-// 老库补列：日记附件、心愿阶段时间节点、情书阅读时间
+// 老库补列：日记附件、心愿阶段时间节点、情书阅读时间、文件 ID 化新列
 ensureColumns('entries', { media: "TEXT DEFAULT '[]'" })
+ensureColumns('users', { avatar_file_id: 'TEXT' })
+ensureColumns('moment_photos', { file_id: 'TEXT' })
+ensureColumns('albums', { cover_file_id: 'TEXT' })
+ensureColumns('album_photos', { file_id: 'TEXT' })
+ensureColumns('time_capsules', { photo_file_id: 'TEXT' })
 ensureColumns('wish_items', {
   completed_at: 'TEXT',
   started_at: 'TEXT',

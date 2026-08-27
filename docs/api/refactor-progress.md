@@ -20,6 +20,7 @@
 - [x] timeline / observatory / misc 模块迁移（聚合/公开/系统）
 - [x] stats 共享聚合查询模块（stats/daysSincePaired/pairStartedAt/listUsers）
 - [x] 旧 db.js / middleware.js / routes/ 全部移除（所有 SQL 已入各模块 repository）
+- [x] 文件存储重构：雪花文件 ID + files 表 + yyyy/MM/dd 分级 + 软删除墓碑（见 docs/api/file-storage.md，迁移：npm run migrate:files）
 
 ## 前端
 

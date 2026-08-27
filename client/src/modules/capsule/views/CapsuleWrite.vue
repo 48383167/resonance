@@ -23,7 +23,12 @@ async function seal() {
   if (!form.value.unlockDate) return toast('选择解锁日期')
   busy.value = true
   try {
-    await createCapsule({ ...form.value, content: form.value.content.trim() })
+    await createCapsule({
+      title: form.value.title,
+      content: form.value.content.trim(),
+      unlockDate: form.value.unlockDate,
+      photoFileId: form.value.photoUrl?.id || null,
+    })
     toast('胶囊已密封 ⏳')
     router.push('/capsules')
   } catch (e) {

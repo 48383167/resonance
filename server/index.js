@@ -22,6 +22,7 @@ import capsuleRoutes from './src/modules/capsule/capsule.routes.js'
 import anniversaryRoutes from './src/modules/anniversary/anniversary.routes.js'
 import shareRoutes from './src/modules/share/share.routes.js'
 import miscRoutes from './src/modules/misc/misc.routes.js'
+import fileRoutes from './src/modules/file/file.routes.js'
 import musicRoutes from './src/modules/music/music.routes.js'
 import themeRoutes from './src/modules/theme/theme.routes.js'
 
@@ -59,6 +60,7 @@ app.use('/api/anniversaries', anniversaryRoutes)
 app.use('/api/share', shareRoutes)
 app.use('/api/music', musicRoutes)
 app.use('/api/users/me/theme', themeRoutes)
+app.use('/api', fileRoutes)
 app.use('/api', miscRoutes)
 
 // 生产模式：托管前端构建产物（Vite 单页应用）

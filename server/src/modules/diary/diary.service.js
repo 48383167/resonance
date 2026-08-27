@@ -1,6 +1,7 @@
 import { NotFoundError } from '../../common/errors/NotFoundError.js'
 import * as coupleService from '../couple/couple.service.js'
 import { emitDiaryCreated, emitDiaryUpdated, emitDiaryDeleted } from '../../infrastructure/socket/diary.socket.js'
+import { softDeleteQuietly } from '../file/file.service.js'
 import * as diaryRepository from './diary.repository.js'
 import * as diarySchema from './diary.schema.js'
 
@@ -59,6 +60,12 @@ export function remove(userId, id) {
   const entry = diaryRepository.findById(id)
   if (!entry) throw new NotFoundError('日记不存在')
   diaryRepository.remove(id)
+  // 级联回收附件文件（软删除墓碑，URL 立即失效）
+  let media = []
+  try { media = JSON.parse(entry.media || '[]') } catch { /* 忽略 */ }
+  for (const m of media) {
+    if (m && typeof m === 'object' && m.fileId) softDeleteQuietly(m.fileId, userId)
+  }
   const coupleId = coupleIdOf(userId)
   if (coupleId) emitDiaryDeleted(coupleId, id)
   return null

@@ -1,5 +1,6 @@
 import { NotFoundError } from '../../common/errors/NotFoundError.js'
 import { localDateStr } from '../../common/utils/date.js'
+import { softDeleteQuietly } from '../file/file.service.js'
 import * as capsuleRepository from './capsule.repository.js'
 import * as capsuleSchema from './capsule.schema.js'
 
@@ -33,7 +34,10 @@ export function create(userId, raw) {
   return toVO(capsuleRepository.create({ authorId: userId, ...data }))
 }
 
-export function remove(id) {
+export function remove(userId, id) {
+  const capsule = capsuleRepository.findById(id)
+  if (!capsule) throw new NotFoundError('胶囊不存在')
+  if (capsule.photo_file_id) softDeleteQuietly(capsule.photo_file_id, userId)
   capsuleRepository.remove(id)
   return null
 }

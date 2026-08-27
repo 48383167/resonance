@@ -1,30 +1,38 @@
 import { randomUUID } from 'node:crypto'
 import { db } from '../../config/database.js'
+import { resolveUrl } from '../file/file.service.js'
 
 // 不含 password_hash 的公开用户字段（登录态用户对象）
-const PUBLIC_USER = 'id, username, nickname, avatar_url, pair_code, paired_at'
+const PUBLIC_USER = 'id, username, nickname, avatar_url, avatar_file_id, pair_code, paired_at'
+
+// 头像 URL 解析：优先 avatar_file_id → files 表；迁移前旧行兜底 avatar_url
+function resolveAvatar(u) {
+  if (!u) return u
+  u.avatar_url = u.avatar_file_id ? resolveUrl(u.avatar_file_id) : (u.avatar_url || '')
+  return u
+}
 
 export function countUsers() {
   return db.prepare('SELECT COUNT(*) AS c FROM users').get().c
 }
 
 export function findById(id) {
-  return db.prepare(`SELECT ${PUBLIC_USER} FROM users WHERE id = ?`).get(id)
+  return resolveAvatar(db.prepare(`SELECT ${PUBLIC_USER} FROM users WHERE id = ?`).get(id))
 }
 
 export function findByUsername(username) {
-  return db.prepare(
-    'SELECT id, username, password_hash, nickname, avatar_url, pair_code, paired_at FROM users WHERE username = ?'
-  ).get(username)
+  return resolveAvatar(db.prepare(
+    'SELECT id, username, password_hash, nickname, avatar_url, avatar_file_id, pair_code, paired_at FROM users WHERE username = ?'
+  ).get(username))
 }
 
 export function findByPairCode(code) {
-  return db.prepare(`SELECT ${PUBLIC_USER} FROM users WHERE pair_code = ?`).get(code)
+  return resolveAvatar(db.prepare(`SELECT ${PUBLIC_USER} FROM users WHERE pair_code = ?`).get(code))
 }
 
 export function findPartnerOf(userId, pairCode) {
   const rows = db.prepare(`SELECT ${PUBLIC_USER} FROM users WHERE pair_code = ?`).all(pairCode)
-  return rows.find((r) => r.id !== userId) || null
+  return resolveAvatar(rows.find((r) => r.id !== userId) || null)
 }
 
 export function create({ username, passwordHash, nickname, pairCode }) {
@@ -43,8 +51,8 @@ export function setPassword(id, passwordHash) {
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, id)
 }
 
-export function updateUser(id, { nickname, avatarUrl }) {
-  db.prepare('UPDATE users SET nickname = COALESCE(?, nickname), avatar_url = COALESCE(?, avatar_url) WHERE id = ?')
-    .run(nickname || null, avatarUrl || null, id)
+export function updateUser(id, { nickname, avatarFileId }) {
+  db.prepare('UPDATE users SET nickname = COALESCE(?, nickname), avatar_file_id = COALESCE(?, avatar_file_id) WHERE id = ?')
+    .run(nickname || null, avatarFileId || null, id)
   return findById(id)
 }

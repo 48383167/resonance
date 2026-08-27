@@ -59,7 +59,7 @@ const hour = computed(() => (entry.value ? new Date(entry.value.created_at).getH
 const palette = computed(() => (entry.value ? paletteFor(hour.value, entry.value.weather_code) : ['#0b1d3a']))
 const fgColor = computed(() => entry.value?.time_color_hex || palette.value[1] || '#d8a7ff')
 
-const imageMedia = computed(() => (entry.value?.media || []).filter((u) => mediaTypeOf(u) === 'image'))
+const imageMedia = computed(() => (entry.value?.media || []).filter((u) => (u.type || mediaTypeOf(u.url || '')) === 'image'))
 
 // 正文分片：把 user_id 映射成昵称，供渲染
 const named = computed(() => (entry.value?.contents || []).map((c) => ({
@@ -107,14 +107,14 @@ const named = computed(() => (entry.value?.contents || []).map((c) => ({
 
       <div v-if="entry.media?.length" class="mt-6 space-y-3 border-t border-white/10 pt-5">
         <div v-if="imageMedia.length" class="flex flex-wrap gap-2">
-          <img v-for="(u, i) in imageMedia" :key="u" :src="u" class="h-24 w-24 cursor-zoom-in rounded-lg object-cover"
-            loading="lazy" @click="openLightbox(imageMedia, i)" />
+          <img v-for="(u, i) in imageMedia" :key="u.id || u.url || i" :src="u.url" class="h-24 w-24 cursor-zoom-in rounded-lg object-cover"
+            loading="lazy" @click="openLightbox(imageMedia.map((x) => x.url), i)" />
         </div>
-        <video v-for="u in entry.media.filter((x) => mediaTypeOf(x) === 'video')" :key="u" :src="u"
+        <video v-for="(u, i) in entry.media.filter((x) => (x.type || mediaTypeOf(x.url || '')) === 'video')" :key="u.id || u.url || i" :src="u.url"
           class="max-h-72 w-full rounded-xl" controls />
-        <a v-for="u in entry.media.filter((x) => mediaTypeOf(x) === 'file')" :key="u" :href="u" target="_blank"
+        <a v-for="(u, i) in entry.media.filter((x) => (x.type || mediaTypeOf(x.url || '')) === 'file')" :key="u.id || u.url || i" :href="u.url" target="_blank"
           class="flex items-center gap-2 rounded-xl bg-white/5 px-4 py-2.5 text-sm text-accent-2 hover:bg-white/10">
-          📄 {{ decodeURIComponent(u.split('/').pop()) }}
+          📄 {{ u.name || decodeURIComponent((u.url || '').split('/').pop()) }}
         </a>
       </div>
 

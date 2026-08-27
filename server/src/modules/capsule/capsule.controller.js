@@ -13,5 +13,5 @@ export async function create(req, res, next) {
 }
 
 export async function remove(req, res, next) {
-  try { res.success(capsuleService.remove(req.params.id)) } catch (e) { next(e) }
+  try { res.success(capsuleService.remove(req.user.id, req.params.id)) } catch (e) { next(e) }
 }

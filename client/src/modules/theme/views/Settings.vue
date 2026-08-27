@@ -43,7 +43,9 @@ onMounted(async () => {
   if (!session.me) await initSession()
   if (session.me) await loadTheme(session.me.id)
   nickname.value = session.me?.nickname || ''
-  avatarUrl.value = session.me?.avatar_url || ''
+  avatarUrl.value = session.me?.avatar_url
+    ? { id: session.me.avatar_file_id || '', url: session.me.avatar_url, type: 'image', name: '头像' }
+    : ''
   themeDraft.value = normalizeTheme(currentTheme)
   await loadShare()
 })
@@ -98,7 +100,7 @@ async function saveThemeSettings() {
 
 async function saveProfile() {
   if (!nickname.value.trim()) return toast('昵称不能为空')
-  const me = await updateProfile({ nickname: nickname.value.trim(), avatarUrl: avatarUrl.value || null })
+  const me = await updateProfile({ nickname: nickname.value.trim(), avatarFileId: avatarUrl.value?.id || null })
   session.me = me
   toast('资料已保存')
 }

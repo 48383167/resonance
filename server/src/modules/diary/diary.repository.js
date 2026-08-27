@@ -1,19 +1,37 @@
 import { randomUUID } from 'node:crypto'
 import { db } from '../../config/database.js'
+import { resolveItems } from '../file/file.service.js'
 
 function getContents(entryId) {
   return db.prepare('SELECT * FROM entry_contents WHERE entry_id = ?').all(entryId)
 }
 
+// 附件组装：旧值 {url,type} 兼容直出；新值 {fileId,type} → files 表解析出 {id,url,type,name}
+function assembleMedia(entry) {
+  let raw = []
+  try {
+    raw = JSON.parse(entry.media || '[]')
+  } catch {
+    raw = []
+  }
+  const fileIds = raw
+    .filter((it) => it && typeof it === 'object' && it.fileId)
+    .map((it) => it.fileId)
+  const byId = new Map(resolveItems(fileIds).map((i) => [i.id, i]))
+  entry.media = raw.map((it) => {
+    if (typeof it === 'string' && it) return { id: '', url: it, type: 'file', name: '' }
+    if (!it || typeof it !== 'object') return null
+    if (it.fileId) return byId.get(it.fileId) || null
+    if (it.url) return { id: '', url: it.url, type: it.type || 'file', name: '' }
+    return null
+  }).filter(Boolean)
+  return entry
+}
+
 // 组装日记：挂载内容分片 + 解析附件 JSON（就地修改并返回）
 export function attachContents(entry) {
   entry.contents = getContents(entry.id)
-  try {
-    entry.media = JSON.parse(entry.media || '[]')
-  } catch {
-    entry.media = []
-  }
-  return entry
+  return assembleMedia(entry)
 }
 
 export function findById(id) {

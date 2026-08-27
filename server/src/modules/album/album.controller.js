@@ -17,7 +17,7 @@ export async function update(req, res, next) {
 }
 
 export async function remove(req, res, next) {
-  try { res.success(albumService.remove(req.params.id)) } catch (e) { next(e) }
+  try { res.success(albumService.remove(req.user.id, req.params.id)) } catch (e) { next(e) }
 }
 
 export async function addPhoto(req, res, next) {
@@ -25,7 +25,7 @@ export async function addPhoto(req, res, next) {
 }
 
 export async function removePhoto(req, res, next) {
-  try { res.success(albumService.removePhoto(req.params.photoId)) } catch (e) { next(e) }
+  try { res.success(albumService.removePhoto(req.user.id, req.params.photoId)) } catch (e) { next(e) }
 }
 
 export async function setCover(req, res, next) {

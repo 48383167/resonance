@@ -5,6 +5,7 @@ import { listMoments, removeMoment } from '../moment.api.js'
 import { toast } from '../../../stores/toast'
 import { confirmDialog } from '../../../stores/confirm'
 import { openLightbox } from '../../../stores/lightbox'
+import { mediaTypeOf } from '../../../utils/media'
 import AppDatePicker from '../../../shared/components/AppDatePicker.vue'
 import AppSelect from '../../../shared/components/AppSelect.vue'
 
@@ -141,8 +142,8 @@ const dateText = (m) => (m.moment_date || m.created_at.slice(0, 10))
         </div>
         <p class="mt-3 whitespace-pre-wrap leading-relaxed">{{ m.content }}</p>
         <div v-if="m.photos?.length" class="mt-3 flex flex-wrap gap-2">
-          <img v-for="(u, pi) in m.photos" :key="u" :src="u" class="h-24 w-24 cursor-zoom-in rounded-lg object-cover"
-            loading="lazy" @click="openLightbox(m.photos, pi)" />
+          <img v-for="(u, pi) in m.photos" :key="u.id || u.url || pi" :src="u.url" class="h-24 w-24 cursor-zoom-in rounded-lg object-cover"
+            loading="lazy" @click="openLightbox(m.photos.filter((x) => (x.type || mediaTypeOf(x.url || '')) === 'image').map((x) => x.url), pi)" />
         </div>
       </article>
       <div v-if="list.length > visible" class="flex justify-center">

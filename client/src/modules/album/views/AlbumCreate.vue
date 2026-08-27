@@ -24,7 +24,7 @@ async function create() {
     const album = await createAlbum({
       name: form.value.name.trim(),
       description: form.value.description,
-      coverUrl: form.value.coverUrl,
+      coverFileId: form.value.coverUrl?.id || null,
     })
     toast('相册已创建')
     router.push(`/albums/${album.id}`)

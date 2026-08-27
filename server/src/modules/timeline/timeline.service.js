@@ -23,7 +23,7 @@ export function getTimeline() {
     events.push({
       kind: 'moment', ts: m.moment_date ? `${m.moment_date}T12:00:00.000Z` : m.created_at,
       text: m.content, mood: m.mood, location: m.location,
-      photos: m.photos || [], author: m.author?.nickname,
+      photos: (m.photos || []).map((p) => p.url).filter(Boolean), author: m.author?.nickname,
     })
   }
 

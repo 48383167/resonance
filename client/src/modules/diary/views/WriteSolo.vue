@@ -44,7 +44,7 @@ async function submit(payload) {
       title: title.value.trim(),
       weatherCode: weather.value,
       timeColorHex: timeColorHex(),
-      media: media.value,
+      media: media.value.filter((m) => m?.id).map((m) => ({ fileId: m.id, type: m.type || 'file' })),
     })
     localStorage.removeItem(TITLE_KEY)
     editorRef.value?.clearDraft()

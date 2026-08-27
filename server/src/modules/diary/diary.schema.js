@@ -6,7 +6,12 @@ export function validateCreate(body = {}) {
   if (!content || !String(content).trim()) {
     throw new BadRequestError('内容不能为空')
   }
-  return { title, content, typingSpeed, deleteCount, pauseDuration, weatherCode, timeColorHex, media }
+  const normalizedMedia = Array.isArray(media)
+    ? media
+        .filter((m) => m && typeof m === 'object' && m.fileId)
+        .map((m) => ({ fileId: String(m.fileId), type: ['image', 'video', 'file'].includes(m.type) ? m.type : 'file' }))
+    : []
+  return { title, content, typingSpeed, deleteCount, pauseDuration, weatherCode, timeColorHex, media: normalizedMedia }
 }
 
 export function validateCalendar(query = {}) {
