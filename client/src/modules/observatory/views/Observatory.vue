@@ -5,9 +5,16 @@ import { paletteFor, weatherLabel } from '../../../composables/useAmbient'
 import EmotionText from '../../diary/components/EmotionText.vue'
 
 // 观测台：对外展示页（无需配对，展示精选的高光时刻）
+const props = defineProps({
+  initialData: { type: Object, default: null },
+})
 const entries = ref([])
 
 async function load() {
+  if (props.initialData) {
+    entries.value = props.initialData.entries || []
+    return
+  }
   const data = await getObservatory()
   entries.value = data.entries
 }
@@ -22,12 +29,12 @@ const dateText = (e) => new Date(e.created_at).toLocaleDateString('zh-CN', { mon
     <header class="py-6 text-center">
       <div class="text-3xl">🔭</div>
       <h1 class="serif mt-3 text-2xl font-bold tracking-[0.3em]">观测台</h1>
-      <p class="mt-2 text-sm text-white/55">来自「共鸣」的精选高光时刻 · 对外展示页</p>
+      <p class="mt-2 text-sm text-white/55">把想分享的日常，留给星光收藏</p>
     </header>
 
     <div v-if="!entries.length" class="glass p-10 text-center text-white/50">
       <div class="text-3xl">🌌</div>
-      <p class="mt-3">还没有公开的日记 —— 在日记详情页点亮 🔭 即可展示在这里</p>
+      <p class="mt-3">这里还没有公开的日记，等一段愿意被看见的心事。</p>
     </div>
 
     <div class="grid gap-5">

@@ -35,18 +35,16 @@ export function useEmotion() {
   return { metrics, onInput, reset }
 }
 
-// —— 渲染规则：高 WPM → 加粗 + 微发光；高退格/长停顿 → 透明度降低 + 轻微 blur ——
+// —— 渲染规则：用字重和透明度表现情绪，避免影响正文清晰度 ——
 export function emotionStyle(m) {
   const style = {}
   if (m.wpm >= 60) {
     style.fontWeight = 700
-    style.textShadow = '0 0 14px rgba(255,255,255,0.5)'
   } else if (m.wpm >= 35) {
     style.fontWeight = 600
   }
   if (m.backspaceCount >= 10 || m.pauseDuration >= 4000) {
-    style.opacity = 0.72
-    style.filter = 'blur(0.8px)'
+    style.opacity = 0.82
   }
   return style
 }
