@@ -5,6 +5,7 @@ import AmbientBackground from './shared/components/AmbientBackground.vue'
 import MouseTrail from './shared/components/MouseTrail.vue'
 import ImageLightbox from './shared/components/ImageLightbox.vue'
 import ConfirmDialog from './shared/components/ConfirmDialog.vue'
+import AppDock from './shared/components/AppDock.vue'
 import MusicPlayer from './modules/music/components/MusicPlayer.vue'
 import { session, initSession, logout } from './stores/session'
 import { socket } from './socket'
@@ -55,17 +56,14 @@ onUnmounted(() => {
         <span class="text-xl">♫</span>
         <span class="serif text-lg">共鸣</span>
       </router-link>
-      <nav class="flex items-center gap-3 text-sm">
-        <router-link to="/home" class="text-white/70 hover:text-white">首页</router-link>
-        <router-link to="/timeline" class="text-white/70 hover:text-white">时间轴</router-link>
-        <router-link to="/observatory" class="text-white/70 hover:text-white">观测台</router-link>
-        <router-link to="/settings" class="text-white/70 hover:text-white">设置</router-link>
+      <div class="flex items-center gap-3 text-sm">
+        <span class="max-w-32 truncate text-white/70">{{ session.me.nickname }}</span>
         <button class="rounded-full border border-white/20 px-3 py-1 text-xs hover:bg-white/10" @click="doLogout">
-          {{ session.me.nickname }} · 退出
+          退出
         </button>
-      </nav>
+      </div>
     </header>
-    <main class="mx-auto max-w-3xl px-4 pb-16">
+    <main class="mx-auto max-w-3xl px-4 pb-32">
       <router-view />
     </main>
 
@@ -80,6 +78,7 @@ onUnmounted(() => {
         </div>
       </TransitionGroup>
     </div>
+    <AppDock v-if="session.me" />
   </div>
 </template>
 
