@@ -18,15 +18,31 @@ export function getShare(token, password) {
   if (st.password && password !== st.password) return { status: 'need_password' }
 
   shareRepository.incrementViewCount(st.token)
+
+  // 内容范围开关：关闭的类别不查询、不下发对应内容
+  const includeMoments = st.include_moments !== 0
+  const includeEntries = st.include_entries !== 0
+  const includeAnniversaries = st.include_anniversaries !== 0
+
+  const moments = includeMoments ? momentRepository.list({}) : []
+  const entries = includeEntries ? diaryRepository.listPublic() : []
+  const anniversaries = includeAnniversaries ? anniversaryRepository.list() : []
+
+  const stats = statsRepository.stats({ includeMoments, includeEntries, includeAnniversaries })
+  // 三类计数与实际下发数组长度保持一致；其余统计字段保留
+  stats.moments = moments.length
+  stats.entries = entries.length
+  stats.anniversaries = anniversaries.length
+
   return {
     status: 'ok',
     data: {
       users: statsRepository.listUsers().map((u) => ({ nickname: u.nickname, avatarUrl: u.avatar_url })),
       daysTogether: coupleRepository.daysSincePaired(),
-      stats: statsRepository.stats(),
-      moments: momentRepository.list({}),
-      entries: diaryRepository.listPublic(),
-      anniversaries: anniversaryRepository.list(),
+      stats,
+      moments,
+      entries,
+      anniversaries,
     },
   }
 }

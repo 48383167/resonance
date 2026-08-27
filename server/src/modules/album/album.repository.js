@@ -86,8 +86,9 @@ export function remove(id) {
 
 export function addPhoto(albumId, { fileId, caption }) {
   const id = newId('ap')
-  db.prepare('INSERT INTO album_photos (id, album_id, file_id, caption) VALUES (?, ?, ?, ?)')
-    .run(id, albumId, fileId, caption || '')
+  // 旧库的 url 可能仍是 NOT NULL；新文件 ID 模式下保留空旧值，由 files 表提供真实 URL。
+  db.prepare('INSERT INTO album_photos (id, album_id, url, file_id, caption) VALUES (?, ?, ?, ?, ?)')
+    .run(id, albumId, '', fileId, caption || '')
   return findById(albumId)
 }
 

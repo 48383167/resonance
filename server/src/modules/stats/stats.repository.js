@@ -2,19 +2,19 @@ import { db } from '../../config/database.js'
 import { resolveUrl } from '../file/file.service.js'
 
 // 跨模块聚合查询：Dashboard / 恋爱树 / 分享页 / 时间线共用
-export function stats() {
+export function stats({ includeMoments = true, includeEntries = true, includeAnniversaries = true } = {}) {
   const one = (sql, ...args) => db.prepare(sql).get(...args).c
   return {
-    moments: one('SELECT COUNT(*) AS c FROM moments'),
+    moments: includeMoments ? one('SELECT COUNT(*) AS c FROM moments') : 0,
     photos: one('SELECT COUNT(*) AS c FROM moment_photos') + one('SELECT COUNT(*) AS c FROM album_photos'),
     letters: one('SELECT COUNT(*) AS c FROM love_letters'),
     unreadLetters: one('SELECT COUNT(*) AS c FROM love_letters WHERE is_read = 0'),
-    entries: one('SELECT COUNT(*) AS c FROM entries'),
+    entries: includeEntries ? one('SELECT COUNT(*) AS c FROM entries') : 0,
     wishesTodo: one("SELECT COUNT(*) AS c FROM wish_items WHERE status = 'todo'"),
     wishesDoing: one("SELECT COUNT(*) AS c FROM wish_items WHERE status = 'doing'"),
     wishesDone: one("SELECT COUNT(*) AS c FROM wish_items WHERE status = 'done'"),
     capsules: one('SELECT COUNT(*) AS c FROM time_capsules'),
-    anniversaries: one('SELECT COUNT(*) AS c FROM anniversaries'),
+    anniversaries: includeAnniversaries ? one('SELECT COUNT(*) AS c FROM anniversaries') : 0,
   }
 }
 

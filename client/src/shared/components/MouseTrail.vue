@@ -1,6 +1,6 @@
 <template>
   <!-- 捕捉鼠标移动，指针事件穿透，绝对置顶 -->
-  <canvas ref="canvasEl" class="pointer-events-none fixed inset-0 z-[9999] h-full w-full"></canvas>
+  <canvas ref="canvasEl" class="pointer-events-none fixed inset-0 z-30 h-full w-full"></canvas>
 </template>
 
 <script setup>

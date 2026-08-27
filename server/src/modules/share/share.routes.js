@@ -6,6 +6,7 @@ const router = express.Router()
 
 router.post('/create', requireAuth, shareController.createShare)
 router.get('/current', requireAuth, shareController.getCurrent)
+router.patch('/current', requireAuth, shareController.updateCurrent)
 router.delete('/current', requireAuth, shareController.disableShare)
 
 export default router

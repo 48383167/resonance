@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { updateProfile } from '../../../modules/misc/misc.api.js'
 import { changePassword as changePasswordApi } from '../../../modules/auth/auth.api.js'
-import { getCurrentShare, createShare as createShareApi, disableShare as disableShareApi } from '../../../modules/share/share.api.js'
+import { getCurrentShare, createShare as createShareApi, updateCurrentShare, disableShare as disableShareApi } from '../../../modules/share/share.api.js'
 import { session, initSession } from '../../../stores/session'
 import { toast } from '../../../stores/toast'
 import { applyTheme, currentTheme, loadTheme, saveTheme } from '../../../stores/theme'
@@ -14,7 +14,7 @@ const nickname = ref('')
 const avatarUrl = ref('')
 const pw = ref({ old: '', next: '' })
 const share = ref(null)
-const shareForm = ref({ password: '', expireDays: 30 })
+const shareForm = ref({ password: '', expireDays: 30, includeMoments: true, includeEntries: true, includeAnniversaries: true })
 const locationOrigin = globalThis.location.origin
 const themeDraft = ref(normalizeTheme(currentTheme))
 const themeSaving = ref(false)
@@ -37,6 +37,11 @@ const detailOptions = [
   { key: 'textColor', label: '主文字色' },
   { key: 'mutedTextColor', label: '次文字色' },
   { key: 'borderColor', label: '边框色' },
+]
+const shareOptions = [
+  { key: 'includeMoments', label: '恋爱瞬间', icon: '📷', description: '照片与当时写下的心情' },
+  { key: 'includeEntries', label: '公开日记', icon: '📝', description: '标记为公开的文字日记' },
+  { key: 'includeAnniversaries', label: '纪念日', icon: '🌷', description: '一起珍藏的重要日期' },
 ]
 
 onMounted(async () => {
@@ -120,7 +125,15 @@ async function changePassword() {
 async function loadShare() {
   try {
     share.value = await getCurrentShare()
+    syncShareForm(share.value)
   } catch { /* 忽略 */ }
+}
+
+function syncShareForm(value) {
+  if (!value) return
+  shareForm.value.includeMoments = value.includeMoments !== false
+  shareForm.value.includeEntries = value.includeEntries !== false
+  shareForm.value.includeAnniversaries = value.includeAnniversaries !== false
 }
 
 async function createShare() {
@@ -128,8 +141,12 @@ async function createShare() {
     const data = await createShareApi({
       password: shareForm.value.password,
       expireDays: Number(shareForm.value.expireDays),
+      includeMoments: shareForm.value.includeMoments,
+      includeEntries: shareForm.value.includeEntries,
+      includeAnniversaries: shareForm.value.includeAnniversaries,
     })
-    share.value = { ...data, hasPassword: Boolean(shareForm.value.password), viewCount: 0 }
+    share.value = data
+    syncShareForm(data)
     // 生成后自动复制链接
     const url = location.origin + data.shareUrl
     try {
@@ -138,6 +155,21 @@ async function createShare() {
     } catch {
       toast('分享链接已生成')
     }
+  } catch (e) {
+    toast(e.message)
+  }
+}
+
+async function saveShareContent() {
+  try {
+    const updated = await updateCurrentShare({
+      includeMoments: shareForm.value.includeMoments,
+      includeEntries: shareForm.value.includeEntries,
+      includeAnniversaries: shareForm.value.includeAnniversaries,
+    })
+    share.value = updated
+    syncShareForm(updated)
+    toast('分享内容已保存')
   } catch (e) {
     toast(e.message)
   }
@@ -303,7 +335,26 @@ function copyShare() {
             <span v-if="share.expiresAt"> · 有效期至 {{ new Date(share.expiresAt).toLocaleDateString('zh-CN') }}</span>
             <span v-else> · 永久有效</span>
           </div>
-        </div>
+         </div>
+         <div class="mt-4 rounded-2xl border border-accent/20 bg-accent-soft/30 p-4">
+           <div class="flex flex-wrap items-start justify-between gap-2">
+             <div>
+               <h4 class="text-sm font-semibold text-white/85">分享内容</h4>
+               <p class="mt-1 text-xs text-white/50">选择访客在恋爱剪贴簿中可以看到的内容</p>
+             </div>
+             <span class="rounded-full bg-white/10 px-2.5 py-1 text-[11px] text-accent">可随时调整</span>
+           </div>
+           <div class="mt-3 grid gap-2 sm:grid-cols-3">
+             <button v-for="item in shareOptions" :key="item.key" type="button"
+               class="min-w-0 rounded-xl border p-3 text-left transition hover:-translate-y-0.5"
+               :class="shareForm[item.key] ? 'border-accent bg-accent/10' : 'border-white/10 bg-black/10 opacity-75'"
+               :aria-pressed="shareForm[item.key]" @click="shareForm[item.key] = !shareForm[item.key]">
+               <span class="flex items-center gap-2 text-sm"><span>{{ item.icon }}</span><b class="truncate">{{ item.label }}</b></span>
+               <span class="mt-1 block text-[11px] text-white/50">{{ shareForm[item.key] ? '将展示' : '不展示' }} · {{ item.description }}</span>
+             </button>
+           </div>
+           <button class="btn-primary mt-3 w-full sm:w-auto" @click="saveShareContent">保存分享内容</button>
+         </div>
          <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:gap-3">
            <button class="btn-primary w-full sm:w-auto" @click="copyShare">复制链接</button>
            <button class="btn-ghost w-full sm:w-auto" @click="disableShare">停用分享</button>
@@ -319,9 +370,22 @@ function copyShare() {
             { value: 90, label: '90 天有效' },
             { value: 0, label: '永久有效' },
           ]" />
-           <button class="btn-primary w-full sm:w-auto" @click="createShare">生成分享链接</button>
-        </div>
-      </div>
+         </div>
+        <div class="rounded-2xl border border-accent/20 bg-accent-soft/30 p-4">
+          <h4 class="text-sm font-semibold text-white/85">分享内容</h4>
+          <p class="mt-1 text-xs text-white/50">生成前选择剪贴簿中要展示的类别</p>
+          <div class="mt-3 grid gap-2 sm:grid-cols-3">
+            <button v-for="item in shareOptions" :key="item.key" type="button"
+              class="min-w-0 rounded-xl border p-3 text-left transition hover:-translate-y-0.5"
+              :class="shareForm[item.key] ? 'border-accent bg-accent/10' : 'border-white/10 bg-black/10 opacity-75'"
+              :aria-pressed="shareForm[item.key]" @click="shareForm[item.key] = !shareForm[item.key]">
+              <span class="flex items-center gap-2 text-sm"><span>{{ item.icon }}</span><b class="truncate">{{ item.label }}</b></span>
+              <span class="mt-1 block text-[11px] text-white/50">{{ shareForm[item.key] ? '将展示' : '不展示' }}</span>
+            </button>
+           </div>
+         </div>
+         <button class="btn-primary w-full sm:w-auto" @click="createShare">生成分享链接</button>
+       </div>
     </div>
 
     <!-- 数据 -->

@@ -190,6 +190,9 @@ CREATE TABLE IF NOT EXISTS share_tokens (
     expires_at TEXT,                 -- ISO8601，空 = 永久
     view_count INTEGER DEFAULT 0,
     status INTEGER DEFAULT 1,        -- 1=有效 0=已停用
+    include_moments INTEGER NOT NULL DEFAULT 1,       -- 是否分享恋爱瞬间
+    include_entries INTEGER NOT NULL DEFAULT 1,       -- 是否分享公开日记
+    include_anniversaries INTEGER NOT NULL DEFAULT 1, -- 是否分享纪念日
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 `)
@@ -216,4 +219,9 @@ ensureColumns('user_theme_settings', {
   text_color: 'TEXT',
   muted_text_color: 'TEXT',
   border_color: 'TEXT',
+})
+ensureColumns('share_tokens', {
+  include_moments: 'INTEGER NOT NULL DEFAULT 1',
+  include_entries: 'INTEGER NOT NULL DEFAULT 1',
+  include_anniversaries: 'INTEGER NOT NULL DEFAULT 1',
 })

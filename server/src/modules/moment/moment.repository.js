@@ -33,8 +33,9 @@ function attachAuthor(moment) {
 function setPhotos(momentId, fileIds) {
   db.prepare('DELETE FROM moment_photos WHERE moment_id = ?').run(momentId)
   for (const fileId of fileIds || []) {
-    db.prepare('INSERT INTO moment_photos (id, moment_id, file_id) VALUES (?, ?, ?)')
-      .run(newId('mp'), momentId, fileId)
+    // 旧库的 url 可能仍是 NOT NULL；新文件 ID 模式下保留空旧值，由 files 表提供真实 URL。
+    db.prepare('INSERT INTO moment_photos (id, moment_id, url, file_id) VALUES (?, ?, ?, ?)')
+      .run(newId('mp'), momentId, '', fileId)
   }
 }
 
