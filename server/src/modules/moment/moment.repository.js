@@ -1,13 +1,28 @@
 import { randomUUID } from 'node:crypto'
 import { db } from '../../config/database.js'
 import { findById as findUserById } from '../auth/auth.repository.js'
+import { typeOfMime } from '../file/file.service.js'
 
 function newId(prefix) {
   return prefix + '_' + randomUUID().slice(0, 12)
 }
 
+// 照片组装：file_id 联 files 表出 {id,url,type,name}；迁移前旧行（仅有 url）兼容直出
 function getPhotos(momentId) {
-  return db.prepare('SELECT url FROM moment_photos WHERE moment_id = ?').all(momentId).map((r) => r.url)
+  const rows = db.prepare(
+    `SELECT mp.id AS photo_id, mp.file_id, mp.url AS legacy_url,
+            f.path, f.mime, f.original_name, f.status AS file_status
+     FROM moment_photos mp
+     LEFT JOIN files f ON f.id = mp.file_id
+     WHERE mp.moment_id = ? AND COALESCE(f.status, 1) = 1
+     ORDER BY datetime(mp.created_at) ASC, mp.id ASC`
+  ).all(momentId)
+  return rows.map((r) => {
+    if (r.file_id && r.file_status === 1) {
+      return { id: r.file_id, url: `/media/${r.path}`, type: typeOfMime(r.mime), name: r.original_name || '' }
+    }
+    return { id: '', url: r.file_id ? '' : (r.legacy_url || ''), type: 'file', name: '' }
+  })
 }
 
 function attachAuthor(moment) {
@@ -15,10 +30,11 @@ function attachAuthor(moment) {
   return moment
 }
 
-function setPhotos(momentId, photos) {
+function setPhotos(momentId, fileIds) {
   db.prepare('DELETE FROM moment_photos WHERE moment_id = ?').run(momentId)
-  for (const url of photos) {
-    db.prepare('INSERT INTO moment_photos (id, moment_id, url) VALUES (?, ?, ?)').run(newId('mp'), momentId, url)
+  for (const fileId of fileIds || []) {
+    db.prepare('INSERT INTO moment_photos (id, moment_id, file_id) VALUES (?, ?, ?)')
+      .run(newId('mp'), momentId, fileId)
   }
 }
 
