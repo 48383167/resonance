@@ -104,7 +104,7 @@ const todayStr = (() => {
             <span class="break-words text-white/50">{{ e.title || '无题日记' }}</span>
             <span class="text-white/35">by {{ e.contents.find((c) => c.user_id === session.userId)?.content ? session.me?.nickname : session.partner?.nickname }}</span>
           </div>
-          <p class="mt-2 text-sm text-white/70 line-clamp-2">{{ e.contents[0]?.content }}</p>
+           <p class="mt-2 break-words text-sm text-white/70 line-clamp-2">{{ e.contents[0]?.content }}</p>
         </div>
       </div>
     </div>

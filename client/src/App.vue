@@ -70,8 +70,8 @@ onUnmounted(() => {
     <!-- 全局通知 -->
     <div class="app-toast pointer-events-none fixed left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-2">
       <TransitionGroup name="toast">
-          <div v-for="t in toasts" :key="t.id"
-           class="glass pointer-events-auto flex items-center gap-2 px-4 py-2.5 text-sm shadow-xl">
+           <div v-for="t in toasts" :key="t.id"
+            class="glass pointer-events-auto flex max-w-[calc(100vw-2rem)] items-center gap-2 break-words px-4 py-2.5 text-center text-sm shadow-xl">
            <span class="h-2 w-2 rounded-full"
             :style="{ background: t.type === 'info' ? 'var(--accent-2)' : 'var(--accent)' }" />
           {{ t.message }}

@@ -86,7 +86,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
     </button>
     <Transition name="dp">
       <div v-if="open"
-         class="date-picker-popup theme-popup absolute left-0 z-30 rounded-xl border border-white/15 p-3 shadow-2xl backdrop-blur-xl"
+         class="date-picker-popup theme-popup absolute left-0 z-[65] rounded-xl border border-white/15 p-3 shadow-2xl backdrop-blur-xl"
          :class="direction === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'">
         <div class="mb-2 flex items-center justify-between">
           <button type="button" class="flex h-7 w-7 items-center justify-center rounded-lg text-white/60 hover:bg-white/10 hover:text-white"

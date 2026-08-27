@@ -65,7 +65,7 @@ const coverOf = (a) => a.cover_url || a.firstPhotoUrl || ''
           </div>
         </div>
         <button title="删除相册"
-          class="absolute right-2 top-2 rounded-full bg-black/50 px-2 py-0.5 text-[11px] text-rose-300/90 opacity-0 transition-opacity hover:text-rose-300 group-hover:opacity-100"
+           class="absolute right-2 top-2 rounded-full bg-black/50 px-2 py-0.5 text-[11px] text-rose-300/90 opacity-100 transition-opacity hover:text-rose-300 sm:opacity-0 sm:group-hover:opacity-100"
           @click="removeAlbum(a)">删除</button>
       </div>
     </div>

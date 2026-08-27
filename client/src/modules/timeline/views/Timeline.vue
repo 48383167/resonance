@@ -173,7 +173,7 @@ const anniversaryTypeLabel = (t) => ({ first_meet: '初遇', together: '在一�
               </div>
 
               <!-- 内容 -->
-              <p v-if="e.kind !== 'photo'" class="mt-2 text-sm text-white/75"
+              <p v-if="e.kind !== 'photo'" class="mt-2 break-words text-sm text-white/75"
                 :class="[isOpen(gIdx, i) ? 'whitespace-pre-wrap' : 'line-clamp-2', e.kind === 'capsule' && !e.unlocked ? 'blur-[3px] select-none' : '']">
                 {{ e.text }}
               </p>

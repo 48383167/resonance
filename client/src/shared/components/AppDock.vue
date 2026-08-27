@@ -31,7 +31,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
 <template>
   <div ref="dock" class="app-dock fixed bottom-5 left-1/2 z-[55] -translate-x-1/2" @click.stop>
     <Transition name="dock-panel">
-      <div v-if="moreOpen" class="app-dock__panel glass absolute bottom-[calc(100%+14px)] left-1/2 w-[min(620px,calc(100vw-2rem))] -translate-x-1/2 p-4">
+      <div v-if="moreOpen" class="app-dock__panel glass absolute bottom-[calc(100%+14px)] left-1/2 max-h-[min(70svh,36rem)] w-[min(620px,calc(100vw-2rem))] -translate-x-1/2 overflow-y-auto overscroll-contain p-4">
         <div class="mb-3 flex items-center justify-between">
           <div>
             <div class="text-sm font-semibold text-theme-primary">全部功能</div>
