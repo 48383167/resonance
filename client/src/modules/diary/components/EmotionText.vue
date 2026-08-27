@@ -17,7 +17,7 @@ const lines = computed(() => props.content.split('\n'))
 <template>
   <div>
     <p v-for="(line, i) in lines" :key="i" :style="{ color, ...style }"
-      class="whitespace-pre-wrap leading-relaxed" :class="compact ? 'text-sm' : 'text-base'">
+      class="break-words whitespace-pre-wrap leading-relaxed" :class="compact ? 'text-sm' : 'text-base'">
       {{ line || ' ' }}
     </p>
     <div v-if="metrics && (metrics.wpm || metrics.backspaceCount)" class="mt-3 text-[11px] text-white/40">

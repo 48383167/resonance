@@ -60,9 +60,9 @@ async function submit(payload) {
 
 <template>
   <div class="fade-up">
-    <div class="mb-4 flex items-center justify-between">
+    <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <button class="btn-ghost text-sm" @click="goBack">← 返回</button>
-      <span class="text-xs text-white/40">情绪墨水会在落笔时悄悄采集</span>
+      <span class="text-xs text-white/40 sm:text-right">情绪墨水会在落笔时悄悄采集</span>
     </div>
     <h2 class="serif mb-4 text-xl">写日记</h2>
     <div class="glass mb-4 p-5">

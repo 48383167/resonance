@@ -56,9 +56,9 @@ async function send() {
 
 <template>
   <div class="fade-up">
-    <div class="mb-4 flex items-center justify-between">
+    <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <button class="btn-ghost text-sm" @click="goBack">← 返回</button>
-      <span class="text-xs text-white/40">{{ editingId ? '修改这封信' : '写一封只给 Ta 看的信' }}</span>
+      <span class="text-xs text-white/40 sm:text-right">{{ editingId ? '修改这封信' : '写一封只给 Ta 看的信' }}</span>
     </div>
     <h2 class="serif mb-4 text-xl">{{ editingId ? '编辑情书' : (isSecret ? '🔐 写一封秘密信件' : '✎ 写情书') }}</h2>
 
@@ -75,17 +75,17 @@ async function send() {
       <div class="paper-lines pointer-events-none absolute inset-x-8 top-24 bottom-8" />
     </div>
 
-    <div class="mb-4 flex items-center justify-between">
-      <label class="flex cursor-pointer items-center gap-2 text-sm text-white/60">
-        <input v-model="isSecret" type="checkbox" class="accent-violet-400" />
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+      <label class="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-white/60 select-none">
+        <input v-model="isSecret" type="checkbox" class="size-5 accent-violet-400" />
         🔐 秘密信件
       </label>
       <span class="text-xs text-white/40">{{ content.length }} 字</span>
     </div>
 
-    <div class="flex items-center justify-end gap-3">
-      <button class="btn-ghost" :disabled="busy" @click="goBack">取消</button>
-      <button class="btn-primary" :disabled="busy || !content.trim()" @click="send">
+    <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+      <button class="btn-ghost w-full sm:w-auto" :disabled="busy" @click="goBack">取消</button>
+      <button class="btn-primary w-full sm:w-auto" :disabled="busy || !content.trim()" @click="send">
         {{ busy ? (editingId ? '保存中…' : '寄送中…') : (editingId ? '保存修改' : '💌 送出这封信') }}
       </button>
     </div>

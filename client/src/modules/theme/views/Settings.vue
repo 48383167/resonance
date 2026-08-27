@@ -162,11 +162,11 @@ function copyShare() {
 
     <!-- 配对信息 -->
     <div class="glass p-5 text-sm">
-      <div class="flex items-center gap-3">
+      <div class="flex min-w-0 items-center gap-3">
         <img v-if="session.me?.avatar_url" :src="session.me.avatar_url" class="h-12 w-12 rounded-full object-cover" />
         <div v-else class="flex h-12 w-12 items-center justify-center rounded-full bg-accent-soft text-lg">♫</div>
-        <div>
-          <div class="font-medium">{{ session.me?.nickname }} × {{ session.partner?.nickname || '…' }}</div>
+        <div class="min-w-0">
+          <div class="break-words font-medium">{{ session.me?.nickname }} × {{ session.partner?.nickname || '…' }}</div>
           <div class="mt-0.5 text-xs text-white/45">
             {{ session.partner ? '已配对' : '等待 Ta 用配对码注册' }}
             <span v-if="!session.partner" class="ml-2 text-accent">{{ session.inviteCode }}</span>
@@ -186,7 +186,7 @@ function copyShare() {
         <label class="mb-1 block text-xs text-white/50">头像</label>
         <ImageUpload v-model="avatarUrl" :multiple="false" accept="image" />
       </div>
-      <button class="btn-primary" @click="saveProfile">保存资料</button>
+      <button class="btn-primary w-full sm:w-auto" @click="saveProfile">保存资料</button>
     </div>
 
     <!-- 个人主题：只保存到当前登录用户，不会影响伴侣 -->
@@ -217,24 +217,24 @@ function copyShare() {
 
       <div class="rounded-2xl border border-white/10 p-4">
         <div class="flex items-center justify-between gap-3">
-          <div>
+          <div class="min-w-0">
             <div class="text-sm font-medium">自由配色</div>
             <div class="mt-1 text-xs text-white/45">颜色可以自由组合，页面会自动适配明暗基底。</div>
           </div>
           <span class="rounded-full bg-accent-soft px-2.5 py-1 text-xs text-accent">{{ themeDraft.themeKey === 'custom' ? '自定义' : '预置主题' }}</span>
         </div>
         <div class="mt-4 grid gap-3 sm:grid-cols-3">
-          <label class="flex items-center gap-2 rounded-xl bg-white/5 p-3 text-xs text-white/65">
-            <input v-model="themeDraft.primaryColor" type="color" class="h-8 w-8 cursor-pointer rounded-lg border-0 bg-transparent p-0" @input="markCustom" />
-            <span>主色<br /><b class="text-white/85">{{ themeDraft.primaryColor }}</b></span>
+          <label class="flex min-h-11 min-w-0 items-center gap-2 rounded-xl bg-white/5 p-3 text-xs text-white/65">
+            <input v-model="themeDraft.primaryColor" type="color" class="h-10 w-10 shrink-0 cursor-pointer rounded-lg border-0 bg-transparent p-0" @input="markCustom" />
+            <span class="min-w-0 break-words">主色<br /><b class="text-white/85">{{ themeDraft.primaryColor }}</b></span>
           </label>
-          <label class="flex items-center gap-2 rounded-xl bg-white/5 p-3 text-xs text-white/65">
-            <input v-model="themeDraft.secondaryColor" type="color" class="h-8 w-8 cursor-pointer rounded-lg border-0 bg-transparent p-0" @input="markCustom" />
-            <span>辅助色<br /><b class="text-white/85">{{ themeDraft.secondaryColor }}</b></span>
+          <label class="flex min-h-11 min-w-0 items-center gap-2 rounded-xl bg-white/5 p-3 text-xs text-white/65">
+            <input v-model="themeDraft.secondaryColor" type="color" class="h-10 w-10 shrink-0 cursor-pointer rounded-lg border-0 bg-transparent p-0" @input="markCustom" />
+            <span class="min-w-0 break-words">辅助色<br /><b class="text-white/85">{{ themeDraft.secondaryColor }}</b></span>
           </label>
-          <label class="flex items-center gap-2 rounded-xl bg-white/5 p-3 text-xs text-white/65">
-            <input v-model="themeDraft.ambientColor" type="color" class="h-8 w-8 cursor-pointer rounded-lg border-0 bg-transparent p-0" @input="markCustom" />
-            <span>氛围色<br /><b class="text-white/85">{{ themeDraft.ambientColor }}</b></span>
+          <label class="flex min-h-11 min-w-0 items-center gap-2 rounded-xl bg-white/5 p-3 text-xs text-white/65">
+            <input v-model="themeDraft.ambientColor" type="color" class="h-10 w-10 shrink-0 cursor-pointer rounded-lg border-0 bg-transparent p-0" @input="markCustom" />
+            <span class="min-w-0 break-words">氛围色<br /><b class="text-white/85">{{ themeDraft.ambientColor }}</b></span>
           </label>
         </div>
       </div>
@@ -253,10 +253,10 @@ function copyShare() {
             <AppSelect v-model="themeDraft.appearanceMode" :options="appearanceOptions" @update:model-value="setAppearanceMode" />
           </div>
           <div class="grid gap-3 sm:grid-cols-2">
-            <label v-for="item in detailOptions" :key="item.key" class="flex items-center gap-2 rounded-xl bg-white/5 p-3 text-xs text-white/65">
-              <input type="color" class="h-8 w-8 cursor-pointer rounded-lg border-0 bg-transparent p-0"
-                :value="detailValue(item.key)" @input="setDetailColor(item.key, $event)" />
-              <span>{{ item.label }}<br /><b class="text-white/85">{{ themeDraft[item.key] || '自动生成' }}</b></span>
+             <label v-for="item in detailOptions" :key="item.key" class="flex min-h-11 min-w-0 items-center gap-2 rounded-xl bg-white/5 p-3 text-xs text-white/65">
+               <input type="color" class="h-10 w-10 shrink-0 cursor-pointer rounded-lg border-0 bg-transparent p-0"
+                 :value="detailValue(item.key)" @input="setDetailColor(item.key, $event)" />
+               <span class="min-w-0 break-words">{{ item.label }}<br /><b class="text-white/85">{{ themeDraft[item.key] || '自动生成' }}</b></span>
             </label>
           </div>
           <button type="button" class="btn-ghost text-sm" @click="clearDetails">恢复自动配色</button>
@@ -268,12 +268,12 @@ function copyShare() {
         color: currentTheme.accentContrast,
       }">
         <div class="text-xs opacity-70">主题预览</div>
-        <div class="mt-2 flex items-center justify-between gap-3">
+        <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
           <span class="serif text-lg font-semibold">我们的专属色</span>
           <button type="button" class="rounded-full bg-black/15 px-3 py-1.5 text-xs" @click="previewTheme">应用预览</button>
         </div>
       </div>
-      <button class="btn-primary" :disabled="themeSaving" @click="saveThemeSettings">
+      <button class="btn-primary w-full sm:w-auto" :disabled="themeSaving" @click="saveThemeSettings">
         {{ themeSaving ? '保存中…' : '保存主题' }}
       </button>
     </div>
@@ -285,7 +285,7 @@ function copyShare() {
         <input v-model="pw.old" type="password" class="input-dark" placeholder="原密码" autocomplete="current-password" />
         <input v-model="pw.next" type="password" class="input-dark" placeholder="新密码（至少 6 位）" autocomplete="new-password" />
       </div>
-      <button class="btn-primary" @click="changePassword">修改密码</button>
+       <button class="btn-primary w-full sm:w-auto" @click="changePassword">修改密码</button>
     </div>
 
     <!-- 分享 -->
@@ -295,7 +295,7 @@ function copyShare() {
         <div class="rounded-xl bg-white/5 p-3 text-sm">
           <div class="flex items-center gap-2">
             <span class="text-white/60">🔗</span>
-            <span class="truncate">{{ locationOrigin }}{{ share.shareUrl }}</span>
+             <span class="break-anywhere min-w-0">{{ locationOrigin }}{{ share.shareUrl }}</span>
           </div>
           <div class="mt-1 text-xs text-white/45">
             浏览 {{ share.viewCount }} 次
@@ -304,9 +304,9 @@ function copyShare() {
             <span v-else> · 永久有效</span>
           </div>
         </div>
-        <div class="mt-3 flex gap-3">
-          <button class="btn-primary" @click="copyShare">复制链接</button>
-          <button class="btn-ghost" @click="disableShare">停用分享</button>
+         <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:gap-3">
+           <button class="btn-primary w-full sm:w-auto" @click="copyShare">复制链接</button>
+           <button class="btn-ghost w-full sm:w-auto" @click="disableShare">停用分享</button>
         </div>
       </div>
       <div v-else class="space-y-3">
@@ -319,7 +319,7 @@ function copyShare() {
             { value: 90, label: '90 天有效' },
             { value: 0, label: '永久有效' },
           ]" />
-          <button class="btn-primary" @click="createShare">生成分享链接</button>
+           <button class="btn-primary w-full sm:w-auto" @click="createShare">生成分享链接</button>
         </div>
       </div>
     </div>

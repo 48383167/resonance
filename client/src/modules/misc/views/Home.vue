@@ -71,14 +71,14 @@ const statCards = (s) => [
 <template>
   <div v-if="dash" class="fade-up space-y-5">
     <!-- 我们 -->
-    <div class="flex items-center justify-between rounded-2xl bg-white/5 p-5 backdrop-blur">
-      <div class="flex items-center gap-4">
+    <div class="flex flex-col gap-4 rounded-2xl bg-white/5 p-5 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex min-w-0 items-center gap-3 sm:gap-4">
         <BreathingLight :online="session.partnerOnline" :size="48" />
-        <div>
-          <div class="flex items-center gap-2 text-lg">
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2 text-lg">
             <span class="font-semibold">{{ dash.me.nickname }}</span>
             <span class="text-white/40">×</span>
-            <span class="font-semibold text-accent">{{ dash.partner?.nickname || '…' }}</span>
+            <span class="break-words font-semibold text-accent">{{ dash.partner?.nickname || '…' }}</span>
           </div>
           <div class="mt-0.5 text-xs text-white/50">
             <template v-if="dash.partner">
@@ -91,7 +91,7 @@ const statCards = (s) => [
           </div>
         </div>
       </div>
-      <button class="btn-primary" @click="router.push('/write/solo')">✎ 写日记</button>
+      <button class="btn-primary w-full sm:w-auto" @click="router.push('/write/solo')">✎ 写日记</button>
     </div>
 
     <!-- 未配对：展示配对码 -->
@@ -133,9 +133,9 @@ const statCards = (s) => [
           <span class="flex h-10 w-10 items-center justify-center rounded-xl text-lg" :style="{ background: m.color }">
             {{ m.icon }}
           </span>
-          <div>
-            <div class="font-medium">{{ m.label }}</div>
-            <div class="text-xs text-white/45">{{ m.desc }}</div>
+          <div class="min-w-0">
+            <div class="break-words font-medium">{{ m.label }}</div>
+            <div class="break-words text-xs text-white/45">{{ m.desc }}</div>
           </div>
         </div>
       </button>

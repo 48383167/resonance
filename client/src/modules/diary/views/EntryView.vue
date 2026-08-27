@@ -70,9 +70,9 @@ const named = computed(() => (entry.value?.contents || []).map((c) => ({
 
 <template>
   <div class="fade-up">
-    <div class="mb-4 flex items-center justify-between">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
       <button class="btn-ghost text-sm" @click="goBack">← 返回</button>
-      <div v-if="entry" class="flex gap-2">
+      <div v-if="entry" class="flex flex-wrap justify-end gap-2">
         <button class="btn-ghost text-sm" @click="togglePublic">{{ entry.is_public ? '🔭 设为私密' : '🔒 公开' }}</button>
       </div>
     </div>
@@ -84,7 +84,7 @@ const named = computed(() => (entry.value?.contents || []).map((c) => ({
       <div class="relative z-10 text-center">
         <div class="text-[10px] text-white/40">{{ dateText }}</div>
         <div class="serif mt-1 text-2xl" :style="{ color: fgColor }">{{ timeText }}</div>
-        <h1 class="serif mt-4 text-3xl font-bold">{{ entry.title || '无题' }}</h1>
+        <h1 class="serif mt-4 break-words text-3xl font-bold">{{ entry.title || '无题' }}</h1>
         <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
           <span v-if="entry.weather_code != null" class="rounded-full bg-white/5 px-2.5 py-0.5 text-xs text-white/50">
             {{ weatherLabel(entry.weather_code) }}

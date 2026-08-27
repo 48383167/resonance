@@ -42,9 +42,9 @@ const dateText = (l) => (l
 
 <template>
   <div class="fade-up">
-    <div class="mb-4 flex items-center justify-between">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
       <button class="btn-ghost text-sm" @click="goBack">← 信箱</button>
-      <div v-if="letter" class="flex items-center gap-3">
+      <div v-if="letter" class="flex flex-wrap items-center justify-end gap-4">
         <button v-if="letter.sender_id === session.userId"
           class="text-xs text-white/50 transition-colors hover:text-white"
           @click="router.push(`/letters/${letter.id}/edit`)">✎ 编辑</button>
@@ -58,9 +58,9 @@ const dateText = (l) => (l
     <div v-else class="letter-sheet relative p-6 sm:p-10">
       <div class="paper-lines pointer-events-none absolute inset-0" />
       <div class="relative z-10">
-        <div class="flex items-start justify-between gap-4">
+          <div class="flex items-start justify-between gap-4">
           <div class="min-w-0">
-            <h1 class="serif text-2xl font-bold">{{ letter.title || '无题情书' }}</h1>
+            <h1 class="serif break-words text-2xl font-bold">{{ letter.title || '无题情书' }}</h1>
             <div class="mt-2 text-xs opacity-60">
               ✎ {{ letter.sender?.nickname }} · {{ dateText(letter) }}
               <span v-if="letter.is_secret">· 🔐 秘密信件</span>
@@ -68,7 +68,7 @@ const dateText = (l) => (l
           </div>
           <span v-if="letter.is_secret" class="shrink-0 text-lg">🔐</span>
         </div>
-        <p class="serif mt-6 whitespace-pre-wrap text-lg leading-loose">{{ letter.content }}</p>
+        <p class="serif mt-6 break-words whitespace-pre-wrap text-lg leading-loose">{{ letter.content }}</p>
       </div>
     </div>
   </div>

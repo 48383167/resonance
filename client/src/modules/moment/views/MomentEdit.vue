@@ -90,9 +90,9 @@ async function save() {
 
 <template>
   <div class="fade-up">
-    <div class="mb-4 flex items-center justify-between">
+    <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <button class="btn-ghost text-sm" @click="goBack">← 返回</button>
-      <span class="text-xs text-white/40">{{ editingId ? '编辑这条瞬间' : '记录此刻的心情、地点与照片' }}</span>
+      <span class="text-xs text-white/40 sm:text-right">{{ editingId ? '编辑这条瞬间' : '记录此刻的心情、地点与照片' }}</span>
     </div>
     <h2 class="serif mb-4 text-xl">{{ editingId ? '编辑瞬间' : '记录瞬间' }}</h2>
 
@@ -135,9 +135,9 @@ async function save() {
       <ImageUpload v-model="photos" accept="all" />
     </div>
 
-    <div class="flex items-center justify-end gap-3">
-      <button class="btn-ghost" :disabled="busy" @click="router.push('/moments')">取消</button>
-      <button class="btn-primary" :disabled="busy" @click="save">
+    <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+      <button class="btn-ghost w-full sm:w-auto" :disabled="busy" @click="router.push('/moments')">取消</button>
+      <button class="btn-primary w-full sm:w-auto" :disabled="busy" @click="save">
         {{ busy ? '保存中…' : (editingId ? '保存修改' : '收藏这个瞬间') }}
       </button>
     </div>

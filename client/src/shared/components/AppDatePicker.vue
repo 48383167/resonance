@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 // 主题化日期选择器：替代原生 date 控件；v-model 为 YYYY-MM-DD，可留空
 const props = defineProps({
@@ -10,6 +10,7 @@ const emit = defineEmits(['update:modelValue'])
 
 const open = ref(false)
 const rootEl = ref(null)
+const direction = ref('down')
 const today = new Date()
 const viewYear = ref(today.getFullYear())
 const viewMonth = ref(today.getMonth()) // 0-11
@@ -57,6 +58,16 @@ function clear() {
   emit('update:modelValue', '')
 }
 
+async function toggle() {
+  open.value = !open.value
+  if (!open.value) return
+  await nextTick()
+  const rect = rootEl.value?.getBoundingClientRect()
+  if (!rect) return
+  const spaceBelow = window.innerHeight - rect.bottom
+  direction.value = spaceBelow < 300 && rect.top > spaceBelow ? 'up' : 'down'
+}
+
 function onDocClick(e) {
   if (rootEl.value && !rootEl.value.contains(e.target)) open.value = false
 }
@@ -67,7 +78,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
 <template>
   <div ref="rootEl" class="relative">
     <button type="button" class="input-dark flex items-center justify-between gap-2 text-left"
-      @click="open = !open">
+      @click="toggle">
       <span :class="modelValue ? 'text-white/40' : ''">📅</span>
       <span class="flex-1 truncate" :class="modelValue ? '' : 'text-white/40'">{{ label || placeholder }}</span>
       <span v-if="modelValue" class="text-xs text-white/40 hover:text-white" @click.stop="clear">×</span>
@@ -75,7 +86,8 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
     </button>
     <Transition name="dp">
       <div v-if="open"
-         class="theme-popup absolute left-0 top-full z-30 mt-1.5 w-72 rounded-xl border border-white/15 p-3 shadow-2xl backdrop-blur-xl">
+         class="date-picker-popup theme-popup absolute left-0 z-30 rounded-xl border border-white/15 p-3 shadow-2xl backdrop-blur-xl"
+         :class="direction === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'">
         <div class="mb-2 flex items-center justify-between">
           <button type="button" class="flex h-7 w-7 items-center justify-center rounded-lg text-white/60 hover:bg-white/10 hover:text-white"
             @click="shift(-1)">‹</button>
@@ -86,7 +98,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
         <div class="grid grid-cols-7 gap-0.5 text-center">
           <span v-for="w in WEEKDAYS" :key="w" class="py-1 text-[11px] text-white/35">{{ w }}</span>
           <button v-for="(day, i) in cells" :key="i" type="button" :disabled="!day"
-            class="aspect-square rounded-lg text-[13px] transition-colors"
+             class="aspect-square min-h-8 rounded-lg text-[13px] transition-colors"
             :class="[
               day ? 'text-white/80 hover:bg-accent-soft' : '',
               day === modelValue ? 'bg-accent-soft font-semibold text-accent ring-1 ring-accent' : '',
@@ -102,6 +114,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
 </template>
 
 <style>
+.date-picker-popup { width: min(18rem, calc(100vw - 2rem)); }
 .dp-enter-active, .dp-leave-active { transition: opacity 0.15s ease, transform 0.15s ease; }
 .dp-enter-from, .dp-leave-to { opacity: 0; transform: translateY(-4px); }
 </style>

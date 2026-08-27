@@ -27,14 +27,14 @@ async function togglePublic(entry) {
 
 <template>
   <div class="fade-up space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h2 class="serif text-xl">日记</h2>
         <p class="text-xs text-white/45">共 {{ entries.length }} 篇</p>
       </div>
-      <div class="flex gap-2">
-        <button class="btn-ghost" @click="router.push('/diary')">🗓️ 日历视图</button>
-        <button class="btn-primary" @click="router.push('/write/solo')">✎ 写日记</button>
+      <div class="flex w-full flex-wrap gap-2 sm:w-auto">
+        <button class="btn-ghost flex-1 whitespace-nowrap sm:flex-none" @click="router.push('/diary')">🗓️ 日历视图</button>
+        <button class="btn-primary flex-1 whitespace-nowrap sm:flex-none" @click="router.push('/write/solo')">✎ 写日记</button>
       </div>
     </div>
 

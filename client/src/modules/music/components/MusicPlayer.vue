@@ -85,7 +85,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="fixed bottom-6 right-4 z-40 flex flex-col items-end">
+  <div class="music-player fixed bottom-6 right-4 z-40 flex flex-col items-end">
     <!-- 迷你播放卡片 -->
     <Transition name="mp">
       <div v-if="expanded && current" class="glass mb-3 w-64 p-4">
@@ -121,4 +121,11 @@ onUnmounted(() => {
 <style scoped>
 .mp-enter-active, .mp-leave-active { transition: all 0.25s ease; }
 .mp-enter-from, .mp-leave-to { opacity: 0; transform: translateY(8px); }
+
+@media (max-width: 640px) {
+  .music-player {
+    bottom: calc(4.75rem + env(safe-area-inset-bottom));
+    right: 0.75rem;
+  }
+}
 </style>

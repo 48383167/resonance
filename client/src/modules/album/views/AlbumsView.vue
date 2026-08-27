@@ -31,12 +31,12 @@ const coverOf = (a) => a.cover_url || a.firstPhotoUrl || ''
 
 <template>
   <div class="fade-up space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h2 class="serif text-xl">相册</h2>
         <p class="text-xs text-white/45">把照片和回忆收进册子</p>
       </div>
-      <button class="btn-primary" @click="router.push('/albums/new')">+ 新建相册</button>
+      <button class="btn-primary w-full sm:w-auto" @click="router.push('/albums/new')">+ 新建相册</button>
     </div>
 
     <div v-if="!albums.length" class="glass p-10 text-center text-white/50">
@@ -57,8 +57,8 @@ const coverOf = (a) => a.cover_url || a.firstPhotoUrl || ''
               class="absolute bottom-1.5 left-1.5 rounded-full bg-black/50 px-2 py-0.5 text-[10px] text-white/70">暂以首图代封面</span>
           </div>
           <div class="p-3">
-            <div class="flex items-center justify-between">
-              <span class="font-medium">{{ a.name }}</span>
+            <div class="flex min-w-0 items-start justify-between gap-2">
+              <span class="min-w-0 break-words font-medium">{{ a.name }}</span>
               <span class="text-xs text-white/45">{{ a.photoCount }} 张</span>
             </div>
             <p v-if="a.description" class="mt-1 line-clamp-1 text-xs text-white/45">{{ a.description }}</p>

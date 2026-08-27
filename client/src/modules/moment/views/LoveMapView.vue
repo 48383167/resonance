@@ -67,7 +67,7 @@ onUnmounted(() => {
 
 <template>
   <div class="fade-up space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h2 class="serif text-xl">恋爱地图</h2>
         <p class="text-xs text-white/45">带坐标的瞬间会化作足迹，按时间连成轨迹</p>
@@ -75,13 +75,13 @@ onUnmounted(() => {
       <button v-if="canGoBack" class="btn-ghost" @click="router.back()">← 返回</button>
     </div>
 
-    <div class="glass flex items-center gap-6 p-4 text-sm">
+    <div class="glass flex flex-wrap items-center gap-x-6 gap-y-2 p-4 text-sm">
       <div><b class="text-xl text-accent">{{ stats.count }}</b> <span class="text-white/50">处足迹</span></div>
       <div><b class="text-xl text-accent-2">{{ stats.places }}</b> <span class="text-white/50">个地点</span></div>
-      <div class="ml-auto text-xs text-white/40">瓦片 © OpenStreetMap</div>
+      <div class="basis-full text-xs text-white/40 sm:ml-auto sm:basis-auto">瓦片 © OpenStreetMap</div>
     </div>
 
-    <div ref="mapEl" class="h-[60vh] w-full overflow-hidden rounded-2xl border border-white/10" />
+    <div ref="mapEl" class="h-[55svh] min-h-64 max-h-[38rem] w-full overflow-hidden rounded-2xl border border-white/10 sm:h-[60vh]" />
 
     <div v-if="!points.length" class="glass p-6 text-center text-sm text-white/50">
       还没有足迹 —— 在「恋爱瞬间」里创建带坐标的记录即可点亮地图

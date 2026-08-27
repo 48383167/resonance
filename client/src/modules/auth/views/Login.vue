@@ -38,8 +38,8 @@ async function doLogin() {
 </script>
 
 <template>
-  <div class="flex min-h-[80vh] items-center justify-center">
-    <div class="glass w-full max-w-sm p-8 fade-up">
+  <div class="flex min-h-[80svh] items-start justify-center px-1 pt-8 sm:items-center sm:pt-0">
+    <div class="glass w-full max-w-sm p-6 fade-up sm:p-8">
       <div class="text-center">
         <div class="text-4xl">♫</div>
         <h1 class="serif mt-2 text-2xl font-bold tracking-[0.3em]">共鸣</h1>

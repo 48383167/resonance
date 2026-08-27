@@ -45,9 +45,9 @@ async function save() {
 
 <template>
   <div class="fade-up">
-    <div class="mb-4 flex items-center justify-between">
+    <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <button class="btn-ghost text-sm" @click="goBack">← 返回</button>
-      <span class="text-xs text-white/40">修改相册的名字与描述</span>
+      <span class="text-xs text-white/40 sm:text-right">修改相册的名字与描述</span>
     </div>
     <h2 class="serif mb-4 text-xl">编辑相册信息</h2>
 
@@ -61,9 +61,9 @@ async function save() {
       <textarea v-model="form.description" class="input-dark resize-none" rows="3" placeholder="这本相册记录了…" />
     </div>
 
-    <div class="flex items-center justify-end gap-3">
-      <button class="btn-ghost" :disabled="busy" @click="goBack">取消</button>
-      <button class="btn-primary" :disabled="busy || !form.name.trim()" @click="save">
+    <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+      <button class="btn-ghost w-full sm:w-auto" :disabled="busy" @click="goBack">取消</button>
+      <button class="btn-primary w-full sm:w-auto" :disabled="busy || !form.name.trim()" @click="save">
         {{ busy ? '保存中…' : '保存' }}
       </button>
     </div>

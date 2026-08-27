@@ -61,16 +61,16 @@ const todayStr = (() => {
 
 <template>
   <div class="fade-up space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h2 class="serif text-xl">日记日历</h2>
         <p class="text-xs text-white/45">按日期回顾我们的日记</p>
       </div>
-      <div class="flex items-center gap-2">
-        <button class="btn-ghost" @click="shift(-1)">←</button>
-        <span class="serif w-32 text-center">{{ year }} 年 {{ month }} 月</span>
-        <button class="btn-ghost" @click="shift(1)">→</button>
-        <button class="btn-primary" @click="router.push('/write/solo')">写日记</button>
+      <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+        <button class="btn-ghost shrink-0" @click="shift(-1)">←</button>
+        <span class="serif min-w-0 flex-1 text-center sm:w-32 sm:flex-none">{{ year }} 年 {{ month }} 月</span>
+        <button class="btn-ghost shrink-0" @click="shift(1)">→</button>
+        <button class="btn-primary w-full sm:w-auto" @click="router.push('/write/solo')">写日记</button>
       </div>
     </div>
 
@@ -99,9 +99,9 @@ const todayStr = (() => {
       <div class="mt-3 space-y-3">
         <div v-for="e in dayEntries" :key="e.id" class="cursor-pointer rounded-xl bg-white/5 p-4 hover:bg-white/10"
           @click="router.push(`/entry/${e.id}`)">
-          <div class="flex items-center gap-2 text-xs">
+          <div class="flex min-w-0 flex-wrap items-center gap-2 text-xs">
             <span class="rounded-full bg-white/10 px-2 py-0.5 text-white/60">日记</span>
-            <span class="text-white/50">{{ e.title || '无题日记' }}</span>
+            <span class="break-words text-white/50">{{ e.title || '无题日记' }}</span>
             <span class="text-white/35">by {{ e.contents.find((c) => c.user_id === session.userId)?.content ? session.me?.nickname : session.partner?.nickname }}</span>
           </div>
           <p class="mt-2 text-sm text-white/70 line-clamp-2">{{ e.contents[0]?.content }}</p>

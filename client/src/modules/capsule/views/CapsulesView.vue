@@ -42,12 +42,12 @@ const unlockText = (c) => {
 
 <template>
   <div class="fade-up space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h2 class="serif text-xl">时间胶囊</h2>
         <p class="text-xs text-white/45">把话寄给未来的你们，到期才能打开</p>
       </div>
-      <button class="btn-primary" @click="router.push('/capsules/new')">+ 密封一枚</button>
+      <button class="btn-primary w-full sm:w-auto" @click="router.push('/capsules/new')">+ 密封一枚</button>
     </div>
 
     <div v-if="!capsules.length" class="glass p-10 text-center text-white/50">
@@ -60,19 +60,19 @@ const unlockText = (c) => {
       <div v-for="c in sortedCapsules" :key="c.id"
         class="glass cursor-pointer p-5 transition-colors hover:bg-white/10"
         @click="router.push(`/capsules/${c.id}`)">
-        <div class="flex items-center justify-between">
-          <span class="text-sm text-white/70">{{ c.title || '无题胶囊' }}</span>
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <span class="break-words text-sm text-white/70">{{ c.title || '无题胶囊' }}</span>
           <span class="rounded-full px-2.5 py-0.5 text-xs"
               :class="c.isUnlocked ? 'bg-emerald-400/20 text-emerald-200'
                 : (c.unlock_date === todayStr() ? 'bg-sky-400/25 text-sky-200' : 'bg-amber-400/15 text-amber-200')">
             {{ c.isUnlocked ? '🔓' : '🔒' }} {{ unlockText(c) }}
           </span>
         </div>
-        <p class="mt-3 text-sm" :class="c.isUnlocked ? 'whitespace-pre-wrap text-white/80' : 'text-white/40 blur-[3px] select-none'">
+        <p class="mt-3 break-words text-sm" :class="c.isUnlocked ? 'whitespace-pre-wrap text-white/80' : 'text-white/40 blur-[3px] select-none'">
           {{ c.content }}
         </p>
-        <div class="mt-3 flex items-center justify-between text-xs text-white/40">
-          <span>由 {{ c.author?.nickname }} 密封 · 解锁于 {{ c.unlock_date }}</span>
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-white/40">
+          <span class="break-words">由 {{ c.author?.nickname }} 密封 · 解锁于 {{ c.unlock_date }}</span>
           <button class="hover:text-rose-300" @click.stop="remove(c)">销毁</button>
         </div>
       </div>

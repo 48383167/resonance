@@ -116,30 +116,36 @@ async function removeAlbum() {
 
 // 展示封面：优先独立封面，否则用第一张照片代替展示
 const displayCover = computed(() => album.value.cover_url || photos.value[0]?.url || '')
+const imagePhotos = computed(() => photos.value.filter((photo) => mediaTypeOf(photo.url) === 'image'))
+
+function openPhoto(photo) {
+  const index = imagePhotos.value.findIndex((item) => item.id === photo.id)
+  if (index >= 0) openLightbox(imagePhotos.value.map((item) => item.url), index)
+}
 </script>
 
 <template>
   <div v-if="album" class="fade-up space-y-5">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-wrap items-center justify-between gap-3">
       <button class="btn-ghost text-sm" @click="router.push('/albums')">← 相册列表</button>
       <button class="text-xs text-rose-300/70 hover:text-rose-300" @click="removeAlbum">删除相册</button>
     </div>
 
     <!-- 相册信息 -->
     <div class="glass p-5">
-      <div class="flex items-start justify-between gap-4">
-        <div class="flex items-center gap-4">
-          <div class="flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl bg-white/5 text-3xl">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div class="flex min-w-0 items-start gap-3 sm:gap-4">
+          <div class="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/5 text-3xl sm:h-20 sm:w-20">
             <img v-if="displayCover" :src="displayCover" class="h-full w-full object-cover" />
             <span v-else>📷</span>
           </div>
-          <div>
-            <h2 class="serif text-2xl font-bold">{{ album.name }}</h2>
-            <p v-if="album.description" class="mt-1 text-sm text-white/55">{{ album.description }}</p>
+          <div class="min-w-0">
+            <h2 class="serif break-words text-2xl font-bold">{{ album.name }}</h2>
+            <p v-if="album.description" class="mt-1 break-words text-sm text-white/55">{{ album.description }}</p>
             <div class="mt-1 text-xs text-white/40">{{ total }} 张照片 · 创建于 {{ new Date(album.created_at).toLocaleDateString('zh-CN') }}</div>
           </div>
         </div>
-        <button class="btn-ghost text-sm" @click="router.push(`/albums/${album.id}/edit`)">✎ 编辑信息</button>
+        <button class="btn-ghost w-full text-sm sm:w-auto" @click="router.push(`/albums/${album.id}/edit`)">✎ 编辑信息</button>
       </div>
     </div>
 
@@ -153,11 +159,11 @@ const displayCover = computed(() => album.value.cover_url || photos.value[0]?.ur
     </div>
 
     <!-- 照片网格 -->
-    <div v-if="photos.length" class="grid grid-cols-2 gap-4 md:grid-cols-3">
-      <figure v-for="(p, pi) in photos" :key="p.id" class="glass overflow-hidden">
-        <div class="relative h-44 cursor-zoom-in overflow-hidden" @click="openLightbox(photos.filter((x) => mediaTypeOf(x.url) === 'image').map((x) => x.url), pi)">
+    <div v-if="photos.length" class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
+      <figure v-for="p in photos" :key="p.id" class="glass overflow-hidden">
+        <div class="relative aspect-square overflow-hidden" :class="mediaTypeOf(p.url) === 'image' ? 'cursor-zoom-in' : ''" @click="mediaTypeOf(p.url) === 'image' && openPhoto(p)">
           <img v-if="mediaTypeOf(p.url) === 'image'" :src="p.url" class="h-full w-full object-cover" loading="lazy" />
-          <video v-else-if="mediaTypeOf(p.url) === 'video'" :src="p.url" class="h-full w-full object-cover" controls />
+          <video v-else-if="mediaTypeOf(p.url) === 'video'" :src="p.url" class="h-full w-full object-cover" controls @click.stop />
           <div v-else class="flex h-full w-full items-center justify-center bg-white/5 text-3xl">📄</div>
         </div>
         <figcaption class="p-3">
@@ -173,11 +179,11 @@ const displayCover = computed(() => album.value.cover_url || photos.value[0]?.ur
           <!-- 普通展示 -->
           <template v-else>
             <p v-if="p.caption" class="line-clamp-3 text-xs leading-relaxed text-white/70">{{ p.caption }}</p>
-            <div class="mt-2 flex items-center justify-between text-[11px]">
+            <div class="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px]">
               <button class="text-white/45 hover:text-white" @click="openStory(p)">
                 {{ p.caption ? '编辑故事' : '＋ 写故事' }}
               </button>
-              <span class="flex gap-2.5">
+              <span class="flex flex-wrap justify-end gap-x-2.5 gap-y-1">
                 <button class="text-white/45 hover:text-white" @click="setCover(p)">
                   {{ album.cover_file_id === p.file_id ? '✓ 封面' : '设为封面' }}
                 </button>

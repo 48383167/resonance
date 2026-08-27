@@ -37,12 +37,12 @@ const dateText = (l) => new Date(l.created_at).toLocaleString('zh-CN', { month: 
 
 <template>
   <div class="fade-up space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h2 class="serif text-xl">情书</h2>
         <p class="text-xs text-white/45">写一封只给 Ta 看的信</p>
       </div>
-      <button class="btn-primary" @click="router.push('/letters/write')">✎ 写信</button>
+      <button class="btn-primary w-full sm:w-auto" @click="router.push('/letters/write')">✎ 写信</button>
     </div>
 
     <div v-if="!letters.length" class="glass p-10 text-center text-white/50">
@@ -56,7 +56,7 @@ const dateText = (l) => new Date(l.created_at).toLocaleString('zh-CN', { month: 
         class="paper-card group relative cursor-pointer p-5 transition-transform hover:-translate-y-0.5 hover:rotate-0"
         :style="{ transform: `rotate(${i % 2 ? 0.6 : -0.6}deg)` }"
         @click="open(l)">
-        <div class="flex items-start justify-between">
+        <div class="flex min-w-0 items-start justify-between gap-3">
           <span class="text-lg">{{ l.is_secret ? '🔐' : '💌' }}</span>
           <div class="flex items-center gap-2.5">
             <span v-if="l.is_read === 0" class="h-2 w-2 rounded-full bg-rose-500" title="未读" />
@@ -66,9 +66,9 @@ const dateText = (l) => new Date(l.created_at).toLocaleString('zh-CN', { month: 
             <button class="text-[11px] text-rose-400/70 hover:text-rose-400" @click.stop="remove(l)">删除</button>
           </div>
         </div>
-        <h3 class="serif mt-2 text-lg font-semibold" :class="l.title ? '' : 'text-black/40'">{{ l.title || '无题情书' }}</h3>
-        <p class="serif mt-2 line-clamp-3 whitespace-pre-wrap text-sm leading-relaxed">{{ l.content }}</p>
-        <div class="mt-3 flex items-center justify-between text-[11px]">
+        <h3 class="serif mt-2 break-words text-lg font-semibold" :class="l.title ? '' : 'text-black/40'">{{ l.title || '无题情书' }}</h3>
+        <p class="serif mt-2 break-words line-clamp-3 whitespace-pre-wrap text-sm leading-relaxed">{{ l.content }}</p>
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px]">
           <span>✎ {{ l.sender?.nickname }}</span>
           <span>{{ dateText(l) }}</span>
         </div>

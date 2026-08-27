@@ -85,14 +85,14 @@ async function useMyLocation() {
 
 <template>
   <div>
-    <div class="mb-1 flex items-center justify-between">
+    <div class="mb-1 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <span class="text-xs text-white/50">地图选点（足迹会画在恋爱地图上）</span>
-      <button type="button" class="text-xs text-accent-2 hover:underline disabled:opacity-50" :disabled="locating"
+      <button type="button" class="self-start text-xs text-accent-2 hover:underline disabled:opacity-50 sm:self-auto" :disabled="locating"
         @click="useMyLocation">
         {{ locating ? '定位中…' : '📍 用我的位置' }}
       </button>
     </div>
-    <div ref="mapEl" class="h-56 w-full overflow-hidden rounded-xl border border-white/10" />
+    <div ref="mapEl" class="h-[42svh] min-h-52 max-h-80 w-full overflow-hidden rounded-xl border border-white/10 sm:h-56" />
     <p class="mt-1 text-xs text-white/40">
       已选坐标：{{ modelValue?.lat != null ? `${modelValue.lat.toFixed(4)}, ${modelValue.lng.toFixed(4)}` : '未选择（点击地图选取）' }}
     </p>

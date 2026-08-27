@@ -59,8 +59,8 @@ defineExpose({ clearDraft })
 
 <template>
   <div class="glass p-5">
-    <div class="mb-2 flex items-center justify-between text-xs text-white/60">
-      <span>{{ hint || '情绪墨水正在采集：打字速度 · 删改 · 停顿' }}</span>
+    <div class="mb-2 flex flex-col items-start gap-2 text-xs text-white/60 sm:flex-row sm:items-center sm:justify-between">
+      <span class="break-words">{{ hint || '情绪墨水正在采集：打字速度 · 删改 · 停顿' }}</span>
       <span class="inline-block rounded-full bg-white/10 px-3 py-1" v-if="metrics.wpm || metrics.backspaceCount">
         {{ summary }}
       </span>
@@ -68,12 +68,12 @@ defineExpose({ clearDraft })
     <textarea v-model="text" @input="handleInput" :disabled="disabled"
       class="focus-ring-accent w-full resize-none rounded-xl bg-white/5 p-4 outline-none disabled:opacity-50"
       :placeholder="placeholder" rows="8" />
-    <div class="mt-3 flex items-center justify-between">
+    <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <span class="text-xs text-white/40">
         {{ text.length }} 字
         <template v-if="draftKey"> · 草稿自动保存</template>
       </span>
-      <button class="btn-primary" :disabled="disabled || !text.trim()" @click="doSubmit">{{ submitText }}</button>
+      <button class="btn-primary w-full sm:w-auto" :disabled="disabled || !text.trim()" @click="doSubmit">{{ submitText }}</button>
     </div>
   </div>
 </template>

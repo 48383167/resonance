@@ -43,6 +43,10 @@ html, body, #app {
   height: 100%;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   background: var(--page-bg);
@@ -101,6 +105,7 @@ body {
 
 .btn-primary {
   @apply px-5 py-2.5 rounded-full font-medium transition-all duration-300;
+  min-height: 2.75rem;
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   color: var(--accent-contrast);
   box-shadow: 0 4px 24px rgb(var(--accent-rgb) / 0.35);
@@ -110,6 +115,7 @@ body {
 
 .btn-ghost {
   @apply px-5 py-2.5 rounded-full font-medium transition-all duration-300;
+  min-height: 2.75rem;
   border: 1px solid rgb(var(--border-subtle-rgb) / var(--ghost-border-alpha));
   color: var(--text-primary);
 }
@@ -117,6 +123,7 @@ body {
 
 .input-dark {
   @apply w-full rounded-xl px-4 py-3 outline-none transition-all;
+  min-height: 2.75rem;
   background: rgb(var(--surface-1-rgb) / var(--control-alpha));
   border: 1px solid rgb(var(--border-subtle-rgb) / var(--control-border-alpha));
   color: var(--text-primary);
@@ -158,6 +165,13 @@ body {
 }
 .theme-vignette {
   background: radial-gradient(ellipse at 50% 0%, transparent 40%, rgba(0, 0, 0, 0.45) 100%);
+}
+
+.break-anywhere { overflow-wrap: anywhere; }
+
+@media (max-width: 640px) {
+  .btn-primary,
+  .btn-ghost { min-height: 2.75rem; }
 }
 
 /* 明亮主题只切换视觉基底，保持页面布局和交互不变。 */

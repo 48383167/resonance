@@ -51,24 +51,24 @@ onUnmounted(() => {
   <ConfirmDialog />
   <MusicPlayer v-if="session.me" />
   <div class="relative min-h-full">
-    <header v-if="session.me" class="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-      <router-link to="/home" class="flex items-center gap-2">
+    <header v-if="session.me" class="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-3 sm:py-4">
+      <router-link to="/home" class="flex min-w-0 items-center gap-2">
         <span class="text-xl">♫</span>
         <span class="serif text-lg">共鸣</span>
       </router-link>
-      <div class="flex items-center gap-3 text-sm">
+      <div class="flex min-w-0 items-center gap-2 text-sm sm:gap-3">
         <span class="max-w-32 truncate text-white/70">{{ session.me.nickname }}</span>
-        <button class="rounded-full border border-white/20 px-3 py-1 text-xs hover:bg-white/10" @click="doLogout">
+        <button class="min-h-10 shrink-0 rounded-full border border-white/20 px-3 py-1 text-xs hover:bg-white/10" @click="doLogout">
           退出
         </button>
       </div>
     </header>
-    <main class="mx-auto max-w-3xl px-4 pb-32">
+    <main class="app-main mx-auto max-w-3xl px-4 pb-32">
       <router-view />
     </main>
 
     <!-- 全局通知 -->
-    <div class="pointer-events-none fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-2">
+    <div class="app-toast pointer-events-none fixed left-1/2 z-50 flex -translate-x-1/2 flex-col items-center gap-2">
       <TransitionGroup name="toast">
           <div v-for="t in toasts" :key="t.id"
            class="glass pointer-events-auto flex items-center gap-2 px-4 py-2.5 text-sm shadow-xl">
@@ -85,4 +85,10 @@ onUnmounted(() => {
 <style>
 .toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
 .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(10px); }
+
+.app-toast { bottom: 1.5rem; }
+.app-main { padding-bottom: calc(8rem + env(safe-area-inset-bottom)); }
+@media (max-width: 640px) {
+  .app-toast { bottom: calc(5.75rem + env(safe-area-inset-bottom)); }
+}
 </style>

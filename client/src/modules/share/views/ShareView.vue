@@ -65,10 +65,10 @@ const dateText = (m) => (m.moment_date || m.created_at.slice(0, 10))
         <div class="space-y-3">
           <article v-for="(m, i) in data.moments" :key="m.id" class="glass fade-up p-4"
             :style="{ animationDelay: `${Math.min(i, 8) * 60}ms` }">
-            <div class="text-xs text-white/45">{{ m.author?.nickname }} · {{ dateText(m) }}
+            <div class="break-words text-xs text-white/45">{{ m.author?.nickname }} · {{ dateText(m) }}
               <span v-if="m.location"> · 📍 {{ m.location }}</span>
             </div>
-            <p class="mt-2 text-sm whitespace-pre-wrap">{{ m.content }}</p>
+            <p class="mt-2 break-words text-sm whitespace-pre-wrap">{{ m.content }}</p>
             <div v-if="m.photos?.length" class="mt-2 flex flex-wrap gap-2">
               <img v-for="(u, i) in m.photos" :key="u.id || u.url || i" :src="u.url" class="h-20 w-20 rounded-lg object-cover" loading="lazy" />
             </div>
@@ -82,8 +82,8 @@ const dateText = (m) => (m.moment_date || m.created_at.slice(0, 10))
           <article v-for="(e, i) in data.entries" :key="e.id" class="glass fade-up p-4"
             :style="{ animationDelay: `${Math.min(i, 8) * 60}ms` }">
             <div class="text-xs text-white/45">{{ e.created_at.slice(0, 10) }} · 日记</div>
-            <h3 class="serif mt-1 font-semibold">{{ e.title || '无题日记' }}</h3>
-            <p v-for="c in e.contents" :key="c.id" class="mt-1.5 text-sm whitespace-pre-wrap text-white/75">{{ c.content }}</p>
+            <h3 class="serif mt-1 break-words font-semibold">{{ e.title || '无题日记' }}</h3>
+            <p v-for="c in e.contents" :key="c.id" class="mt-1.5 break-words text-sm whitespace-pre-wrap text-white/75">{{ c.content }}</p>
           </article>
         </div>
       </section>
@@ -91,8 +91,8 @@ const dateText = (m) => (m.moment_date || m.created_at.slice(0, 10))
       <section v-if="data.anniversaries.length">
         <h2 class="mb-3 text-sm text-white/60">📅 纪念日</h2>
         <div class="glass divide-y divide-white/5">
-          <div v-for="a in data.anniversaries" :key="a.id" class="flex items-center justify-between p-3 text-sm">
-            <span>{{ a.title }}</span>
+           <div v-for="a in data.anniversaries" :key="a.id" class="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
+             <span class="break-words">{{ a.title }}</span>
             <span class="text-white/45">{{ a.date }}</span>
           </div>
         </div>

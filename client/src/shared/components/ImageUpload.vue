@@ -147,7 +147,7 @@ function remove(i) {
     <!-- 已有附件预览（点击可查看） -->
     <div v-if="list.length" class="mb-3 space-y-2">
       <div v-for="(u, i) in list" :key="u.url || u.id || i"
-        class="group flex items-center gap-3 rounded-xl bg-white/5 p-2 transition-colors hover:bg-white/10">
+         class="group flex min-w-0 items-center gap-3 rounded-xl bg-white/5 p-2 transition-colors hover:bg-white/10">
         <!-- 缩略图 -->
         <div class="relative h-14 w-14 shrink-0 cursor-zoom-in overflow-hidden rounded-lg bg-white/5" @click="preview(u)">
           <img v-if="u.type === 'image' || mediaTypeOf(u.url || '') === 'image'" :src="u.url" class="h-full w-full object-cover" />
@@ -158,7 +158,7 @@ function remove(i) {
         </div>
         <!-- 名称与操作 -->
         <div class="min-w-0 flex-1">
-          <p class="truncate text-sm text-white/80">{{ nameOf(u) }}</p>
+           <p class="break-anywhere text-sm text-white/80">{{ nameOf(u) }}</p>
           <button type="button" class="mt-0.5 text-xs text-accent-2 hover-text-accent-2 hover:underline"
             @click="preview(u)">点击预览</button>
         </div>
@@ -172,7 +172,7 @@ function remove(i) {
     <div v-for="t in tasks.filter((x) => x.status === 'uploading')" :key="t.name"
       class="mb-1.5 rounded-lg bg-white/5 px-3 py-1.5 text-xs">
       <div class="flex justify-between text-white/60">
-        <span class="truncate">{{ t.name }}</span>
+        <span class="min-w-0 break-anywhere">{{ t.name }}</span>
         <span>{{ t.progress }}%</span>
       </div>
       <div class="mt-1 h-1 overflow-hidden rounded-full bg-white/10">
@@ -185,7 +185,7 @@ function remove(i) {
     <input ref="fileInput" type="file" :accept="acceptAttr" :multiple="multiple" class="hidden"
       @change="handleFiles($event.target.files)" />
     <button type="button"
-      class="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-3 text-sm transition-colors"
+      class="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-3 text-center text-sm transition-colors"
           :class="dragging ? 'border-accent bg-accent-soft text-accent' : 'border-white/25 text-white/55 hover:border-white/40 hover:text-white/80'"
       @click="fileInput.click()"
       @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="onDrop">

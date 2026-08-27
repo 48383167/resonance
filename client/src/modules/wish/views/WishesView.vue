@@ -54,12 +54,12 @@ async function remove(w) {
 
 <template>
   <div class="fade-up space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h2 class="serif text-xl">心愿清单</h2>
         <p class="text-xs text-white/45">想一起做的事，从待办到完成</p>
       </div>
-      <button class="btn-primary" @click="router.push('/wishes/new')">+ 许个心愿</button>
+      <button class="btn-primary w-full sm:w-auto" @click="router.push('/wishes/new')">+ 许个心愿</button>
     </div>
 
     <!-- items-start：各列高度随内容自适应，互不撑开 -->
@@ -74,21 +74,21 @@ async function remove(w) {
             class="cursor-pointer rounded-xl bg-white/5 p-3 transition-colors hover:bg-white/10"
             @click="router.push(`/wishes/${w.id}`)">
             <div class="flex items-start justify-between gap-2">
-              <span class="text-sm font-medium">
+              <span class="min-w-0 break-words text-sm font-medium">
                 <span v-if="w.priority >= 2" title="非常想">⭐ </span>{{ w.title }}
               </span>
-              <div class="flex gap-1.5 text-xs">
+              <div class="flex shrink-0 gap-1.5 text-xs">
                 <button v-if="col.key !== 'done'" class="text-accent-2 hover-text-accent-2" title="下一阶段" @click.stop="move(w, 1)">→</button>
                 <button v-if="col.key !== 'todo'" class="text-white/40 hover:text-white" title="上一阶段" @click.stop="move(w, -1)">←</button>
               </div>
             </div>
-            <p v-if="w.description" class="mt-1 text-xs text-white/45">{{ w.description }}</p>
-            <div class="mt-2 flex items-center justify-between text-xs">
+            <p v-if="w.description" class="mt-1 break-words text-xs text-white/45">{{ w.description }}</p>
+            <div class="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
               <span class="rounded-full bg-accent-soft px-2 py-0.5 text-accent">{{ catLabel(w.category) }}</span>
-              <span class="text-white/40">by {{ w.proposer?.nickname }} · {{ dateOf(w.created_at) }} 提出</span>
+              <span class="break-words text-white/40">by {{ w.proposer?.nickname }} · {{ dateOf(w.created_at) }} 提出</span>
             </div>
             <!-- 阶段时间节点：进行中记开始时间，完成记完成时间 -->
-            <div class="mt-1.5 flex items-center justify-between text-[11px]">
+            <div class="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px]">
               <span v-if="col.key === 'doing' && w.started_at" class="text-accent-2">
                 🔥 {{ dateOf(w.started_at) }} 开始
               </span>
@@ -96,7 +96,7 @@ async function remove(w) {
                 ✓ {{ dateOf(w.completed_at) }} 完成
               </span>
               <span v-else />
-              <span class="flex gap-3">
+              <span class="flex shrink-0 gap-3">
                 <button class="hover:text-white" @click.stop="router.push(`/wishes/${w.id}/edit`)">编辑</button>
                 <button class="hover:text-rose-300" @click.stop="remove(w)">删除</button>
               </span>

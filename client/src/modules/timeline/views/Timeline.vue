@@ -142,7 +142,7 @@ const anniversaryTypeLabel = (t) => ({ first_meet: '初遇', together: '在一�
         </div>
 
         <div v-for="(e, i) in g.items" :key="keyOf(gIdx, i)"
-          class="fade-up relative mb-5 md:grid md:grid-cols-[1fr_2rem_1fr] md:gap-3"
+          class="fade-up relative mb-5 min-w-0 md:grid md:grid-cols-[1fr_2rem_1fr] md:gap-3"
           :style="{ animationDelay: `${Math.min(i, 10) * 60}ms` }">
           <!-- 节点：仅保留类型图标（清爽悬浮于主线上） -->
           <div class="absolute left-[13px] top-4 z-10 -translate-x-1/2 md:left-1/2">
@@ -160,7 +160,7 @@ const anniversaryTypeLabel = (t) => ({ first_meet: '初遇', together: '在一�
             <article class="glass cursor-pointer p-4 transition-colors hover:bg-white/10" @click="toggle(gIdx, i)">
               <!-- 头部：标题 + 时间（时间收纳进卡片，不再压在线上） -->
               <div class="flex items-start justify-between gap-2">
-                <span class="text-xs leading-5 text-white/70">
+                <span class="min-w-0 break-words text-xs leading-5 text-white/70">
                   <template v-if="e.kind === 'entry'">📔 日记 · {{ e.title }}</template>
                   <template v-else-if="e.kind === 'moment'">{{ e.author }} 的瞬间</template>
                   <template v-else-if="e.kind === 'letter'">{{ e.title }} <span v-if="e.isSecret">🔐</span></template>
@@ -177,7 +177,7 @@ const anniversaryTypeLabel = (t) => ({ first_meet: '初遇', together: '在一�
                 :class="[isOpen(gIdx, i) ? 'whitespace-pre-wrap' : 'line-clamp-2', e.kind === 'capsule' && !e.unlocked ? 'blur-[3px] select-none' : '']">
                 {{ e.text }}
               </p>
-              <p v-else class="mt-2 text-sm text-white/75">{{ e.text || e.album }}</p>
+              <p v-else class="mt-2 break-words text-sm text-white/75">{{ e.text || e.album }}</p>
 
               <!-- 照片 -->
               <div v-if="(e.kind === 'photo' || e.photos?.length)" class="mt-2 flex flex-wrap gap-2">
@@ -189,8 +189,8 @@ const anniversaryTypeLabel = (t) => ({ first_meet: '初遇', together: '在一�
 
               <!-- 尾巴信息 -->
               <div class="mt-2 flex items-center gap-2 text-[11px] text-white/35">
-                <span v-if="e.kind === 'moment' && e.location">📍 {{ e.location }}</span>
-                <span v-if="e.kind === 'letter'">来自 {{ e.sender }}</span>
+                 <span v-if="e.kind === 'moment' && e.location" class="break-words">📍 {{ e.location }}</span>
+                 <span v-if="e.kind === 'letter'" class="break-words">来自 {{ e.sender }}</span>
                 <span v-if="e.kind === 'wish' && e.proposer">by {{ e.proposer }}</span>
                 <span v-if="e.kind === 'capsule'">解锁于 {{ e.unlockDate }}</span>
                 <router-link v-if="e.kind === 'entry'" :to="`/entry/${e.entryId}`"

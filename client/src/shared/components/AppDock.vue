@@ -195,4 +195,22 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
     display: none;
   }
 }
+
+@media (max-width: 380px) {
+  .app-dock__bar {
+    gap: 0.125rem;
+    padding: 0.375rem;
+  }
+
+  .app-dock__item {
+    height: 42px;
+    width: 40px;
+  }
+
+  .app-dock__item--create {
+    height: 46px;
+    width: 46px;
+    margin: 0 1px;
+  }
+}
 </style>

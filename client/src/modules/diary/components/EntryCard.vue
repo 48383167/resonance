@@ -34,8 +34,8 @@ const dateText = computed(() => new Date(props.entry.created_at).toLocaleString(
         {{ entry.is_public ? '🔭' : '🔒' }}
       </button>
     </div>
-    <h3 class="serif mt-3 text-lg font-semibold">{{ entry.title || '无题日记' }}</h3>
-    <p v-if="snippet" class="mt-2 text-sm text-white/60">{{ snippet }}</p>
+    <h3 class="serif mt-3 break-words text-lg font-semibold">{{ entry.title || '无题日记' }}</h3>
+    <p v-if="snippet" class="mt-2 break-words text-sm text-white/60">{{ snippet }}</p>
     <div class="mt-3 text-xs text-white/35">{{ dateText }}</div>
   </div>
 </template>

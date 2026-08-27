@@ -84,18 +84,24 @@ async function remove(m) {
 }
 
 const dateText = (m) => (m.moment_date || m.created_at.slice(0, 10))
+
+function openMomentPhoto(photos, photo) {
+  const images = photos.filter((item) => (item.type || mediaTypeOf(item.url || '')) === 'image')
+  const index = images.indexOf(photo)
+  if (index >= 0) openLightbox(images.map((item) => item.url), index)
+}
 </script>
 
 <template>
   <div class="fade-up space-y-5">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h2 class="serif text-xl">恋爱瞬间</h2>
         <p class="text-xs text-white/45">记录此刻的心情、地点与照片</p>
       </div>
-      <div class="flex gap-2">
-        <button class="btn-ghost" @click="router.push('/map')">🗺️ 足迹地图</button>
-        <button class="btn-primary" @click="router.push('/moments/new')">+ 记录瞬间</button>
+      <div class="flex w-full flex-wrap gap-2 sm:w-auto">
+        <button class="btn-ghost flex-1 whitespace-nowrap sm:flex-none" @click="router.push('/map')">🗺️ 足迹地图</button>
+        <button class="btn-primary flex-1 whitespace-nowrap sm:flex-none" @click="router.push('/moments/new')">+ 记录瞬间</button>
       </div>
     </div>
 
@@ -129,21 +135,21 @@ const dateText = (m) => (m.moment_date || m.created_at.slice(0, 10))
     <div v-else class="space-y-3">
       <article v-for="m in shown" :key="m.id" class="glass p-5 transition-colors hover:bg-white/8">
         <div class="flex items-start justify-between gap-3">
-          <div class="flex flex-wrap items-center gap-2 text-sm">
+          <div class="flex min-w-0 flex-wrap items-center gap-2 text-sm">
             <span class="text-lg">{{ moodOf(m.mood).emoji }}</span>
             <span class="text-accent">{{ m.author?.nickname || 'Ta' }}</span>
             <span class="text-xs text-white/40">· {{ dateText(m) }}</span>
-            <span v-if="m.location" class="text-xs text-accent-2">📍 {{ m.location }}</span>
+            <span v-if="m.location" class="break-words text-xs text-accent-2">📍 {{ m.location }}</span>
           </div>
-          <div class="flex gap-3 text-xs">
+          <div class="flex shrink-0 gap-3 text-xs">
             <button class="text-white/50 transition-colors hover:text-white" @click="router.push(`/moments/${m.id}/edit`)">编辑</button>
             <button class="text-rose-300/80 transition-colors hover:text-rose-300" @click="remove(m)">删除</button>
           </div>
         </div>
-        <p class="mt-3 whitespace-pre-wrap leading-relaxed">{{ m.content }}</p>
+        <p class="mt-3 break-words whitespace-pre-wrap leading-relaxed">{{ m.content }}</p>
         <div v-if="m.photos?.length" class="mt-3 flex flex-wrap gap-2">
           <img v-for="(u, pi) in m.photos" :key="u.id || u.url || pi" :src="u.url" class="h-24 w-24 cursor-zoom-in rounded-lg object-cover"
-            loading="lazy" @click="openLightbox(m.photos.filter((x) => (x.type || mediaTypeOf(x.url || '')) === 'image').map((x) => x.url), pi)" />
+            loading="lazy" @click="openMomentPhoto(m.photos, u)" />
         </div>
       </article>
       <div v-if="list.length > visible" class="flex justify-center">

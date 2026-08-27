@@ -41,9 +41,9 @@ async function seal() {
 
 <template>
   <div class="fade-up">
-    <div class="mb-4 flex items-center justify-between">
+    <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <button class="btn-ghost text-sm" @click="goBack">← 返回</button>
-      <span class="text-xs text-white/40">把话寄给未来的你们，到期才能打开</span>
+      <span class="text-xs text-white/40 sm:text-right">把话寄给未来的你们，到期才能打开</span>
     </div>
     <h2 class="serif mb-4 text-xl">密封时间胶囊</h2>
 
@@ -70,9 +70,9 @@ async function seal() {
       </div>
     </div>
 
-    <div class="flex items-center justify-end gap-3">
-      <button class="btn-ghost" :disabled="busy" @click="goBack">取消</button>
-      <button class="btn-primary" :disabled="busy || !form.content.trim() || !form.unlockDate" @click="seal">
+    <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
+      <button class="btn-ghost w-full sm:w-auto" :disabled="busy" @click="goBack">取消</button>
+      <button class="btn-primary w-full sm:w-auto" :disabled="busy || !form.content.trim() || !form.unlockDate" @click="seal">
         {{ busy ? '密封中…' : '密封 ⏳' }}
       </button>
     </div>

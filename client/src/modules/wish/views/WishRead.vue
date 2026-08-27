@@ -68,9 +68,9 @@ const dateText = (iso) => (iso ? new Date(iso).toLocaleString('zh-CN', { month: 
 
 <template>
   <div class="fade-up">
-    <div class="mb-4 flex items-center justify-between">
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
       <button class="btn-ghost text-sm" @click="goBack">← 返回</button>
-      <div v-if="wish" class="flex items-center gap-3">
+      <div v-if="wish" class="flex flex-wrap items-center justify-end gap-4">
         <button class="text-xs text-white/50 transition-colors hover:text-white"
           @click="router.push(`/wishes/${wish.id}/edit`)">✎ 编辑</button>
         <button class="text-xs text-rose-300/70 hover:text-rose-300" @click="remove">删除</button>
@@ -86,9 +86,9 @@ const dateText = (iso) => (iso ? new Date(iso).toLocaleString('zh-CN', { month: 
         <span class="rounded-full bg-white/10 px-3 py-1 text-white/60">{{ prio(wish.priority).icon }} {{ prio(wish.priority).label }}</span>
       </div>
 
-      <h1 class="serif mt-5 text-2xl font-bold">{{ wish.title }}</h1>
+      <h1 class="serif mt-5 break-words text-2xl font-bold">{{ wish.title }}</h1>
 
-      <p v-if="wish.description" class="mt-4 whitespace-pre-wrap leading-relaxed text-white/75">{{ wish.description }}</p>
+      <p v-if="wish.description" class="mt-4 break-words whitespace-pre-wrap leading-relaxed text-white/75">{{ wish.description }}</p>
 
       <div class="mt-6 space-y-1 text-xs text-white/40">
         <div>by {{ wish.proposer?.nickname }} · 提出于 {{ dateText(wish.created_at) }}</div>
@@ -97,11 +97,11 @@ const dateText = (iso) => (iso ? new Date(iso).toLocaleString('zh-CN', { month: 
       </div>
 
       <!-- 阶段流转 -->
-      <div class="mt-6 flex items-center gap-2 border-t border-white/10 pt-5">
-        <button v-if="wish.status !== 'done'" class="btn-primary px-5 py-2 text-sm" @click="move(1)">
+      <div class="mt-6 flex flex-col gap-2 border-t border-white/10 pt-5 sm:flex-row sm:items-center">
+        <button v-if="wish.status !== 'done'" class="btn-primary w-full px-5 py-2 text-sm sm:w-auto" @click="move(1)">
           {{ wish.status === 'todo' ? '开始去做 →' : '完成了 🎉' }}
         </button>
-        <button v-if="wish.status !== 'todo'" class="btn-ghost px-5 py-2 text-sm" @click="move(-1)">← 退回上一阶段</button>
+        <button v-if="wish.status !== 'todo'" class="btn-ghost w-full px-5 py-2 text-sm sm:w-auto" @click="move(-1)">← 退回上一阶段</button>
       </div>
     </div>
   </div>
