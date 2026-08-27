@@ -1,4 +1,6 @@
 import { NotFoundError } from '../../common/errors/NotFoundError.js'
+import { BadRequestError } from '../../common/errors/BadRequestError.js'
+import * as coupleService from '../couple/couple.service.js'
 import { softDeleteQuietly } from '../file/file.service.js'
 import * as albumRepository from './album.repository.js'
 import * as albumSchema from './album.schema.js'
@@ -70,4 +72,17 @@ export function updatePhotoCaption(photoId, raw) {
   const photo = albumRepository.updatePhotoCaption(photoId, caption)
   if (!photo) throw new NotFoundError('照片不存在')
   return photo
+}
+
+export function setPhotoObservatory(userId, albumId, photoId, raw) {
+  const data = albumSchema.validateObservatory(raw)
+  const album = albumRepository.findById(albumId)
+  if (!album) throw new NotFoundError('相册不存在')
+  const photo = albumRepository.findPhotoById(photoId)
+  if (!photo || photo.album_id !== albumId) throw new NotFoundError('照片不存在')
+  if (photo.file_user_id) coupleService.assertSamePair(userId, photo.file_user_id)
+  if (data.showInObservatory && (!photo.file_id || photo.file_status !== 1 || !photo.file_mime?.startsWith('image/'))) {
+    throw new BadRequestError('只有有效图片可以展示到观测台')
+  }
+  return albumRepository.setPhotoObservatory(photoId, data.showInObservatory)
 }

@@ -4,9 +4,10 @@ import * as anniversaryRepository from '../anniversary/anniversary.repository.js
 import * as shareRepository from '../share/share.repository.js'
 import * as statsRepository from '../stats/stats.repository.js'
 import * as coupleRepository from '../couple/couple.repository.js'
+import * as albumRepository from '../album/album.repository.js'
 
 export function getObservatory() {
-  return { entries: diaryRepository.listPublic() }
+  return { photos: albumRepository.listObservatoryPhotos() }
 }
 
 // 分享链接：token 只读访问（可选密码、有效期、浏览计数）

@@ -14,5 +14,6 @@ router.put('/:id', requireAuth, albumController.update)
 router.delete('/:id', requireAuth, albumController.remove)
 router.delete('/:id/photos/:photoId', requireAuth, albumController.removePhoto)
 router.put('/:id/photos/:photoId', requireAuth, albumController.updatePhotoCaption)
+router.patch('/:id/photos/:photoId/observatory', requireAuth, albumController.setPhotoObservatory)
 
 export default router

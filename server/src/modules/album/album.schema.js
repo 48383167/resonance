@@ -23,3 +23,11 @@ export function validateCover(body = {}) {
   if (!fileId) throw new BadRequestError('封面文件 ID 不能为空')
   return { fileId: String(fileId) }
 }
+
+export function validateObservatory(body = {}) {
+  const { showInObservatory } = body
+  if (typeof showInObservatory !== 'boolean') {
+    throw new BadRequestError('showInObservatory 必须为布尔值')
+  }
+  return { showInObservatory }
+}

@@ -39,3 +39,7 @@ export async function photosPage(req, res, next) {
 export async function updatePhotoCaption(req, res, next) {
   try { res.success(albumService.updatePhotoCaption(req.params.photoId, req.body)) } catch (e) { next(e) }
 }
+
+export async function setPhotoObservatory(req, res, next) {
+  try { res.success(albumService.setPhotoObservatory(req.user.id, req.params.id, req.params.photoId, req.body)) } catch (e) { next(e) }
+}

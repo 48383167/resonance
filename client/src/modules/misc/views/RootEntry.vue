@@ -17,7 +17,7 @@ onMounted(async () => {
 
   try {
     const data = await getObservatory()
-    if (data.entries?.length) observatory.value = data
+    if (data.photos?.length) observatory.value = data
     else await router.replace({ name: 'login' })
   } catch {
     // 公开观测台不可用时，不阻塞用户进入登录页。

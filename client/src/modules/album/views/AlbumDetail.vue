@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getAlbum, albumPhotos, addPhoto, removePhoto as removePhotoApi, setCover as setCoverApi, updatePhotoCaption, removeAlbum as removeAlbumApi } from '../album.api.js'
+import { getAlbum, albumPhotos, addPhoto, removePhoto as removePhotoApi, setCover as setCoverApi, updatePhotoCaption, updatePhotoObservatory, removeAlbum as removeAlbumApi } from '../album.api.js'
 import { toast } from '../../../stores/toast'
 import { confirmDialog } from '../../../stores/confirm'
 import { openLightbox } from '../../../stores/lightbox'
@@ -21,6 +21,7 @@ const sentinel = ref(null)
 // 照片故事（内联编辑）
 const storyPhotoId = ref(null)
 const storyText = ref('')
+const observatoryUpdating = ref(new Set())
 
 const uploadUrls = ref([])
 
@@ -102,6 +103,29 @@ async function saveStory() {
   toast('故事已保存 ✍️')
 }
 
+function isInObservatory(photo) {
+  return photo.show_in_observatory === 1 || photo.show_in_observatory === true
+}
+
+function isImagePhoto(photo) {
+  return photo.type === 'image' || mediaTypeOf(photo.url) === 'image'
+}
+
+async function toggleObservatory(photo) {
+  if (observatoryUpdating.value.has(photo.id) || !isImagePhoto(photo)) return
+  observatoryUpdating.value = new Set(observatoryUpdating.value).add(photo.id)
+  const nextValue = !isInObservatory(photo)
+  try {
+    const updated = await updatePhotoObservatory(album.value.id, photo.id, nextValue)
+    Object.assign(photo, updated)
+    toast(nextValue ? '已加入观测台' : '已移出观测台')
+  } finally {
+    const next = new Set(observatoryUpdating.value)
+    next.delete(photo.id)
+    observatoryUpdating.value = next
+  }
+}
+
 async function removeAlbum() {
   const ok = await confirmDialog({
     title: '删除相册',
@@ -116,7 +140,7 @@ async function removeAlbum() {
 
 // 展示封面：优先独立封面，否则用第一张照片代替展示
 const displayCover = computed(() => album.value.cover_url || photos.value[0]?.url || '')
-const imagePhotos = computed(() => photos.value.filter((photo) => mediaTypeOf(photo.url) === 'image'))
+const imagePhotos = computed(() => photos.value.filter(isImagePhoto))
 
 function openPhoto(photo) {
   const index = imagePhotos.value.findIndex((item) => item.id === photo.id)
@@ -184,6 +208,9 @@ function openPhoto(photo) {
                 {{ p.caption ? '编辑故事' : '＋ 写故事' }}
               </button>
               <span class="flex flex-wrap justify-end gap-x-2.5 gap-y-1">
+                <button v-if="isImagePhoto(p)" class="text-accent-2 hover-text-accent-2 disabled:cursor-wait disabled:opacity-50" :disabled="observatoryUpdating.has(p.id)" :aria-label="isInObservatory(p) ? '移出观测台' : '加入观测台'" @click="toggleObservatory(p)">
+                  {{ isInObservatory(p) ? '✓ 已在观测台' : '加入观测台' }}
+                </button>
                 <button class="text-white/45 hover:text-white" @click="setCover(p)">
                   {{ album.cover_file_id === p.file_id ? '✓ 封面' : '设为封面' }}
                 </button>

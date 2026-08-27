@@ -127,6 +127,7 @@ CREATE TABLE IF NOT EXISTS album_photos (
     url TEXT DEFAULT '',             -- 已作废：改用 file_id
     file_id TEXT,                    -- 文件表 ID（files.id）
     caption TEXT DEFAULT '',
+    show_in_observatory INTEGER NOT NULL DEFAULT 0, -- 是否展示到观测台（仅图片）
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
@@ -198,7 +199,10 @@ ensureColumns('entries', { media: "TEXT DEFAULT '[]'" })
 ensureColumns('users', { avatar_file_id: 'TEXT' })
 ensureColumns('moment_photos', { file_id: 'TEXT' })
 ensureColumns('albums', { cover_file_id: 'TEXT' })
-ensureColumns('album_photos', { file_id: 'TEXT' })
+ensureColumns('album_photos', {
+  file_id: 'TEXT',
+  show_in_observatory: 'INTEGER NOT NULL DEFAULT 0',
+})
 ensureColumns('time_capsules', { photo_file_id: 'TEXT' })
 ensureColumns('wish_items', {
   completed_at: 'TEXT',
