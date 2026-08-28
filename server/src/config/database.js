@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS users (
     avatar_url TEXT DEFAULT '',          -- 已作废：改用 avatar_file_id
     avatar_file_id TEXT,                 -- 文件表 ID（files.id）
     pair_code TEXT,
-    paired_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    paired_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    first_meet_at TEXT                -- 手动设置的相识日期 YYYY-MM-DD（NULL=未设置）
 );
 
 CREATE TABLE IF NOT EXISTS user_theme_settings (
@@ -201,7 +202,7 @@ CREATE TABLE IF NOT EXISTS share_tokens (
 
 // 老库补列：日记附件、心愿阶段时间节点、情书阅读时间、文件 ID 化新列
 ensureColumns('entries', { media: "TEXT DEFAULT '[]'" })
-ensureColumns('users', { avatar_file_id: 'TEXT' })
+ensureColumns('users', { avatar_file_id: 'TEXT', first_meet_at: 'TEXT' })
 ensureColumns('moment_photos', { file_id: 'TEXT' })
 ensureColumns('albums', { cover_file_id: 'TEXT' })
 ensureColumns('album_photos', {

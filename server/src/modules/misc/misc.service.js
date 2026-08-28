@@ -16,7 +16,8 @@ export function getDashboard(user) {
     me: user,
     partner,
     inviteCode: partner ? null : user.pair_code,
-    daysTogether: coupleRepository.daysSincePaired(),
+    firstMeetAt: coupleRepository.getFirstMeetAt(),
+    daysTogether: coupleRepository.daysTogether(),
     stats: s,
     upcomingAnniversary: upcoming,
   }

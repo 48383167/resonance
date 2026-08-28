@@ -1,18 +1,23 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { getDashboard, getTreeState } from '../misc.api.js'
+import { getDashboard, getTreeState, setFirstMeetAt } from '../misc.api.js'
 import { session, initSession } from '../../../stores/session'
 import { socket } from '../../../socket'
 import { toast } from '../../../stores/toast'
 import { useGreeting } from '../../../composables/useTime'
 import BreathingLight from '../../../shared/components/BreathingLight.vue'
 import LoveTree from '../components/LoveTree.vue'
+import AppDatePicker from '../../../shared/components/AppDatePicker.vue'
 
 const router = useRouter()
 const dash = ref(null)
 const tree = ref(null)
 const greeting = useGreeting()
+
+const editMeet = ref(false)
+const meetDate = ref('')
+const meetBusy = ref(false)
 
 const modules = [
   { name: 'timeline', icon: '🕰️', label: '时光时间线', desc: '我们的点点滴滴', color: 'rgb(var(--accent-rgb) / 0.25)' },
@@ -42,15 +47,46 @@ function onPresence(p) {
   if (p.online && p.userId !== session.userId && dash.value && !dash.value.partner) load()
 }
 
+// 对方修改相识日期时实时刷新
+function onCoupleUpdated(p) {
+  if (!dash.value) return
+  dash.value.daysTogether = p.daysTogether
+  dash.value.firstMeetAt = p.firstMeetAt
+}
+
 onMounted(async () => {
   if (!session.me) await initSession()
   await load()
   socket.on('user_presence', onPresence)
+  socket.on('couple:updated', onCoupleUpdated)
 })
 
 onUnmounted(() => {
   socket.off('user_presence', onPresence)
+  socket.off('couple:updated', onCoupleUpdated)
 })
+
+function toggleMeetEditor() {
+  if (!dash.value?.partner) return
+  editMeet.value = !editMeet.value
+  if (editMeet.value) meetDate.value = dash.value.firstMeetAt || ''
+}
+
+async function saveMeet() {
+  if (meetBusy.value || !meetDate.value) return
+  meetBusy.value = true
+  try {
+    const r = await setFirstMeetAt(meetDate.value)
+    dash.value.firstMeetAt = r.firstMeetAt
+    dash.value.daysTogether = r.daysTogether
+    editMeet.value = false
+    toast('相识日期已更新')
+  } catch (e) {
+    toast(e.message)
+  } finally {
+    meetBusy.value = false
+  }
+}
 
 async function copyInvite() {
   try {
@@ -71,27 +107,54 @@ const statCards = (s) => [
 <template>
   <div v-if="dash" class="fade-up space-y-5">
     <!-- 我们 -->
-    <div class="flex flex-col gap-4 rounded-2xl bg-white/5 p-5 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
-      <div class="flex min-w-0 items-center gap-3 sm:gap-4">
-        <BreathingLight :online="session.partnerOnline" :size="48" />
-        <div class="min-w-0">
-          <div class="flex flex-wrap items-center gap-2 text-lg">
-            <span class="font-semibold">{{ dash.me.nickname }}</span>
-            <span class="text-white/40">×</span>
-            <span class="break-words font-semibold text-accent">{{ dash.partner?.nickname || '…' }}</span>
-          </div>
-          <div class="mt-0.5 text-xs text-white/50">
-            <template v-if="dash.partner">
-              相识 <b class="text-amber-200">{{ dash.daysTogether }}</b> 天
-              <template v-if="dash.upcomingAnniversary">
-                · 最近纪念日：{{ dash.upcomingAnniversary.title }}（{{ dash.upcomingAnniversary.date }}）
+    <div class="relative z-20 rounded-2xl bg-white/5 p-5 backdrop-blur">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex min-w-0 items-center gap-3 sm:gap-4">
+          <BreathingLight :online="session.partnerOnline" :size="48" />
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2 text-lg">
+              <span class="font-semibold">{{ dash.me.nickname }}</span>
+              <span class="text-white/40">×</span>
+              <span class="break-words font-semibold text-accent">{{ dash.partner?.nickname || '…' }}</span>
+            </div>
+            <div class="mt-0.5 text-xs text-white/50">
+              <template v-if="dash.partner">
+                <button class="group/meet inline-flex items-center gap-1.5 hover:text-white/75" title="设置相识日期"
+                  @click="toggleMeetEditor">
+                  相识 <b class="text-amber-200">{{ dash.daysTogether }}</b> 天
+                  <span class="text-xs text-white/30 transition-colors group-hover/meet:text-accent"
+                    :class="editMeet ? 'text-accent' : ''">✎</span>
+                </button>
+                <template v-if="dash.upcomingAnniversary">
+                  · 最近纪念日：{{ dash.upcomingAnniversary.title }}（{{ dash.upcomingAnniversary.date }}）
+                </template>
               </template>
-            </template>
-            <template v-else>等 Ta 加入，一起开启属于你们的时间</template>
+              <template v-else>等 Ta 加入，一起开启属于你们的时间</template>
+            </div>
           </div>
         </div>
+        <button class="btn-primary w-full sm:w-auto" @click="router.push('/write/solo')">✎ 写日记</button>
       </div>
-      <button class="btn-primary w-full sm:w-auto" @click="router.push('/write/solo')">✎ 写日记</button>
+
+      <!-- 相识日期：行内编辑 -->
+      <Transition name="meet">
+        <div v-if="dash.partner && editMeet"
+          class="relative z-20 mt-4 rounded-xl border border-white/10 bg-white/[0.04] p-4">
+          <div class="flex items-center justify-between">
+            <label class="text-xs text-white/55">相识日期</label>
+            <span class="text-[10px] text-white/35">选好后从这天开始计天数，双方都能改</span>
+          </div>
+          <div class="mt-2">
+            <AppDatePicker v-model="meetDate" placeholder="选择相识日期" />
+          </div>
+          <div class="mt-3 flex justify-end gap-2">
+            <button class="btn-ghost !min-h-9 !px-4 !py-1.5 text-sm" :disabled="meetBusy" @click="editMeet = false">取消</button>
+            <button class="btn-primary !min-h-9 !px-4 !py-1.5 text-sm" :disabled="meetBusy || !meetDate" @click="saveMeet">
+              {{ meetBusy ? '保存中…' : '保存' }}
+            </button>
+          </div>
+        </div>
+      </Transition>
     </div>
 
     <!-- 未配对：展示配对码 -->
@@ -143,3 +206,8 @@ const statCards = (s) => [
   </div>
   <div v-else class="flex min-h-[50vh] items-center justify-center text-white/40">正在收拾小屋…</div>
 </template>
+
+<style scoped>
+.meet-enter-active, .meet-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
+.meet-enter-from, .meet-leave-to { opacity: 0; transform: translateY(-4px); }
+</style>

@@ -38,7 +38,7 @@ export function getShare(token, password) {
     status: 'ok',
     data: {
       users: statsRepository.listUsers().map((u) => ({ nickname: u.nickname, avatarUrl: u.avatar_url })),
-      daysTogether: coupleRepository.daysSincePaired(),
+      daysTogether: coupleRepository.daysTogether(),
       stats,
       moments,
       entries,

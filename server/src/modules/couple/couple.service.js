@@ -1,5 +1,7 @@
 import * as coupleRepository from './couple.repository.js'
+import * as coupleSchema from './couple.schema.js'
 import { ForbiddenError } from '../../common/errors/ForbiddenError.js'
+import { emitCoupleUpdated } from '../../infrastructure/socket/couple.socket.js'
 
 // 情侣空间核心：提供数据隔离原语，供各业务模块（diary/moment/...）统一复用。
 // 当前为严格双人配对，couple 标识即 pair_code。
@@ -10,7 +12,26 @@ export function getUserCouple(userId) {
   if (!me || !me.pair_code) return null
   const members = coupleRepository.findMembersByPairCode(me.pair_code)
   const partner = members.find((m) => m.id !== userId) || null
-  return { pairCode: me.pair_code, me, partner, members }
+  return {
+    pairCode: me.pair_code,
+    me,
+    partner,
+    members,
+    firstMeetAt: coupleRepository.getFirstMeetAt(),
+  }
+}
+
+// 设置相识日期：双方任何一方都可修改，按 pair_code 同步双方并广播
+export function setFirstMeetAt(userId, raw) {
+  const me = coupleRepository.findById(userId)
+  if (!me || !me.pair_code) throw new ForbiddenError('尚未配对，无法设置相识日期')
+  const members = coupleRepository.findMembersByPairCode(me.pair_code)
+  if (members.length < 2) throw new ForbiddenError('尚未配对，无法设置相识日期')
+  const date = coupleSchema.validateFirstMeet(raw)
+  coupleRepository.setFirstMeetAt(me.pair_code, date)
+  const payload = { firstMeetAt: date, daysTogether: coupleRepository.daysTogether() }
+  emitCoupleUpdated(me.pair_code, payload)
+  return payload
 }
 
 // 校验 userId 属于指定情侣空间（coupleId 即 pair_code）；通过返回该用户，否则抛 403

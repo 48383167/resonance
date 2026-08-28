@@ -5,5 +5,6 @@ import { requireAuth } from '../../middleware/auth.middleware.js'
 const router = express.Router()
 
 router.get('/', requireAuth, coupleController.getCouple)
+router.put('/first-meet', requireAuth, coupleController.updateFirstMeet)
 
 export default router

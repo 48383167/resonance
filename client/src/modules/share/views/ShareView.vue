@@ -1,8 +1,10 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import { toBlob } from 'html-to-image'
 import { getPublicShare } from '../../../modules/observatory/observatory.api.js'
 import { openLightbox } from '../../../stores/lightbox'
+import { toast } from '../../../stores/toast'
 import { mediaTypeOf } from '../../../utils/media'
 
 const route = useRoute()
@@ -11,6 +13,8 @@ const error = ref('')
 const loading = ref(true)
 const needPassword = ref(false)
 const password = ref('')
+const scrapbookRef = ref(null)
+const exporting = ref(false)
 
 async function fetchData() {
   error.value = ''
@@ -58,11 +62,85 @@ function showPhoto(moment, photo) {
 function entryText(entry) {
   return (entry.contents || []).map((content) => content.content).filter(Boolean)
 }
+
+function decodeImage(image) {
+  return typeof image.decode === 'function' ? image.decode() : Promise.resolve()
+}
+
+function waitForImage(image) {
+  if (image.complete) {
+    return image.naturalWidth > 0 ? decodeImage(image) : Promise.reject(new Error('image-load-failed'))
+  }
+
+  return new Promise((resolve, reject) => {
+    image.addEventListener('load', () => decodeImage(image).then(resolve).catch(reject), { once: true })
+    image.addEventListener('error', () => reject(new Error('image-load-failed')), { once: true })
+  })
+}
+
+async function saveScrapbook() {
+  if (exporting.value || !scrapbookRef.value) return
+
+  exporting.value = true
+  try {
+    const images = [...scrapbookRef.value.querySelectorAll('img')]
+    images.forEach((image) => {
+      image.loading = 'eager'
+      const source = image.currentSrc || image.src
+      if (source && new URL(source, window.location.href).origin !== window.location.origin) {
+        image.crossOrigin = 'anonymous'
+        image.src = source
+      }
+    })
+    await Promise.all(images.map(waitForImage))
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+
+    const scrapbook = scrapbookRef.value
+    const bounds = scrapbook.getBoundingClientRect()
+    const blob = await toBlob(scrapbook, {
+      backgroundColor: '#f4e8dc',
+      cacheBust: true,
+      pixelRatio: 2,
+      width: Math.ceil(bounds.width),
+      height: Math.ceil(scrapbook.scrollHeight),
+      filter: (element) => !(element instanceof HTMLElement && element.hasAttribute('data-export-ignore')),
+    })
+
+    if (!blob || !blob.size) throw new Error('empty-canvas')
+
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `resonance-scrapbook-${new Date().toISOString().slice(0, 10)}.png`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+    toast('剪贴簿长图已保存')
+  } catch (e) {
+    if (e.message === 'image-load-failed') {
+      toast('图片加载失败（可能是跨域图片），无法生成长图，请检查图片后重试', 'error')
+    } else {
+      toast('内容过长或图片未加载完成，请稍后重试', 'error')
+    }
+  } finally {
+    exporting.value = false
+  }
+}
 </script>
 
 <template>
   <div class="mt-3">
-    <div class="share-scrapbook min-h-screen bg-[#f4e8dc] px-3 pb-6 pt-[calc(1.25rem+env(safe-area-inset-top))] text-[#5d4843] sm:px-6 sm:py-10">
+    <div v-if="data" class="flex justify-end px-3 pb-2 sm:px-2">
+      <button data-export-ignore type="button"
+        class="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/65 shadow-sm backdrop-blur transition hover:border-white/25 hover:bg-black/30 hover:text-white disabled:cursor-wait disabled:opacity-60"
+        :disabled="exporting" @click="saveScrapbook">
+        <span aria-hidden="true">↓</span>
+        {{ exporting ? '正在生成长图…' : '保存剪贴簿长图' }}
+      </button>
+    </div>
+
+    <div ref="scrapbookRef" class="share-scrapbook min-h-screen bg-[#f4e8dc] px-3 pb-6 pt-[calc(1.25rem+env(safe-area-inset-top))] text-[#5d4843] sm:px-6 sm:py-10">
     <div class="mx-auto max-w-5xl">
       <header class="relative overflow-hidden rounded-[0.9rem] border border-[#d9b9a3]/80 bg-[#fffaf1] px-4 pb-6 pt-16 text-center shadow-[0_10px_24px_rgba(132,91,70,.16)] sm:rounded-[1.25rem] sm:px-12 sm:py-10">
         <span class="absolute left-5 top-4 rotate-[-8deg] rounded-sm bg-[#e8b8ae] px-2.5 py-1 text-[9px] tracking-[.2em] text-[#815b58] shadow-sm sm:left-8 sm:top-5 sm:px-3 sm:text-[10px] sm:tracking-[.24em]">OUR STORY</span>

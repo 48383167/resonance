@@ -7,3 +7,11 @@ export async function getCouple(req, res, next) {
     next(error)
   }
 }
+
+export async function updateFirstMeet(req, res, next) {
+  try {
+    res.success(coupleService.setFirstMeetAt(req.user.id, req.body))
+  } catch (error) {
+    next(error)
+  }
+}
