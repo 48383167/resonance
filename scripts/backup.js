@@ -2,10 +2,11 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { dataDir as settingsDataDir } from '../server/src/config/settings.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const root = path.join(__dirname, '..')
-const dataDir = process.env.RESONANCE_DATA_DIR || root
+const dataDir = path.resolve(root, process.env.RESONANCE_DATA_DIR || settingsDataDir)
 const src = path.join(dataDir, 'database.sqlite')
 const backupDir = path.join(dataDir, 'backups')
 

@@ -2,11 +2,15 @@ import { DatabaseSync } from 'node:sqlite'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { dataDir as settingsDataDir } from './settings.js'
 
 // 数据库连接与初始化：仅负责目录 / WAL / 建表 / 列迁移与连接生命周期。
 // 业务 SQL 一律放入 modules/*/*.repository.js（见重构计划 §15）。
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-export const DATA_DIR = process.env.RESONANCE_DATA_DIR || path.join(__dirname, '..', '..', '..')
+const PROJECT_ROOT = path.join(__dirname, '..', '..', '..')
+// 数据目录优先级：环境变量 > settings.js 配置 > 项目根目录；
+// 相对路径基于项目根目录解析，绝对路径原样使用
+export const DATA_DIR = path.resolve(PROJECT_ROOT, process.env.RESONANCE_DATA_DIR || settingsDataDir)
 export const DB_PATH = path.join(DATA_DIR, 'database.sqlite')
 export const MEDIA_DIR = path.join(DATA_DIR, 'media')
 
