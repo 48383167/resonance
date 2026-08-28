@@ -78,7 +78,7 @@ function uploadOne(file) {
         if (json.ok) resolve(json.data)
         else reject(new Error(typeof json.error === 'object' ? json.error.message : json.error || '上传失败'))
       } catch {
-        reject(new Error('上传响应异常'))
+        reject(new Error(xhr.status === 413 ? '文件过大，服务器拒绝了上传' : (xhr.status ? `上传失败（HTTP ${xhr.status}）` : '上传响应异常')))
       }
     }
     xhr.onerror = () => reject(new Error('网络错误'))

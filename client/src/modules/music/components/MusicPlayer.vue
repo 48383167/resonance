@@ -3,7 +3,7 @@ import { ref, computed, onUnmounted } from 'vue'
 import { listTracks } from '../music.api.js'
 import { toast } from '../../../stores/toast'
 
-// 全局甜蜜背景音乐：右下角悬浮迷你播放器（Jamendo 曲库）
+// 全局甜蜜背景音乐：右下角悬浮迷你播放器（网易云随机音乐）
 const tracks = ref([])
 const index = ref(0)
 const playing = ref(false)
@@ -24,11 +24,16 @@ function ensureAudio() {
 
 async function load() {
   if (tracks.value.length) return
+  await loadRandom()
+}
+
+async function loadRandom() {
   loading.value = true
   try {
-    tracks.value = await listTracks()
-    if (tracks.value.length) {
-      index.value = Math.floor(Math.random() * tracks.value.length)
+    const nextTracks = await listTracks()
+    if (nextTracks.length) {
+      tracks.value = [...tracks.value, nextTracks[0]]
+      index.value = tracks.value.length - 1
     }
   } catch (e) {
     toast(e.message)
@@ -60,10 +65,15 @@ async function toggle() {
   }
 }
 
-function next() {
+async function next() {
   if (!tracks.value.length) return
-  index.value = (index.value + 1) % tracks.value.length
-  if (playing.value) playCurrent()
+  if (index.value < tracks.value.length - 1) {
+    index.value += 1
+    if (playing.value) playCurrent()
+    return
+  }
+  await loadRandom()
+  if (playing.value && current.value) playCurrent()
 }
 
 function prev() {

@@ -1,52 +1,28 @@
-// Jamendo 官方音乐 API（免费、正规授权、长期稳定）
-// 优先读环境变量 JAMENDO_CLIENT_ID，否则用默认 key（个人只读 key）
-const CLIENT_ID = process.env.JAMENDO_CLIENT_ID || '70a1004b'
-const TAGS = ['romantic', 'acoustic', 'ballad']
-const PER_TAG = 30
-const CACHE_TTL = 60 * 60 * 1000 // 曲单缓存 1 小时
+// 网易云随机音乐接口：每次请求返回一首随机歌曲。
+const RANDOM_MUSIC_URL = 'https://free.wqwlkj.cn/wqwlapi/wyy_random.php?type=json'
 
-let cache = { at: 0, tracks: [] }
+async function fetchRandomTrack() {
+  const resp = await fetch(RANDOM_MUSIC_URL, { signal: AbortSignal.timeout(10000) })
+  if (!resp.ok) throw new Error(`网易云随机音乐返回 ${resp.status}`)
 
-async function fetchTag(tag) {
-  const url = `https://api.jamendo.com/v3.0/tracks/?client_id=${CLIENT_ID}&format=json&limit=${PER_TAG}&tags=${tag}&audioformat=mp32`
-  const resp = await fetch(url)
-  if (!resp.ok) throw new Error(`Jamendo 返回 ${resp.status}`)
   const json = await resp.json()
-  return json.results || []
+  const data = json?.data
+  if (String(json?.code) !== '1' || !data?.url) throw new Error('网易云随机音乐返回数据无效')
+
+  return {
+    id: String(data.id || data.url),
+    name: data.name || '未知歌曲',
+    artist: data.artistsname || '未知歌手',
+    album: data.alname || '',
+    audio: data.url,
+    image: data.picurl || json.coverImgUrl || '',
+  }
 }
 
 export async function getTracks() {
-  if (cache.tracks.length && Date.now() - cache.at < CACHE_TTL) {
-    return { tracks: cache.tracks }
+  try {
+    return { tracks: [await fetchRandomTrack()] }
+  } catch {
+    return { error: '获取音乐失败：网易云随机音乐暂时不可用' }
   }
-
-  // 合并多个甜蜜标签（Jamendo 的 tags 为 AND，需分别请求再合并去重）
-  const all = []
-  for (const tag of TAGS) {
-    try {
-      all.push(...(await fetchTag(tag)))
-    } catch { /* 单个标签失败不影响整体 */ }
-  }
-  if (!all.length) return { error: '获取音乐失败：曲库暂时不可用' }
-
-  const seen = new Set()
-  const tracks = all
-    .filter((t) => !seen.has(t.id) && seen.add(t.id))
-    .map((t) => ({
-      id: String(t.id),
-      name: t.name,
-      artist: t.artist_name,
-      audio: t.audio,
-      image: t.image,
-      duration: t.duration,
-    }))
-
-  // 随机打乱，保证每次播放不单调
-  for (let i = tracks.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[tracks[i], tracks[j]] = [tracks[j], tracks[i]]
-  }
-
-  cache = { at: Date.now(), tracks }
-  return { tracks }
 }

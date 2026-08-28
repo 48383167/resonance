@@ -19,6 +19,8 @@ server {
 
     # 后端 API
     location /api/ {
+        # Nginx defaults to 1 MB; allow multipart overhead over the backend's 50 MB file limit.
+        client_max_body_size 52m;
         proxy_pass http://127.0.0.1:4000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
