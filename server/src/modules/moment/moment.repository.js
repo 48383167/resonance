@@ -63,6 +63,17 @@ export function list({ mood, keyword, startDate, endDate } = {}) {
   })
 }
 
+// 分享链接公开列表：仅展示 show_in_share = 1 的瞬间（条目级可见性）
+export function listPublic() {
+  const rows = db.prepare(
+    'SELECT * FROM moments WHERE show_in_share = 1 ORDER BY COALESCE(moment_date, date(created_at)) DESC, datetime(created_at) DESC'
+  ).all()
+  return rows.map((m) => {
+    m.photos = getPhotos(m.id)
+    return attachAuthor(m)
+  })
+}
+
 // 恋爱地图：所有带坐标的瞬间（按时间升序，原始字段，不挂 author/photos）
 export function listWithCoords() {
   return db.prepare(
@@ -84,6 +95,12 @@ export function update(id, { content, mood, location, longitude, latitude, momen
     'UPDATE moments SET content = COALESCE(?, content), mood = COALESCE(?, mood), location = COALESCE(?, location), longitude = COALESCE(?, longitude), latitude = COALESCE(?, latitude), moment_date = COALESCE(?, moment_date) WHERE id = ?'
   ).run(content ?? null, mood ?? null, location ?? null, longitude ?? null, latitude ?? null, momentDate ?? null, id)
   if (photos) setPhotos(id, photos)
+  return findById(id)
+}
+
+// 条目级分享可见性：仅更新 show_in_share 一列
+export function updateShowInShare(id, showInShare) {
+  db.prepare('UPDATE moments SET show_in_share = ? WHERE id = ?').run(showInShare ? 1 : 0, id)
   return findById(id)
 }
 

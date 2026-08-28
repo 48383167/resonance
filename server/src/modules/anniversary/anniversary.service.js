@@ -41,6 +41,13 @@ export function update(id, raw) {
   return toVO(anniversaryRepository.update(id, raw))
 }
 
+export function updateShareVisibility(id, raw) {
+  const a = anniversaryRepository.findById(id)
+  if (!a) throw new NotFoundError('纪念日不存在')
+  const showInShare = anniversarySchema.validateShowInShare(raw)
+  return toVO(anniversaryRepository.updateShowInShare(id, showInShare))
+}
+
 export function remove(id) {
   anniversaryRepository.remove(id)
   return null

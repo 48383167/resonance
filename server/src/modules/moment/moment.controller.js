@@ -40,6 +40,14 @@ export async function update(req, res, next) {
   }
 }
 
+export async function updateShareVisibility(req, res, next) {
+  try {
+    res.success(momentService.updateShareVisibility(req.user.id, req.params.id, req.body))
+  } catch (error) {
+    next(error)
+  }
+}
+
 export async function remove(req, res, next) {
   try {
     res.success(momentService.remove(req.user.id, req.params.id))

@@ -5,3 +5,6 @@ export function getAnniversary(id) { return request('GET', `/api/anniversaries/$
 export function createAnniversary(data) { return request('POST', '/api/anniversaries', data) }
 export function updateAnniversary(id, data) { return request('PUT', `/api/anniversaries/${id}`, data) }
 export function removeAnniversary(id) { return request('DELETE', `/api/anniversaries/${id}`) }
+export function updateAnniversaryShareVisibility(id, showInShare) {
+  return request('PATCH', `/api/anniversaries/${id}/share-visibility`, { showInShare })
+}

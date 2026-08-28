@@ -8,6 +8,7 @@ router.get('/', requireAuth, anniversaryController.list)
 router.post('/', requireAuth, anniversaryController.create)
 router.get('/:id', requireAuth, anniversaryController.detail)
 router.put('/:id', requireAuth, anniversaryController.update)
+router.patch('/:id/share-visibility', requireAuth, anniversaryController.updateShareVisibility)
 router.delete('/:id', requireAuth, anniversaryController.remove)
 
 export default router

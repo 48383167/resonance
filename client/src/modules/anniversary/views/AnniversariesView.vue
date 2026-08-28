@@ -1,12 +1,13 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { listAnniversaries, removeAnniversary } from '../anniversary.api.js'
+import { listAnniversaries, removeAnniversary, updateAnniversaryShareVisibility } from '../anniversary.api.js'
 import { toast } from '../../../stores/toast'
 import { confirmDialog } from '../../../stores/confirm'
 
 const router = useRouter()
 const items = ref([])
+const sharing = ref(new Set())
 
 const TYPES = [
   { key: 'first_meet', label: '初遇', icon: '🌸' },
@@ -26,6 +27,25 @@ async function remove(a) {
   if (!ok) return
   await removeAnniversary(a.id)
   await load()
+}
+
+const isShownInShare = (a) => a.show_in_share !== 0
+
+async function toggleShareVisibility(a) {
+  if (sharing.value.has(a.id)) return
+  const showInShare = !isShownInShare(a)
+  sharing.value = new Set(sharing.value).add(a.id)
+  try {
+    const updated = await updateAnniversaryShareVisibility(a.id, showInShare)
+    Object.assign(a, updated)
+    toast(showInShare ? '已在分享页展示' : '已从分享页隐藏')
+  } catch (error) {
+    toast(error.message || '更新分享展示状态失败', 'error')
+  } finally {
+    const next = new Set(sharing.value)
+    next.delete(a.id)
+    sharing.value = next
+  }
 }
 
 const countText = (a) => {
@@ -70,7 +90,17 @@ const countText = (a) => {
             <span class="ml-1 text-white/40">已一起走过 {{ a.daysSince }} 天</span>
           </div>
         </div>
-        <div class="flex justify-end gap-4 border-t border-white/10 pt-3 text-xs sm:justify-start sm:border-0 sm:pt-0">
+        <div class="flex flex-wrap justify-end gap-2 border-t border-white/10 pt-3 text-xs sm:justify-start sm:border-0 sm:pt-0">
+          <button type="button"
+             class="min-h-8 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60"
+            :class="isShownInShare(a)
+              ? 'border-accent bg-accent-soft text-accent'
+              : 'border-theme surface-soft text-theme-secondary hover-text-accent'"
+            :disabled="sharing.has(a.id)" :aria-pressed="isShownInShare(a)"
+            :aria-label="isShownInShare(a) ? '分享页展示中，点击关闭' : '分享页不展示，点击开启'"
+            @click="toggleShareVisibility(a)">
+            {{ sharing.has(a.id) ? '更新中…' : (isShownInShare(a) ? '✓ 分享页展示' : '分享页不展示') }}
+          </button>
           <button class="text-white/50 hover:text-white" @click="router.push(`/anniversaries/${a.id}/edit`)">编辑</button>
           <button class="text-rose-300/70 hover:text-rose-300" @click="remove(a)">删除</button>
         </div>

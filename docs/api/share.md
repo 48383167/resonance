@@ -17,6 +17,21 @@ include_anniversaries INTEGER NOT NULL DEFAULT 1  -- 1=分享纪念日，0=关�
 - 老库既有 `share_tokens` 行由 `ensureColumns` 自动补列，默认值为 `1`，
   保证既有分享行为不变（三类内容照旧可见）。
 
+## 条目级可见性（show_in_share）
+
+除「类别开关」外，恋爱瞬间与纪念日还支持**条目级**可见性：
+
+```sql
+moments.show_in_share       INTEGER NOT NULL DEFAULT 1  -- 1=该瞬间可进入分享，0=不分享
+anniversaries.show_in_share INTEGER NOT NULL DEFAULT 1  -- 1=该纪念日可进入分享，0=不分享
+```
+
+- 建表（`CREATE TABLE`）与老库补列（`ensureColumns`）均覆盖，迁移幂等；老数据默认 `1`（可见）。
+- 普通登录列表（`GET /api/moments`、`GET /api/anniversaries`）继续返回全部条目及
+  `show_in_share` 字段，供设置页展示每条的状态；条目级过滤只发生在公开分享链路。
+- 该字段与类别开关是 **AND** 关系：某条目要进入分享页，必须同时满足
+  「类别开关开启」且「该条目 `show_in_share = 1`」。任一条件不满足，该条目都不会被公开接口下发。
+
 ## 内容范围开关
 
 | 请求字段（camelCase）  | 数据库列（snake_case）  | 默认值 | 说明 |
@@ -143,7 +158,90 @@ include_anniversaries INTEGER NOT NULL DEFAULT 1  -- 1=分享纪念日，0=关�
 
 停用当前分享链接。成功响应 `{ "ok": true, "data": null }`。
 
-### 5. GET /api/public/share/:token（无需登录）
+### 5. PATCH /api/moments/:id/share-visibility（需登录）
+
+设置某个恋爱瞬间是否进入分享链接（条目级可见性）。
+
+请求参数：
+
+| 位置 | 字段 | 类型 | 说明 |
+|---|---|---|---|
+| path | `id` | string | 瞬间 ID |
+| body | `showInShare` | boolean | 是否在分享链接中展示该瞬间 |
+
+请求体：
+
+```json
+{ "showInShare": false }
+```
+
+成功响应（`200`，返回更新后的完整瞬间对象，含 `show_in_share` 与 photos/author）：
+
+```json
+{
+  "ok": true,
+  "data": {
+    "id": "m_xxxxxxxx",
+    "user_id": "u_xxxxxxxx",
+    "content": "今天一起看了日落",
+    "mood": "sweet",
+    "location": "海边",
+    "show_in_share": 0,
+    "author": { "id": "u_xxxxxxxx", "nickname": "昵称" },
+    "photos": []
+  }
+}
+```
+
+失败响应：
+
+- `showInShare` 非布尔值：`400` `{ code: "BAD_REQUEST", message: "showInShare 必须为布尔值" }`
+- 瞬间不存在：`404` `{ code: "NOT_FOUND", message: "瞬间不存在" }`
+- 未登录：`401` `{ code: "UNAUTHORIZED", message: "未登录或登录已过期" }`
+
+### 6. PATCH /api/anniversaries/:id/share-visibility（需登录）
+
+设置某个纪念日是否进入分享链接（条目级可见性）。
+
+请求参数：
+
+| 位置 | 字段 | 类型 | 说明 |
+|---|---|---|---|
+| path | `id` | string | 纪念日 ID |
+| body | `showInShare` | boolean | 是否在分享链接中展示该纪念日 |
+
+请求体：
+
+```json
+{ "showInShare": false }
+```
+
+成功响应（`200`，返回更新后的纪念日对象，含 `show_in_share` 与 daysUntil/daysSince/isToday 计算字段）：
+
+```json
+{
+  "ok": true,
+  "data": {
+    "id": "ann_xxxxxxxx",
+    "title": "在一起纪念日",
+    "type": "together",
+    "date": "2025-08-26",
+    "description": "",
+    "show_in_share": 0,
+    "daysUntil": 0,
+    "daysSince": 123,
+    "isToday": true
+  }
+}
+```
+
+失败响应：
+
+- `showInShare` 非布尔值：`400` `{ code: "BAD_REQUEST", message: "showInShare 必须为布尔值" }`
+- 纪念日不存在：`404` `{ code: "NOT_FOUND", message: "纪念日不存在" }`
+- 未登录：`401` `{ code: "UNAUTHORIZED", message: "未登录或登录已过期" }`
+
+### 7. GET /api/public/share/:token（无需登录）
 
 访客按 token 只读访问分享内容。可选 `?password=` 查询参数。
 
@@ -184,6 +282,8 @@ include_anniversaries INTEGER NOT NULL DEFAULT 1  -- 1=分享纪念日，0=关�
 - `include_moments = 0` → `moments: []`，`stats.moments = 0`
 - `include_entries = 0` → `entries: []`，`stats.entries = 0`
 - `include_anniversaries = 0` → `anniversaries: []`，`stats.anniversaries = 0`
+- 类别开关开启时，`moments` 只下发 `show_in_share = 1` 的瞬间，`anniversaries` 只下发 `show_in_share = 1` 的纪念日；
+  条目级过滤在 repository 的 public list 中完成，不在 controller/前端过滤。
 - `stats.moments / stats.entries / stats.anniversaries` 与实际下发数组长度一致；其余统计字段保留。
 
 特殊状态（保持原 API 兼容）：
@@ -197,5 +297,8 @@ include_anniversaries INTEGER NOT NULL DEFAULT 1  -- 1=分享纪念日，0=关�
 - 创建 / 查询 / 更新 / 停用接口均需登录；仅更新当前有效分享。
 - 公开访问只下发三类开关允许的内容；关闭的类别不会被查询或返回。
 - `entries` 始终只包含 `is_public = 1` 的公开日记，私有日记永不进入分享链接。
+- `moments` 与 `anniversaries` 在类别开关开启的基础上，进一步按条目级 `show_in_share = 1` 过滤；
+  关闭条目（`show_in_share = 0`）不会通过公共接口下发，也不会计入 `stats` 对应数量。
+- 条目级 `show_in_share` 与类别开关为 **AND** 关系，二者同时成立才对外可见。
 - 密码校验、有效期校验、浏览计数（`view_count`）逻辑保持不变，且先于内容过滤执行。
 - 媒体 URL 统一由文件表解析为 `/media/{path}`，不返回物理路径或文件 ID 之外的内部字段。

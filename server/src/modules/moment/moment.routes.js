@@ -10,6 +10,7 @@ router.get('/map', requireAuth, momentController.listMap)
 router.get('/:id', requireAuth, momentController.detail)
 router.post('/', requireAuth, momentController.create)
 router.put('/:id', requireAuth, momentController.update)
+router.patch('/:id/share-visibility', requireAuth, momentController.updateShareVisibility)
 router.delete('/:id', requireAuth, momentController.remove)
 
 export default router

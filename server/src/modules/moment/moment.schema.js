@@ -10,3 +10,11 @@ export function validateCreate(body = {}) {
     : []
   return { content, mood, location, longitude, latitude, momentDate, photos: normalizedPhotos }
 }
+
+// 条目级分享可见性：showInShare 必须是布尔值
+export function validateShowInShare(body = {}) {
+  if (typeof body.showInShare !== 'boolean') {
+    throw new BadRequestError('showInShare 必须为布尔值')
+  }
+  return body.showInShare
+}

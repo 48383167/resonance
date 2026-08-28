@@ -16,6 +16,10 @@ export async function update(req, res, next) {
   try { res.success(anniversaryService.update(req.params.id, req.body)) } catch (e) { next(e) }
 }
 
+export async function updateShareVisibility(req, res, next) {
+  try { res.success(anniversaryService.updateShareVisibility(req.params.id, req.body)) } catch (e) { next(e) }
+}
+
 export async function remove(req, res, next) {
   try { res.success(anniversaryService.remove(req.params.id)) } catch (e) { next(e) }
 }

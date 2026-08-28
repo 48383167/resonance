@@ -24,9 +24,9 @@ export function getShare(token, password) {
   const includeEntries = st.include_entries !== 0
   const includeAnniversaries = st.include_anniversaries !== 0
 
-  const moments = includeMoments ? momentRepository.list({}) : []
+  const moments = includeMoments ? momentRepository.listPublic() : []
   const entries = includeEntries ? diaryRepository.listPublic() : []
-  const anniversaries = includeAnniversaries ? anniversaryRepository.list() : []
+  const anniversaries = includeAnniversaries ? anniversaryRepository.listPublic() : []
 
   const stats = statsRepository.stats({ includeMoments, includeEntries, includeAnniversaries })
   // 三类计数与实际下发数组长度保持一致；其余统计字段保留

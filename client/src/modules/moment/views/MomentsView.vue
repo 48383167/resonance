@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { listMoments, removeMoment } from '../moment.api.js'
+import { listMoments, removeMoment, updateMomentShareVisibility } from '../moment.api.js'
 import { toast } from '../../../stores/toast'
 import { confirmDialog } from '../../../stores/confirm'
 import { openLightbox } from '../../../stores/lightbox'
@@ -15,6 +15,7 @@ const loading = ref(true)
 const searching = ref(false)
 const PAGE = 15
 const visible = ref(PAGE)
+const sharing = ref(new Set())
 
 const MOODS = [
   { key: 'normal', emoji: '😌', label: '平静' },
@@ -83,6 +84,25 @@ async function remove(m) {
   toast('已删除')
 }
 
+const isShownInShare = (m) => m.show_in_share !== 0
+
+async function toggleShareVisibility(m) {
+  if (sharing.value.has(m.id)) return
+  const showInShare = !isShownInShare(m)
+  sharing.value = new Set(sharing.value).add(m.id)
+  try {
+    const updated = await updateMomentShareVisibility(m.id, showInShare)
+    Object.assign(m, updated)
+    toast(showInShare ? '已在分享页展示' : '已从分享页隐藏')
+  } catch (error) {
+    toast(error.message || '更新分享展示状态失败', 'error')
+  } finally {
+    const next = new Set(sharing.value)
+    next.delete(m.id)
+    sharing.value = next
+  }
+}
+
 const dateText = (m) => (m.moment_date || m.created_at.slice(0, 10))
 
 function openMomentPhoto(photos, photo) {
@@ -141,7 +161,17 @@ function openMomentPhoto(photos, photo) {
             <span class="text-xs text-white/40">· {{ dateText(m) }}</span>
             <span v-if="m.location" class="break-words text-xs text-accent-2">📍 {{ m.location }}</span>
           </div>
-          <div class="flex shrink-0 gap-3 text-xs">
+          <div class="flex min-w-0 flex-wrap justify-end gap-2 text-xs">
+            <button type="button"
+              class="min-h-8 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60"
+              :class="isShownInShare(m)
+                ? 'border-accent bg-accent-soft text-accent'
+                : 'border-theme surface-soft text-theme-secondary hover-text-accent'"
+              :disabled="sharing.has(m.id)" :aria-pressed="isShownInShare(m)"
+              :aria-label="isShownInShare(m) ? '分享页展示中，点击关闭' : '分享页不展示，点击开启'"
+              @click="toggleShareVisibility(m)">
+              {{ sharing.has(m.id) ? '更新中…' : (isShownInShare(m) ? '✓ 分享页展示' : '分享页不展示') }}
+            </button>
             <button class="text-white/50 transition-colors hover:text-white" @click="router.push(`/moments/${m.id}/edit`)">编辑</button>
             <button class="text-rose-300/80 transition-colors hover:text-rose-300" @click="remove(m)">删除</button>
           </div>

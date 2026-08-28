@@ -46,6 +46,16 @@ export function update(userId, id, raw) {
   return updated
 }
 
+export function updateShareVisibility(userId, id, raw) {
+  const moment = momentRepository.findById(id)
+  if (!moment) throw new NotFoundError('瞬间不存在')
+  const showInShare = momentSchema.validateShowInShare(raw)
+  const updated = momentRepository.updateShowInShare(id, showInShare)
+  const coupleId = coupleIdOf(userId)
+  if (coupleId) emitMomentUpdated(coupleId, updated)
+  return updated
+}
+
 export function remove(userId, id) {
   const moment = momentRepository.findById(id)
   if (!moment) throw new NotFoundError('瞬间不存在')

@@ -1,12 +1,11 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { getPublicShare } from '../../../modules/observatory/observatory.api.js'
 import { openLightbox } from '../../../stores/lightbox'
 import { mediaTypeOf } from '../../../utils/media'
 
 const route = useRoute()
-const router = useRouter()
 const data = ref(null)
 const error = ref('')
 const loading = ref(true)
@@ -62,24 +61,25 @@ function entryText(entry) {
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#f4e8dc] px-4 py-6 text-[#5d4843] sm:px-6 sm:py-10">
+  <div class="mt-3">
+    <div class="share-scrapbook min-h-screen bg-[#f4e8dc] px-3 pb-6 pt-[calc(1.25rem+env(safe-area-inset-top))] text-[#5d4843] sm:px-6 sm:py-10">
     <div class="mx-auto max-w-5xl">
-      <header class="relative overflow-hidden rounded-[2rem] border border-[#d9b9a3]/60 bg-[#fffaf1] px-6 py-10 text-center shadow-[0_16px_45px_rgba(132,91,70,.13)] sm:px-12">
-        <span class="absolute left-8 top-5 rotate-[-8deg] rounded-sm bg-[#e8b8ae] px-3 py-1 text-[10px] tracking-[.24em] text-[#815b58] shadow-sm">OUR STORY</span>
-        <span class="absolute right-8 top-7 rotate-[7deg] rounded-sm bg-[#f2d487] px-3 py-1 text-[10px] tracking-[.18em] text-[#806841] shadow-sm">KEEP THIS</span>
+      <header class="relative overflow-hidden rounded-[0.9rem] border border-[#d9b9a3]/80 bg-[#fffaf1] px-4 pb-6 pt-16 text-center shadow-[0_10px_24px_rgba(132,91,70,.16)] sm:rounded-[1.25rem] sm:px-12 sm:py-10">
+        <span class="absolute left-5 top-4 rotate-[-8deg] rounded-sm bg-[#e8b8ae] px-2.5 py-1 text-[9px] tracking-[.2em] text-[#815b58] shadow-sm sm:left-8 sm:top-5 sm:px-3 sm:text-[10px] sm:tracking-[.24em]">OUR STORY</span>
+        <span class="absolute right-5 top-5 rotate-[7deg] rounded-sm bg-[#f2d487] px-2.5 py-1 text-[9px] tracking-[.15em] text-[#806841] shadow-sm sm:right-8 sm:top-7 sm:px-3 sm:text-[10px] sm:tracking-[.18em]">KEEP THIS</span>
         <div class="relative">
-          <p class="text-xs tracking-[.32em] text-[#b58378]">A LITTLE LOVE ARCHIVE</p>
-          <h1 class="serif mt-3 text-4xl font-semibold tracking-wide text-[#664b46] sm:text-6xl">我们的恋爱剪贴簿</h1>
-          <div v-if="data" class="mt-5 flex flex-wrap items-center justify-center gap-3 text-lg">
-            <span class="rounded-full bg-[#f7e1d4] px-4 py-2 font-semibold">{{ data.users?.[0]?.nickname || '我们' }}</span>
-            <span class="text-2xl text-[#d28e87]">♡</span>
-            <span class="rounded-full bg-[#f7e1d4] px-4 py-2 font-semibold">{{ data.users?.[1]?.nickname || 'Ta' }}</span>
-          </div>
-          <p v-if="data" class="mt-4 text-sm text-[#9b7870]">一起走过 {{ data.daysTogether || 0 }} 天 · 把平凡日子收藏成闪光</p>
-        </div>
-      </header>
+          <p class="text-[11px] tracking-[.22em] text-[#b58378] sm:text-xs sm:tracking-[.32em]">A LITTLE LOVE ARCHIVE</p>
+          <h1 class="serif mx-auto mt-2 max-w-full text-[clamp(1.75rem,8.5vw,2.35rem)] font-semibold leading-[1.15] tracking-[.02em] text-[#664b46] sm:mt-3 sm:text-6xl sm:tracking-wide">我们的恋爱剪贴簿</h1>
+          <div v-if="data" class="mx-auto mt-4 grid max-w-[22rem] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1 text-base sm:mt-5 sm:flex sm:max-w-none sm:flex-wrap sm:justify-center sm:gap-3 sm:text-lg">
+            <span class="min-w-0 truncate rounded-full bg-[#f7e1d4] px-2.5 py-1.5 font-semibold sm:px-4 sm:py-2">{{ data.users?.[0]?.nickname || '我们' }}</span>
+            <span class="text-xl text-[#d28e87] sm:text-2xl">♡</span>
+            <span class="min-w-0 truncate rounded-full bg-[#f7e1d4] px-2.5 py-1.5 font-semibold sm:px-4 sm:py-2">{{ data.users?.[1]?.nickname || 'Ta' }}</span>
+           </div>
+           <p v-if="data" class="mt-3 text-xs leading-5 text-[#9b7870] sm:mt-4 sm:text-sm">一起走过 {{ data.daysTogether || 0 }} 天 · 把平凡日子收藏成闪光</p>
+         </div>
+       </header>
 
-      <div v-if="loading" class="py-20 text-center text-[#a78176]">正在翻开这本小小的剪贴簿…</div>
+      <div v-if="loading" class="py-14 text-center text-[#a78176] sm:py-20">正在翻开这本小小的剪贴簿…</div>
 
       <section v-else-if="needPassword" class="mx-auto mt-8 max-w-sm rounded-[1.5rem] bg-[#fffaf1] p-7 text-center shadow-[0_12px_30px_rgba(132,91,70,.12)]">
         <div class="text-4xl">🔐</div>
@@ -92,21 +92,20 @@ function entryText(entry) {
 
       <section v-else-if="error" class="mx-auto mt-8 max-w-sm rounded-[1.5rem] bg-[#fffaf1] p-9 text-center text-[#9b7870] shadow-[0_12px_30px_rgba(132,91,70,.12)]">
         <div class="text-4xl">🥀</div><p class="mt-4">{{ error }}</p>
-        <button class="mt-6 rounded-full border border-[#d9b9a3] px-5 py-2 text-sm" @click="router.push('/login')">进入共鸣</button>
       </section>
 
-      <div v-else-if="data" class="mt-8 space-y-12">
-        <div v-if="!hasContent" class="rounded-[1.5rem] bg-[#fffaf1] px-6 py-14 text-center text-[#9b7870] shadow-[0_12px_30px_rgba(132,91,70,.1)]">
+      <div v-else-if="data" class="mt-5 space-y-8 sm:mt-8 sm:space-y-12">
+        <div v-if="!hasContent" class="rounded-lg border border-[#e2cabb] bg-[#fffaf1] px-6 py-14 text-center text-[#9b7870] shadow-[0_8px_20px_rgba(132,91,70,.12)]">
           <div class="text-4xl">🌷</div><p class="serif mt-4 text-xl">故事正在慢慢收集</p><p class="mt-2 text-sm">这里还没有可以展示的内容，先留下一点甜吧。</p>
         </div>
 
         <section v-if="moments.length">
-          <div class="mb-5 flex items-end justify-between"><div><p class="text-xs tracking-[.24em] text-[#bd8880]">MOMENTS</p><h2 class="serif mt-1 text-3xl">恋爱瞬间</h2></div><span class="text-sm text-[#ad8378]">{{ moments.length }} 个收藏</span></div>
-          <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <article v-for="(moment, index) in moments" :key="moment.id" class="relative overflow-hidden rounded-lg bg-[#fffdf7] p-3 shadow-[0_8px_20px_rgba(132,91,70,.14)] transition hover:-translate-y-1" :class="index % 3 === 1 ? 'rotate-[1deg]' : index % 3 === 2 ? 'rotate-[-1deg]' : 'rotate-[-.5deg]'">
+          <div class="mb-4 flex items-end justify-between sm:mb-5"><div><p class="text-xs tracking-[.24em] text-[#bd8880]">MOMENTS</p><h2 class="serif mt-1 text-3xl">恋爱瞬间</h2></div><span class="text-sm text-[#ad8378]">{{ moments.length }} 个收藏</span></div>
+          <div class="grid gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+            <article v-for="(moment, index) in moments" :key="moment.id" class="relative overflow-hidden rounded-md border border-[#e4cec0] bg-[#fffdf7] p-2.5 shadow-[0_7px_16px_rgba(132,91,70,.16)] transition hover:-translate-y-1 sm:p-3" :class="index % 3 === 1 ? 'rotate-[1deg]' : index % 3 === 2 ? 'rotate-[-1deg]' : 'rotate-[-.5deg]'">
               <span class="absolute -top-2 left-1/2 z-10 h-5 w-16 -translate-x-1/2 rotate-[-3deg] bg-[#e8b8ae]/80 shadow-sm" />
               <div v-if="imageItems(moment).length" class="grid gap-2" :class="imageItems(moment).length > 1 ? 'grid-cols-2' : 'grid-cols-1'">
-                <button v-for="photo in imageItems(moment)" :key="imageUrl(photo)" class="aspect-[4/3] min-w-0 overflow-hidden bg-[#ead8ca]" @click="showPhoto(moment, photo)"><img :src="imageUrl(photo)" class="h-full w-full object-cover transition duration-500 hover:scale-105" loading="lazy" alt="恋爱瞬间" /></button>
+                <button v-for="photo in imageItems(moment)" :key="imageUrl(photo)" class="aspect-[5/3] min-w-0 overflow-hidden bg-[#ead8ca] sm:aspect-[4/3]" @click="showPhoto(moment, photo)"><img :src="imageUrl(photo)" class="h-full w-full object-cover transition duration-500 hover:scale-105" loading="lazy" alt="恋爱瞬间" /></button>
               </div>
               <div class="px-1 pb-1 pt-3"><p class="text-[11px] text-[#b48a7f]">{{ dateText(moment) }}<span v-if="moment.location"> · 📍 {{ moment.location }}</span></p><p class="mt-2 whitespace-pre-wrap break-words text-sm leading-6">{{ moment.content || '把这一天轻轻收好。' }}</p><p v-if="moment.author?.nickname" class="mt-3 text-xs text-[#c09188]">— {{ moment.author.nickname }}</p></div>
             </article>
@@ -116,7 +115,7 @@ function entryText(entry) {
         <section v-if="entries.length">
           <div class="mb-5"><p class="text-xs tracking-[.24em] text-[#bd8880]">DEAR DIARY</p><h2 class="serif mt-1 text-3xl">公开日记</h2></div>
           <div class="grid gap-5 md:grid-cols-2">
-            <article v-for="(entry, index) in entries" :key="entry.id" class="rounded-2xl border border-[#ead4c5] bg-[#f9edc9] p-5 shadow-[3px_5px_0_rgba(205,157,117,.16)]" :class="index % 2 ? 'rotate-[.5deg]' : 'rotate-[-.5deg]'">
+              <article v-for="(entry, index) in entries" :key="entry.id" class="rounded-lg border border-[#ead4c5] bg-[#f9edc9] p-5 shadow-[3px_5px_0_rgba(205,157,117,.18)]" :class="index % 2 ? 'rotate-[.5deg]' : 'rotate-[-.5deg]'">
               <p class="text-xs text-[#ae8770]">{{ dateText(entry) }} · 日记</p><h3 class="serif mt-2 break-words text-xl">{{ entry.title || '无题日记' }}</h3><p v-for="(text, i) in entryText(entry)" :key="i" class="mt-3 whitespace-pre-wrap break-words text-sm leading-7 text-[#765c51]">{{ text }}</p>
             </article>
           </div>
@@ -124,11 +123,25 @@ function entryText(entry) {
 
         <section v-if="anniversaries.length">
           <div class="mb-5"><p class="text-xs tracking-[.24em] text-[#bd8880]">IMPORTANT DAYS</p><h2 class="serif mt-1 text-3xl">纪念日</h2></div>
-          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><article v-for="anniversary in anniversaries" :key="anniversary.id" class="rounded-2xl border border-[#e7c0b6] bg-[#fff8f3] p-5 shadow-[0_8px_18px_rgba(132,91,70,.1)]"><div class="flex items-start justify-between gap-3"><span class="text-2xl">🌷</span><time class="rounded-full bg-[#f6dfd8] px-3 py-1 text-xs text-[#a87570]">{{ anniversary.date }}</time></div><h3 class="serif mt-4 break-words text-lg">{{ anniversary.title }}</h3><p v-if="anniversary.description" class="mt-2 break-words text-sm leading-6 text-[#98776f]">{{ anniversary.description }}</p></article></div>
+          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><article v-for="anniversary in anniversaries" :key="anniversary.id" class="rounded-lg border border-[#e7c0b6] bg-[#fff8f3] p-5 shadow-[0_7px_16px_rgba(132,91,70,.12)]"><div class="flex items-start justify-between gap-3"><span class="text-2xl">🌷</span><time class="rounded-full bg-[#f6dfd8] px-3 py-1 text-xs text-[#a87570]">{{ anniversary.date }}</time></div><h3 class="serif mt-4 break-words text-lg">{{ anniversary.title }}</h3><p v-if="anniversary.description" class="mt-2 break-words text-sm leading-6 text-[#98776f]">{{ anniversary.description }}</p></article></div>
         </section>
 
-        <footer class="pb-6 text-center"><p class="text-sm text-[#ad8378]">愿每一个普通日子，都被好好记住。</p><button class="mt-4 rounded-full border border-[#d9b9a3] bg-[#fffaf1]/70 px-5 py-2 text-sm text-[#8e6963] transition hover:bg-white" @click="router.push('/login')">进入共鸣</button></footer>
+        <footer class="pb-6 text-center"><p class="text-sm text-[#ad8378]">愿每一个普通日子，都被好好记住。</p></footer>
       </div>
+    </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.share-scrapbook {
+  border: 1px solid rgb(217 185 163 / 0.58);
+  border-radius: 14px;
+  box-shadow: 0 14px 34px rgb(55 35 29 / 0.12);
+  overflow: hidden;
+}
+
+@media (min-width: 640px) {
+  .share-scrapbook { border-radius: 20px; }
+}
+</style>

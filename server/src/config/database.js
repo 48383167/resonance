@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS moments (
     location TEXT DEFAULT '',        -- 地点描述
     longitude REAL, latitude REAL,   -- 坐标（恋爱地图足迹）
     moment_date TEXT,                -- 发生日期 YYYY-MM-DD（可补记）
+    show_in_share INTEGER NOT NULL DEFAULT 1, -- 是否在分享链接中展示（条目级）
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
@@ -163,6 +164,7 @@ CREATE TABLE IF NOT EXISTS anniversaries (
     type TEXT DEFAULT 'custom',      -- first_meet/together/birthday/custom
     date TEXT NOT NULL,              -- YYYY-MM-DD
     description TEXT DEFAULT '',
+    show_in_share INTEGER NOT NULL DEFAULT 1, -- 是否在分享链接中展示（条目级）
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
@@ -212,6 +214,8 @@ ensureColumns('wish_items', {
   started_at: 'TEXT',
 })
 ensureColumns('love_letters', { read_at: 'TEXT' })
+ensureColumns('moments', { show_in_share: 'INTEGER NOT NULL DEFAULT 1' })
+ensureColumns('anniversaries', { show_in_share: 'INTEGER NOT NULL DEFAULT 1' })
 ensureColumns('user_theme_settings', {
   appearance_mode: "TEXT NOT NULL DEFAULT 'auto'",
   surface_color: 'TEXT',
