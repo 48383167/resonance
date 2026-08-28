@@ -1,97 +1,33 @@
 <script setup>
-import { ref, computed, onUnmounted } from 'vue'
-import { listTracks } from '../music.api.js'
-import { toast } from '../../../stores/toast'
+import { ref, computed, onMounted } from 'vue'
+import { musicState, restoreMusic, toggleMusic, nextTrack, previousTrack } from '../../../stores/music'
 
 // 全局甜蜜背景音乐：右下角悬浮迷你播放器（网易云随机音乐）
-const tracks = ref([])
-const index = ref(0)
-const playing = ref(false)
 const expanded = ref(false)
-const loading = ref(false)
-let audio = null
 
-const current = computed(() => tracks.value[index.value] || null)
-
-function ensureAudio() {
-  if (!audio) {
-    audio = new Audio()
-    audio.volume = 0.5
-    audio.addEventListener('ended', next)
-  }
-  return audio
-}
-
-async function load() {
-  if (tracks.value.length) return
-  await loadRandom()
-}
-
-async function loadRandom() {
-  loading.value = true
-  try {
-    const nextTracks = await listTracks()
-    if (nextTracks.length) {
-      tracks.value = [...tracks.value, nextTracks[0]]
-      index.value = tracks.value.length - 1
-    }
-  } catch (e) {
-    toast(e.message)
-  } finally {
-    loading.value = false
-  }
-}
-
-function playCurrent() {
-  if (!current.value) return
-  const a = ensureAudio()
-  a.src = current.value.audio
-  a.play().catch(() => {})
-  playing.value = true
-}
+const current = computed(() => musicState.tracks[musicState.index] || null)
+const playing = computed(() => musicState.playing)
+const loading = computed(() => musicState.loading)
 
 async function toggle() {
-  if (loading.value) return
-  if (!tracks.value.length) {
-    await load()
-    if (!tracks.value.length) return
-  }
-  if (playing.value) {
-    audio?.pause()
-    playing.value = false
-  } else {
-    playCurrent()
-    expanded.value = true
-  }
+  const wasPlaying = musicState.playing
+  const started = await toggleMusic()
+  if (!wasPlaying && started) expanded.value = true
 }
 
 async function next() {
-  if (!tracks.value.length) return
-  if (index.value < tracks.value.length - 1) {
-    index.value += 1
-    if (playing.value) playCurrent()
-    return
-  }
-  await loadRandom()
-  if (playing.value && current.value) playCurrent()
+  await nextTrack()
 }
 
-function prev() {
-  if (!tracks.value.length) return
-  index.value = (index.value - 1 + tracks.value.length) % tracks.value.length
-  if (playing.value) playCurrent()
+async function prev() {
+  await previousTrack()
 }
 
 function close() {
   expanded.value = false
 }
 
-onUnmounted(() => {
-  if (audio) {
-    audio.pause()
-    audio = null
-  }
-})
+onMounted(restoreMusic)
 </script>
 
 <template>

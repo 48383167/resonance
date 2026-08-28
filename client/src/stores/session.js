@@ -1,6 +1,7 @@
 import { reactive } from 'vue'
 import { getMe } from '../modules/auth/auth.api.js'
 import { authSocket, socketDisconnect } from '../socket'
+import { stopMusic } from './music'
 
 // 全局会话：token 由 localStorage 持久化，会话内保存本人 / 伴侣 / 在线状态
 export const session = reactive({
@@ -39,6 +40,7 @@ export async function initSession() {
 }
 
 export function logout() {
+  stopMusic()
   localStorage.removeItem('resonance.token')
   session.userId = ''
   session.me = null
