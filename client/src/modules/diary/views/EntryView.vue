@@ -3,6 +3,7 @@ import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getDiary, removeDiary, setVisibility } from '../diary.api.js'
 import { session } from '../../../stores/session'
+import { currentTheme } from '../../../stores/theme'
 import { toast } from '../../../stores/toast'
 import { paletteFor, weatherLabel } from '../../../composables/useAmbient'
 import { confirmDialog } from '../../../stores/confirm'
@@ -58,7 +59,9 @@ async function togglePublic() {
 
 const hour = computed(() => (entry.value ? new Date(entry.value.created_at).getHours() : 12))
 const palette = computed(() => (entry.value ? paletteFor(hour.value, entry.value.weather_code) : ['#0b1d3a']))
-const fgColor = computed(() => entry.value?.time_color_hex || palette.value[1] || '#d8a7ff')
+// 环境底片保留日记当时的时间/天气氛围，文字和边线则使用当前主题强调色保证可读性。
+const fgColor = computed(() => currentTheme.accentText || 'var(--accent-text)')
+const ambientOpacity = computed(() => currentTheme.mode === 'light' ? 0.16 : 0.35)
 
 const imageMedia = computed(() => (entry.value?.media || []).filter((u) => (u.type || mediaTypeOf(u.url || '')) === 'image'))
 
@@ -79,25 +82,25 @@ const named = computed(() => (entry.value?.contents || []).map((c) => ({
       </div>
     </div>
 
-    <div v-if="!entry" class="py-20 text-center text-white/40">加载中…</div>
+    <div v-if="!entry" class="py-20 text-center text-theme-secondary">加载中…</div>
     <div v-else class="glass relative overflow-hidden p-6 sm:p-10">
-      <AmbientBackground :colors="palette" :weather-code="entry.weather_code" :opacity="0.35" />
+      <AmbientBackground :colors="palette" :weather-code="entry.weather_code" :opacity="ambientOpacity" />
       
       <div class="relative z-10 text-center">
-        <div class="text-[10px] text-white/40">{{ dateText }}</div>
+        <div class="text-[10px] text-theme-tertiary">{{ dateText }}</div>
         <div class="serif mt-1 text-2xl" :style="{ color: fgColor }">{{ timeText }}</div>
         <h1 class="serif mt-4 break-words text-3xl font-bold">{{ entry.title || '无题' }}</h1>
         <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
-          <span v-if="entry.weather_code != null" class="rounded-full bg-white/5 px-2.5 py-0.5 text-xs text-white/50">
+          <span v-if="entry.weather_code != null" class="surface-soft rounded-full px-2.5 py-0.5 text-xs text-theme-secondary">
             {{ weatherLabel(entry.weather_code) }}
           </span>
-          <span class="rounded-full bg-white/5 px-2.5 py-0.5 text-xs text-white/50">{{ publicStatus }}</span>
+          <span class="surface-soft rounded-full px-2.5 py-0.5 text-xs text-theme-secondary">{{ publicStatus }}</span>
         </div>
       </div>
 
       <div class="relative z-10 mt-10 space-y-6">
         <div v-for="c in named" :key="c.id" class="border-l-2 pl-4" :style="{ borderColor: fgColor + '60' }">
-          <div class="flex items-center gap-2 text-xs text-white/40">
+          <div class="flex items-center gap-2 text-xs text-theme-tertiary">
             <span>{{ c.nickname }}</span>
             <span v-if="c.typing_speed" title="打字速度 (WPM)">⚡{{ c.typing_speed }}</span>
             <span v-if="c.delete_count" title="删改次数">🗑️{{ c.delete_count }}</span>
@@ -107,7 +110,7 @@ const named = computed(() => (entry.value?.contents || []).map((c) => ({
         </div>
       </div>
 
-      <div v-if="entry.media?.length" class="mt-6 space-y-3 border-t border-white/10 pt-5">
+      <div v-if="entry.media?.length" class="mt-6 space-y-3 border-t border-theme pt-5">
         <div v-if="imageMedia.length" class="flex flex-wrap gap-2">
           <img v-for="(u, i) in imageMedia" :key="u.id || u.url || i" :src="u.url" class="h-24 w-24 cursor-zoom-in rounded-lg object-cover"
             loading="lazy" @click="openLightbox(imageMedia.map((x) => x.url), i)" />
@@ -115,13 +118,13 @@ const named = computed(() => (entry.value?.contents || []).map((c) => ({
         <video v-for="(u, i) in entry.media.filter((x) => (x.type || mediaTypeOf(x.url || '')) === 'video')" :key="u.id || u.url || i" :src="u.url"
           class="max-h-72 w-full rounded-xl" controls />
         <a v-for="(u, i) in entry.media.filter((x) => (x.type || mediaTypeOf(x.url || '')) === 'file')" :key="u.id || u.url || i" :href="u.url" target="_blank"
-          class="flex items-center gap-2 rounded-xl bg-white/5 px-4 py-2.5 text-sm text-accent-2 hover:bg-white/10">
+          class="surface-soft surface-hover flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm text-accent-2">
           📄 {{ u.name || decodeURIComponent((u.url || '').split('/').pop()) }}
         </a>
       </div>
 
       <div class="mt-8 flex justify-center">
-        <button class="rounded-full border border-rose-400/30 px-4 py-1.5 text-xs text-rose-300/80 hover:bg-rose-500/10 hover:text-rose-300"
+        <button class="danger-action rounded-full px-4 py-1.5 text-xs transition-colors"
           @click="remove">🗑 删除这篇日记</button>
       </div>
     </div>

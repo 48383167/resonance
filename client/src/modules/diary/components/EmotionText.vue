@@ -20,7 +20,7 @@ const lines = computed(() => props.content.split('\n'))
       class="break-words whitespace-pre-wrap leading-relaxed" :class="compact ? 'text-sm' : 'text-[15px]'">
       {{ line || ' ' }}
     </p>
-    <div v-if="metrics && (metrics.wpm || metrics.backspaceCount)" class="mt-3 text-[11px] text-white/40">
+    <div v-if="metrics && (metrics.wpm || metrics.backspaceCount)" class="mt-3 text-[11px] text-theme-tertiary">
       情绪痕迹：{{ emotionSummary(metrics) }}
     </div>
   </div>

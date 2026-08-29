@@ -12,6 +12,8 @@
   --accent-2-rgb: 126 200 255;
   --accent-text: #d8a7ff;
   --accent-2-text: #7ec8ff;
+  --danger-text: #fda4af;
+  --danger-rgb: 253 164 175;
   --ambient: #070a18;
   --ambient-rgb: 7 10 24;
   --accent-contrast: #1a1030;
@@ -148,6 +150,11 @@ body {
 .text-accent-2 { color: var(--accent-2-text); }
 .hover-text-accent:hover { color: var(--accent-text); }
 .hover-text-accent-2:hover { color: var(--accent-2-text); }
+.danger-action {
+  border: 1px solid rgb(var(--danger-rgb) / 0.3);
+  color: var(--danger-text);
+}
+.danger-action:hover { background: rgb(var(--danger-rgb) / 0.1); }
 .bg-accent { background: var(--accent); }
 .bg-accent-2 { background: var(--accent-2); }
 .bg-accent-soft { background: rgb(var(--accent-rgb) / 0.18); }
@@ -187,6 +194,8 @@ body {
   --text-secondary-rgb: 110 102 123;
   --border-subtle: #302b43;
   --border-subtle-rgb: 48 43 67;
+  --danger-text: #be123c;
+  --danger-rgb: 190 18 60;
   --surface-1: #ffffff;
   --surface-1-rgb: 255 255 255;
   --surface-2: #ffffff;
