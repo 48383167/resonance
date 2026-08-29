@@ -46,6 +46,7 @@ const timeText = computed(() => {
 })
 
 const publicStatus = computed(() => (entry.value?.is_public ? '公开' : '私密'))
+const canEdit = computed(() => Boolean(entry.value?.contents?.some((c) => c.user_id === session.userId)))
 async function togglePublic() {
   const isPublic = !entry.value.is_public
   const msg = isPublic ? '将此日记公开到观测台？其他人也能看到。' : '将此日记设为私密？'
@@ -73,6 +74,7 @@ const named = computed(() => (entry.value?.contents || []).map((c) => ({
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
       <button class="btn-ghost text-sm" @click="goBack">← 返回</button>
       <div v-if="entry" class="flex flex-wrap justify-end gap-2">
+        <button v-if="canEdit" class="btn-ghost text-sm" @click="router.push(`/entry/${entry.id}/edit`)">✎ 编辑</button>
         <button class="btn-ghost text-sm" @click="togglePublic">{{ entry.is_public ? '🔭 设为私密' : '🔒 公开' }}</button>
       </div>
     </div>

@@ -32,6 +32,14 @@ export async function create(req, res, next) {
   }
 }
 
+export async function update(req, res, next) {
+  try {
+    res.success(diaryService.update(req.user.id, req.params.id, req.body))
+  } catch (error) {
+    next(error)
+  }
+}
+
 export async function setVisibility(req, res, next) {
   try {
     res.success(diaryService.setVisibility(req.user.id, req.params.id, req.body?.isPublic))

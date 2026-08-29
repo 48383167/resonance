@@ -33,6 +33,7 @@ const routes = [
   { path: '/diary', name: 'diary-calendar', component: () => import('./modules/diary/views/DiaryCalendar.vue'), meta: { auth: true } },
   { path: '/settings', name: 'settings', component: () => import('./modules/theme/views/Settings.vue'), meta: { auth: true } },
   { path: '/write/solo', name: 'write-solo', component: () => import('./modules/diary/views/WriteSolo.vue'), meta: { auth: true } },
+  { path: '/entry/:id/edit', name: 'entry-edit', component: () => import('./modules/diary/views/WriteSolo.vue'), meta: { auth: true } },
   { path: '/entry/:id', name: 'entry', component: () => import('./modules/diary/views/EntryView.vue'), meta: { auth: true } },
   { path: '/observatory', name: 'observatory', component: () => import('./modules/observatory/views/Observatory.vue') },
   { path: '/share/:token', name: 'share', component: () => import('./modules/share/views/ShareView.vue') },

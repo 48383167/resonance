@@ -1,4 +1,5 @@
 import { NotFoundError } from '../../common/errors/NotFoundError.js'
+import { ForbiddenError } from '../../common/errors/ForbiddenError.js'
 import * as coupleService from '../couple/couple.service.js'
 import { emitDiaryCreated, emitDiaryUpdated, emitDiaryDeleted } from '../../infrastructure/socket/diary.socket.js'
 import { softDeleteQuietly } from '../file/file.service.js'
@@ -43,6 +44,38 @@ export function create(userId, raw) {
   const assembled = diaryRepository.attachContents(entry)
   const coupleId = coupleIdOf(userId)
   if (coupleId) emitDiaryCreated(coupleId, assembled)
+  return assembled
+}
+
+function mediaFileIds(media) {
+  let raw = media
+  if (typeof media === 'string') {
+    try { raw = JSON.parse(media) } catch { raw = [] /* 忽略损坏的附件数据 */ }
+  }
+  if (!Array.isArray(raw)) return []
+  return raw
+    .filter((m) => m && typeof m === 'object' && m.fileId)
+    .map((m) => m.fileId)
+}
+
+export function update(userId, id, raw) {
+  const entry = diaryRepository.findById(id)
+  if (!entry) throw new NotFoundError('日记不存在')
+
+  const content = diaryRepository.findContentByUser(id, userId)
+  if (!content) throw new ForbiddenError('只能编辑自己写的日记')
+
+  const data = diarySchema.validateUpdate(raw)
+  const nextIds = new Set(mediaFileIds(data.media))
+  for (const fileId of mediaFileIds(entry.media)) {
+    if (!nextIds.has(fileId)) softDeleteQuietly(fileId, userId)
+  }
+
+  diaryRepository.update(id, data)
+  diaryRepository.updateContent(content.id, data)
+  const assembled = diaryRepository.attachContents(diaryRepository.findById(id))
+  const coupleId = coupleIdOf(userId)
+  if (coupleId) emitDiaryUpdated(coupleId, assembled)
   return assembled
 }
 

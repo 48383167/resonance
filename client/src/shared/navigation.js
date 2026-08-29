@@ -7,7 +7,7 @@ export const navigationItems = [
     label: '日记',
     icon: '▤',
     group: '记录',
-    activeRoutes: ['diary-list', 'diary-calendar', 'entry'],
+    activeRoutes: ['diary-list', 'diary-calendar', 'entry', 'entry-edit'],
   },
   {
     name: 'moments',

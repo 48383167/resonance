@@ -32,7 +32,17 @@ export function useEmotion() {
     lastLength = 0
   }
 
-  return { metrics, onInput, reset }
+  function setInitialValue(value, saved = {}) {
+    metrics.wpm = Number(saved.wpm) || 0
+    metrics.backspaceCount = Number(saved.backspaceCount) || 0
+    metrics.pauseDuration = Number(saved.pauseDuration) || 0
+    metrics.charCount = 0
+    startAt = Date.now()
+    lastKeyAt = Date.now()
+    lastLength = String(value || '').length
+  }
+
+  return { metrics, onInput, reset, setInitialValue }
 }
 
 // —— 渲染规则：用字重和透明度表现情绪，避免影响正文清晰度 ——

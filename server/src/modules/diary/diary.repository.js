@@ -71,6 +71,31 @@ export function createContent({ entryId, userId, content, typingSpeed, deleteCou
   return db.prepare('SELECT * FROM entry_contents WHERE id = ?').get(id)
 }
 
+export function findContentByUser(entryId, userId) {
+  return db.prepare(
+    'SELECT * FROM entry_contents WHERE entry_id = ? AND user_id = ? ORDER BY rowid ASC LIMIT 1'
+  ).get(entryId, userId)
+}
+
+export function update(id, { title, weatherCode, timeColorHex, media }) {
+  db.prepare(
+    'UPDATE entries SET title = ?, weather_code = ?, time_color_hex = ?, media = ? WHERE id = ?'
+  ).run(title ? String(title).trim() : null, weatherCode ?? null, timeColorHex ?? null, JSON.stringify(media || []), id)
+  return findById(id)
+}
+
+export function updateContent(id, { content, typingSpeed, deleteCount, pauseDuration }) {
+  db.prepare(
+    `UPDATE entry_contents
+     SET content = ?,
+         typing_speed = COALESCE(?, typing_speed),
+         delete_count = COALESCE(?, delete_count),
+         pause_duration = COALESCE(?, pause_duration)
+     WHERE id = ?`
+  ).run(content, typingSpeed ?? null, deleteCount ?? null, pauseDuration ?? null, id)
+  return db.prepare('SELECT * FROM entry_contents WHERE id = ?').get(id)
+}
+
 export function setVisibility(id, isPublic) {
   db.prepare('UPDATE entries SET is_public = ? WHERE id = ?').run(isPublic ? 1 : 0, id)
 }

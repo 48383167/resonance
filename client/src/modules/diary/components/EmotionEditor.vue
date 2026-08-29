@@ -14,7 +14,7 @@ const props = defineProps({
 const emit = defineEmits(['submit', 'restore'])
 
 const text = ref('')
-const { metrics, onInput } = useEmotion()
+const { metrics, onInput, setInitialValue } = useEmotion()
 
 const summary = computed(() => emotionSummary(metrics))
 const draftStorageKey = () => props.draftKey ? `resonance.draft.${props.draftKey}` : ''
@@ -26,7 +26,7 @@ onMounted(() => {
     if (raw) {
       const d = JSON.parse(raw)
       if (d.content) {
-        text.value = d.content
+        setContent(d.content)
         emit('restore', d)
       }
     }
@@ -38,6 +38,11 @@ function handleInput() {
   if (props.draftKey) {
     localStorage.setItem(draftStorageKey(), JSON.stringify({ content: text.value, at: Date.now() }))
   }
+}
+
+function setContent(value, savedMetrics = {}) {
+  text.value = String(value || '')
+  setInitialValue(text.value, savedMetrics)
 }
 
 function clearDraft() {
@@ -54,7 +59,7 @@ function doSubmit() {
   })
 }
 
-defineExpose({ clearDraft })
+defineExpose({ clearDraft, setContent })
 </script>
 
 <template>
