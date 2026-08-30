@@ -5,9 +5,39 @@ import * as shareRepository from '../share/share.repository.js'
 import * as statsRepository from '../stats/stats.repository.js'
 import * as coupleRepository from '../couple/couple.repository.js'
 import * as albumRepository from '../album/album.repository.js'
+import * as observatoryRepository from './observatory.repository.js'
+import * as observatorySchema from './observatory.schema.js'
 
+// 观测台总展示是否开启（默认开启，缺省 enabled=1 已在 database.js 初始化）
+function isEnabled() {
+  return observatoryRepository.getSettings().enabled !== 0
+}
+
+// 公开观测台：enabled=false 时不下发照片，避免泄露
 export function getObservatory() {
-  return { photos: albumRepository.listObservatoryPhotos() }
+  const enabled = isEnabled()
+  return {
+    enabled,
+    photos: enabled ? albumRepository.listObservatoryPhotos() : [],
+  }
+}
+
+// 内部观测台（登录用户）：无论开关状态，均可看到已勾选照片（供预览/管理）
+export function getInternalObservatory() {
+  return {
+    enabled: isEnabled(),
+    photos: albumRepository.listObservatoryPhotos(),
+  }
+}
+
+// 更新观测台总展示开关，返回最新状态与内部照片
+export function setVisibility(raw) {
+  const { enabled } = observatorySchema.validateVisibility(raw)
+  observatoryRepository.setEnabled(enabled)
+  return {
+    enabled,
+    photos: albumRepository.listObservatoryPhotos(),
+  }
 }
 
 // 分享链接：token 只读访问（可选密码、有效期、浏览计数）

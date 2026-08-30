@@ -35,7 +35,7 @@ const routes = [
   { path: '/write/solo', name: 'write-solo', component: () => import('./modules/diary/views/WriteSolo.vue'), meta: { auth: true } },
   { path: '/entry/:id/edit', name: 'entry-edit', component: () => import('./modules/diary/views/WriteSolo.vue'), meta: { auth: true } },
   { path: '/entry/:id', name: 'entry', component: () => import('./modules/diary/views/EntryView.vue'), meta: { auth: true } },
-  { path: '/observatory', name: 'observatory', component: () => import('./modules/observatory/views/Observatory.vue') },
+  { path: '/observatory', name: 'observatory', component: () => import('./modules/observatory/views/Observatory.vue'), meta: { auth: true } },
   { path: '/share/:token', name: 'share', component: () => import('./modules/share/views/ShareView.vue') },
 ]
 

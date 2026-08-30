@@ -16,7 +16,37 @@ show_in_observatory INTEGER NOT NULL DEFAULT 0  -- 1=展示到观测台，0=不�
 
 ## API 契约
 
-### 1. PATCH /api/albums/:albumId/photos/:photoId/observatory（需登录）
+### 1. 观测台总展示开关
+
+#### GET /api/observatory（需登录）
+
+返回内部观测台数据。无论总开关状态如何，登录用户都可以查看已勾选的照片。
+
+#### PATCH /api/observatory/visibility（需登录）
+
+设置观测台是否对未登录访客展示。
+
+请求体：
+
+```json
+{ "enabled": false }
+```
+
+成功响应：
+
+```json
+{
+  "ok": true,
+  "data": {
+    "enabled": false,
+    "photos": []
+  }
+}
+```
+
+当 `enabled=false` 时，公开入口 `/` 会跳转登录页，公开接口不会返回照片；内部 `/observatory` 仍可查看照片并重新开启展示。
+
+### 2. PATCH /api/albums/:albumId/photos/:photoId/observatory（需登录）
 
 设置某张相册照片是否展示到观测台。
 
@@ -57,7 +87,7 @@ show_in_observatory INTEGER NOT NULL DEFAULT 0  -- 1=展示到观测台，0=不�
 - 开启展示但文件不是有效图片：`400` `{ code: "BAD_REQUEST", message: "只有有效图片可以展示到观测台" }`
 - 未登录：`401` `{ code: "UNAUTHORIZED", message: "未登录或登录已过期" }`
 
-### 2. GET /api/public/observatory（无需登录）
+### 3. GET /api/public/observatory（无需登录）
 
 返回观测台公开图片列表。
 
@@ -69,7 +99,8 @@ show_in_observatory INTEGER NOT NULL DEFAULT 0  -- 1=展示到观测台，0=不�
   "data": {
     "photos": [
       { "id": "ap_xxxxxxxx", "url": "/media/2025/08/26/abc123.jpg", "type": "image" }
-    ]
+    ],
+    "enabled": true
   }
 }
 ```

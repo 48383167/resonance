@@ -219,6 +219,13 @@ CREATE TABLE IF NOT EXISTS share_tokens (
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
+-- 观测台总展示开关（singleton：id 固定为 1，enabled 默认开启）
+CREATE TABLE IF NOT EXISTS observatory_settings (
+    id INTEGER PRIMARY KEY,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
 -- 幂等记录：创建类 POST 接口的幂等保护（中间件 idempotency.middleware.js 使用）
 -- 唯一键 (user_id, request_key, route_scope) 隔离：同用户 + 同 Idempotency-Key + 同路由作用域
 CREATE TABLE IF NOT EXISTS idempotency_records (
@@ -235,6 +242,9 @@ CREATE TABLE IF NOT EXISTS idempotency_records (
     UNIQUE(user_id, request_key, route_scope)
 );
 `)
+
+// 兼容旧库：观测台开关 singleton 行缺省初始化 enabled=1，保证已有行为不变（幂等）
+db.prepare('INSERT OR IGNORE INTO observatory_settings (id, enabled) VALUES (1, 1)').run()
 
 // 老库补列：日记附件、心愿阶段时间节点、情书阅读时间、文件 ID 化新列
 ensureColumns('entries', { media: "TEXT DEFAULT '[]'" })

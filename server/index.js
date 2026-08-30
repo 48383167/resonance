@@ -13,6 +13,7 @@ import coupleRoutes from './src/modules/couple/couple.routes.js'
 import diaryRoutes from './src/modules/diary/diary.routes.js'
 import timelineRoutes from './src/modules/timeline/timeline.routes.js'
 import observatoryRoutes from './src/modules/observatory/observatory.routes.js'
+import observatoryInternalRoutes from './src/modules/observatory/observatory.internal.routes.js'
 import exportRoutes from './src/modules/export/export.routes.js'
 import momentRoutes from './src/modules/moment/moment.routes.js'
 import letterRoutes from './src/modules/letter/letter.routes.js'
@@ -50,6 +51,7 @@ app.use('/api/couple', coupleRoutes)
 app.use('/api/entries', diaryRoutes)
 app.use('/api/timeline', timelineRoutes)
 app.use('/api/public', observatoryRoutes)
+app.use('/api/observatory', observatoryInternalRoutes)
 app.use('/api', exportRoutes)
 app.use('/api/moments', momentRoutes)
 app.use('/api/letters', letterRoutes)
