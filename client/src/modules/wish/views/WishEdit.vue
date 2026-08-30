@@ -4,12 +4,14 @@ import { useRoute, useRouter } from 'vue-router'
 import { getWish, createWish, updateWish } from '../wish.api.js'
 import { toast } from '../../../stores/toast'
 import AppSelect from '../../../shared/components/AppSelect.vue'
+import { generateIdempotencyKey } from '../../../utils/idempotency.js'
 
 // 许愿 / 编辑心愿：独立页面
 const route = useRoute()
 const router = useRouter()
 const editingId = route.params.id || null
 const busy = ref(false)
+let createKey = null
 const form = ref({ title: '', description: '', category: 'other', priority: 0 })
 
 const CATEGORIES = [
@@ -49,7 +51,11 @@ async function save() {
   try {
     const payload = { ...form.value, title: form.value.title.trim() }
     if (editingId) await updateWish(editingId, payload)
-    else await createWish(payload)
+    else {
+      createKey ||= generateIdempotencyKey()
+      await createWish(payload, createKey)
+      createKey = null
+    }
     toast(editingId ? '心愿已更新' : '心愿已许下 ✨')
     router.push(editingId ? `/wishes/${editingId}` : '/wishes')
   } catch (e) {

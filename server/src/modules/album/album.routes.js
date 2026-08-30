@@ -1,13 +1,14 @@
 import express from 'express'
 import * as albumController from './album.controller.js'
 import { requireAuth } from '../../middleware/auth.middleware.js'
+import { idempotency } from '../../middleware/idempotency.middleware.js'
 
 const router = express.Router()
 
 router.get('/', requireAuth, albumController.list)
-router.post('/', requireAuth, albumController.create)
+router.post('/', requireAuth, idempotency, albumController.create)
 router.get('/:id/photos', requireAuth, albumController.photosPage)
-router.post('/:id/photos', requireAuth, albumController.addPhoto)
+router.post('/:id/photos', requireAuth, idempotency, albumController.addPhoto)
 router.put('/:id/cover', requireAuth, albumController.setCover)
 router.get('/:id', requireAuth, albumController.detail)
 router.put('/:id', requireAuth, albumController.update)

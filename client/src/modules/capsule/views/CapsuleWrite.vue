@@ -5,10 +5,12 @@ import { createCapsule } from '../capsule.api.js'
 import { toast } from '../../../stores/toast'
 import AppDatePicker from '../../../shared/components/AppDatePicker.vue'
 import ImageUpload from '../../../shared/components/ImageUpload.vue'
+import { generateIdempotencyKey } from '../../../utils/idempotency.js'
 
 // 密封时间胶囊：独立页面
 const router = useRouter()
 const busy = ref(false)
+let createKey = null
 const form = ref({ title: '', content: '', photoUrl: '', unlockDate: '' })
 
 const canGoBack = Boolean(history.state?.back)
@@ -23,12 +25,14 @@ async function seal() {
   if (!form.value.unlockDate) return toast('选择解锁日期')
   busy.value = true
   try {
+    createKey ||= generateIdempotencyKey()
     await createCapsule({
       title: form.value.title,
       content: form.value.content.trim(),
       unlockDate: form.value.unlockDate,
       photoFileId: form.value.photoUrl?.id || null,
-    })
+    }, createKey)
+    createKey = null
     toast('胶囊已密封 ⏳')
     router.push('/capsules')
   } catch (e) {

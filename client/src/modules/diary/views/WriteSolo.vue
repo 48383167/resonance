@@ -8,6 +8,7 @@ import { toast } from '../../../stores/toast'
 import EmotionEditor from '../components/EmotionEditor.vue'
 import ImageUpload from '../../../shared/components/ImageUpload.vue'
 import WeatherPicker from '../components/WeatherPicker.vue'
+import { generateIdempotencyKey } from '../../../utils/idempotency.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -20,6 +21,7 @@ function goBack() {
 
 const title = ref('')
 const busy = ref(false)
+let createKey = null
 const loading = ref(Boolean(editingId))
 const weather = ref(null)
 const editorRef = ref(null)
@@ -88,7 +90,11 @@ async function submit(payload) {
       media: selectedMedia,
     }
     if (editingId) await updateDiary(editingId, data)
-    else await createDiary(data)
+    else {
+      createKey ||= generateIdempotencyKey()
+      await createDiary(data, createKey)
+      createKey = null
+    }
     if (!editingId) localStorage.removeItem(TITLE_KEY)
     editorRef.value?.clearDraft()
     toast(editingId ? '日记已更新 📔' : '日记已封存 📔')

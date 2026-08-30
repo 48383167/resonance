@@ -19,6 +19,22 @@ fs.mkdirSync(MEDIA_DIR, { recursive: true })
 
 export const db = new DatabaseSync(DB_PATH)
 db.exec('PRAGMA journal_mode = WAL')
+db.exec('PRAGMA busy_timeout = 5000')
+
+// —— 轻量事务助手：供 Service/Repository 包裹多写操作，出错回滚、成功提交 ——
+// 注意：node:sqlite 为同步驱动，未提供 better-sqlite3 的 .transaction() 包装，
+// 这里仅用原生 BEGIN/COMMIT/ROLLBACK 保持语义；调用方需保证不嵌套事务。
+export function transaction(fn) {
+  db.exec('BEGIN')
+  try {
+    const result = fn()
+    db.exec('COMMIT')
+    return result
+  } catch (err) {
+    try { db.exec('ROLLBACK') } catch { /* 忽略回滚失败，保留原始异常 */ }
+    throw err
+  }
+}
 
 // —— 轻量列迁移：为老库补齐后加的列（幂等；须在建表之后执行）——
 function ensureColumns(table, columns) {
@@ -201,6 +217,22 @@ CREATE TABLE IF NOT EXISTS share_tokens (
     include_entries INTEGER NOT NULL DEFAULT 1,       -- 是否分享公开日记
     include_anniversaries INTEGER NOT NULL DEFAULT 1, -- 是否分享纪念日
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+-- 幂等记录：创建类 POST 接口的幂等保护（中间件 idempotency.middleware.js 使用）
+-- 唯一键 (user_id, request_key, route_scope) 隔离：同用户 + 同 Idempotency-Key + 同路由作用域
+CREATE TABLE IF NOT EXISTS idempotency_records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    request_key TEXT NOT NULL,           -- 客户端 Idempotency-Key 请求头原值
+    route_scope TEXT NOT NULL,           -- HTTP method + 路由作用域（含实际路径参数）
+    request_hash TEXT NOT NULL,          -- 请求体 SHA-256 哈希（区分同 key 不同 body）
+    status TEXT NOT NULL DEFAULT 'processing', -- processing=处理中 / completed=已完成
+    status_code INTEGER,                 -- 首次成功响应的 HTTP 状态码
+    response_body TEXT,                  -- 首次成功响应 JSON 原文（用于重放）
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    completed_at TEXT,
+    UNIQUE(user_id, request_key, route_scope)
 );
 `)
 

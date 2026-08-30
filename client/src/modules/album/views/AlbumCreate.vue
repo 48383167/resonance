@@ -4,10 +4,12 @@ import { useRouter } from 'vue-router'
 import { createAlbum } from '../album.api.js'
 import { toast } from '../../../stores/toast'
 import ImageUpload from '../../../shared/components/ImageUpload.vue'
+import { generateIdempotencyKey } from '../../../utils/idempotency.js'
 
 // 新建相册：独立页面（与写日记/记录瞬间/写信一致的整页体验）
 const router = useRouter()
 const creating = ref(false)
+let createKey = null
 // 封面与图片集相互独立：可单独上传；不设置则列表用第一张照片代替展示
 const form = ref({ name: '', description: '', coverUrl: '' })
 
@@ -18,14 +20,17 @@ function goBack() {
 }
 
 async function create() {
+  if (creating.value) return
   if (!form.value.name.trim()) return toast('给相册起个名字')
   creating.value = true
   try {
+    createKey ||= generateIdempotencyKey()
     const album = await createAlbum({
       name: form.value.name.trim(),
       description: form.value.description,
       coverFileId: form.value.coverUrl?.id || null,
-    })
+    }, createKey)
+    createKey = null
     toast('相册已创建')
     router.push(`/albums/${album.id}`)
   } catch (e) {

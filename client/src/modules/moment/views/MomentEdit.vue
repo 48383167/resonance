@@ -6,6 +6,7 @@ import { toast } from '../../../stores/toast'
 import AppDatePicker from '../../../shared/components/AppDatePicker.vue'
 import ImageUpload from '../../../shared/components/ImageUpload.vue'
 import MapPicker from '../components/MapPicker.vue'
+import { generateIdempotencyKey } from '../../../utils/idempotency.js'
 
 // 记录/编辑恋爱瞬间：独立页面（替代拥挤弹窗），风格对齐写日记页
 const route = useRoute()
@@ -20,6 +21,7 @@ function goBack() {
 
 const editingId = route.params.id || null
 const busy = ref(false)
+let createKey = null
 
 const MOODS = [
   { key: 'normal', emoji: '😌', label: '平静' },
@@ -77,7 +79,11 @@ async function save() {
   }
   try {
     if (editingId) await updateMoment(editingId, payload)
-    else await createMoment(payload)
+    else {
+      createKey ||= generateIdempotencyKey()
+      await createMoment(payload, createKey)
+      createKey = null
+    }
     toast(editingId ? '瞬间已更新' : '瞬间已收藏 ✨')
     router.push('/moments')
   } catch (e) {

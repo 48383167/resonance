@@ -1,26 +1,29 @@
 import { randomUUID } from 'node:crypto'
-import { db } from '../../config/database.js'
+import { db, transaction } from '../../config/database.js'
 
 function newId(prefix) {
   return prefix + '_' + randomUUID().slice(0, 12)
 }
 
 export function create({ token, password, expiresAt, includeMoments, includeEntries, includeAnniversaries }) {
-  db.prepare('DELETE FROM share_tokens WHERE status = 1').run() // 同时仅一个有效分享
   const id = newId('st')
-  db.prepare(
-    `INSERT INTO share_tokens
-       (id, token, password, expires_at, view_count, status, include_moments, include_entries, include_anniversaries)
-     VALUES (?, ?, ?, ?, 0, 1, ?, ?, ?)`
-  ).run(
-    id,
-    token,
-    password || '',
-    expiresAt || null,
-    includeMoments ? 1 : 0,
-    includeEntries ? 1 : 0,
-    includeAnniversaries ? 1 : 0
-  )
+  // 删除旧分享 + 插入新分享原子化：新分享插入失败时不至于误删旧分享
+  transaction(() => {
+    db.prepare('DELETE FROM share_tokens WHERE status = 1').run() // 同时仅一个有效分享
+    db.prepare(
+      `INSERT INTO share_tokens
+         (id, token, password, expires_at, view_count, status, include_moments, include_entries, include_anniversaries)
+       VALUES (?, ?, ?, ?, 0, 1, ?, ?, ?)`
+    ).run(
+      id,
+      token,
+      password || '',
+      expiresAt || null,
+      includeMoments ? 1 : 0,
+      includeEntries ? 1 : 0,
+      includeAnniversaries ? 1 : 0
+    )
+  })
   return db.prepare('SELECT * FROM share_tokens WHERE id = ?').get(id)
 }
 

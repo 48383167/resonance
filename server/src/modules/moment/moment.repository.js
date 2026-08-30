@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { db } from '../../config/database.js'
+import { db, transaction } from '../../config/database.js'
 import { findById as findUserById } from '../auth/auth.repository.js'
 import { typeOfMime } from '../file/file.service.js'
 
@@ -83,10 +83,13 @@ export function listWithCoords() {
 
 export function create({ userId, content, mood, location, longitude, latitude, momentDate, photos }) {
   const id = newId('m')
-  db.prepare(
-    'INSERT INTO moments (id, user_id, content, mood, location, longitude, latitude, moment_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-  ).run(id, userId, content, mood || 'normal', location || '', longitude ?? null, latitude ?? null, momentDate || null)
-  setPhotos(id, photos || [])
+  // moments + moment_photos 两写原子化：照片写入失败时回滚主记录
+  transaction(() => {
+    db.prepare(
+      'INSERT INTO moments (id, user_id, content, mood, location, longitude, latitude, moment_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    ).run(id, userId, content, mood || 'normal', location || '', longitude ?? null, latitude ?? null, momentDate || null)
+    setPhotos(id, photos || [])
+  })
   return findById(id)
 }
 

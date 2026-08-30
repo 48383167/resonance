@@ -5,12 +5,14 @@ import { getAnniversary, createAnniversary, updateAnniversary } from '../anniver
 import { toast } from '../../../stores/toast'
 import AppSelect from '../../../shared/components/AppSelect.vue'
 import AppDatePicker from '../../../shared/components/AppDatePicker.vue'
+import { generateIdempotencyKey } from '../../../utils/idempotency.js'
 
 // 添加 / 编辑纪念日：独立页面
 const route = useRoute()
 const router = useRouter()
 const editingId = route.params.id || null
 const busy = ref(false)
+let createKey = null
 const form = ref({ title: '', type: 'custom', date: '', description: '' })
 
 const TYPES = [
@@ -44,7 +46,11 @@ async function save() {
   try {
     const payload = { ...form.value, title: form.value.title.trim() }
     if (editingId) await updateAnniversary(editingId, payload)
-    else await createAnniversary(payload)
+    else {
+      createKey ||= generateIdempotencyKey()
+      await createAnniversary(payload, createKey)
+      createKey = null
+    }
     toast(editingId ? '纪念日已更新' : '纪念日已添加 📅')
     router.push('/anniversaries')
   } catch (e) {

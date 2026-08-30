@@ -9,6 +9,7 @@ import { applyTheme, currentTheme, loadTheme, saveTheme } from '../../../stores/
 import { THEME_PRESETS, normalizeTheme, presetConfig } from '../../../theme/presets'
 import ImageUpload from '../../../shared/components/ImageUpload.vue'
 import AppSelect from '../../../shared/components/AppSelect.vue'
+import { generateIdempotencyKey } from '../../../utils/idempotency.js'
 
 const nickname = ref('')
 const avatarUrl = ref('')
@@ -19,6 +20,8 @@ const locationOrigin = globalThis.location.origin
 const themeDraft = ref(normalizeTheme(currentTheme))
 const themeSaving = ref(false)
 const detailOpen = ref(false)
+const creatingShare = ref(false)
+let createShareKey = null
 const appearanceOptions = [
   { value: 'auto', label: '自动（跟随氛围色）' },
   { value: 'light', label: '明亮' },
@@ -137,14 +140,18 @@ function syncShareForm(value) {
 }
 
 async function createShare() {
+  if (creatingShare.value) return
+  creatingShare.value = true
   try {
+    createShareKey ||= generateIdempotencyKey()
     const data = await createShareApi({
       password: shareForm.value.password,
       expireDays: Number(shareForm.value.expireDays),
       includeMoments: shareForm.value.includeMoments,
       includeEntries: shareForm.value.includeEntries,
       includeAnniversaries: shareForm.value.includeAnniversaries,
-    })
+    }, createShareKey)
+    createShareKey = null
     share.value = data
     syncShareForm(data)
     // 生成后自动复制链接
@@ -157,6 +164,8 @@ async function createShare() {
     }
   } catch (e) {
     toast(e.message)
+  } finally {
+    creatingShare.value = false
   }
 }
 
@@ -384,7 +393,9 @@ function copyShare() {
             </button>
            </div>
          </div>
-         <button class="btn-primary w-full sm:w-auto" @click="createShare">生成分享链接</button>
+          <button class="btn-primary w-full sm:w-auto" :disabled="creatingShare" @click="createShare">
+            {{ creatingShare ? '生成中…' : '生成分享链接' }}
+          </button>
        </div>
     </div>
 

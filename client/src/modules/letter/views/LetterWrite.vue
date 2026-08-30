@@ -3,12 +3,14 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getLetter, createLetter, updateLetter } from '../letter.api.js'
 import { toast } from '../../../stores/toast'
+import { generateIdempotencyKey } from '../../../utils/idempotency.js'
 
 // 写情书 / 编辑情书：独立页面（纸感书写）
 const route = useRoute()
 const router = useRouter()
 const editingId = route.params.id || null
 const busy = ref(false)
+let createKey = null
 const title = ref('')
 const content = ref('')
 const isSecret = ref(false)
@@ -43,7 +45,11 @@ async function send() {
       isSecret: isSecret.value,
     }
     if (editingId) await updateLetter(editingId, payload)
-    else await createLetter(payload)
+    else {
+      createKey ||= generateIdempotencyKey()
+      await createLetter(payload, createKey)
+      createKey = null
+    }
     toast(editingId ? '情书已更新 💌' : '情书已送出 💌')
     router.push(editingId ? `/letters/${editingId}` : '/letters')
   } catch (e) {

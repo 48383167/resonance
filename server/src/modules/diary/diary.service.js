@@ -1,5 +1,6 @@
 import { NotFoundError } from '../../common/errors/NotFoundError.js'
 import { ForbiddenError } from '../../common/errors/ForbiddenError.js'
+import { transaction } from '../../config/database.js'
 import * as coupleService from '../couple/couple.service.js'
 import { emitDiaryCreated, emitDiaryUpdated, emitDiaryDeleted } from '../../infrastructure/socket/diary.socket.js'
 import { softDeleteQuietly } from '../file/file.service.js'
@@ -27,19 +28,23 @@ export function getDetail(id) {
 
 export function create(userId, raw) {
   const data = diarySchema.validateCreate(raw)
-  const entry = diaryRepository.create({
-    title: data.title,
-    weatherCode: data.weatherCode,
-    timeColorHex: data.timeColorHex,
-    media: data.media,
-  })
-  diaryRepository.createContent({
-    entryId: entry.id,
-    userId,
-    content: data.content,
-    typingSpeed: data.typingSpeed,
-    deleteCount: data.deleteCount,
-    pauseDuration: data.pauseDuration,
+  // entries + entry_contents 两写原子化：任一失败整体回滚，避免产生孤儿日记或孤儿内容
+  const entry = transaction(() => {
+    const created = diaryRepository.create({
+      title: data.title,
+      weatherCode: data.weatherCode,
+      timeColorHex: data.timeColorHex,
+      media: data.media,
+    })
+    diaryRepository.createContent({
+      entryId: created.id,
+      userId,
+      content: data.content,
+      typingSpeed: data.typingSpeed,
+      deleteCount: data.deleteCount,
+      pauseDuration: data.pauseDuration,
+    })
+    return created
   })
   const assembled = diaryRepository.attachContents(entry)
   const coupleId = coupleIdOf(userId)

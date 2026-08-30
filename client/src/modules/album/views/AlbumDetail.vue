@@ -7,6 +7,7 @@ import { confirmDialog } from '../../../stores/confirm'
 import { openLightbox } from '../../../stores/lightbox'
 import { mediaTypeOf } from '../../../utils/media'
 import ImageUpload from '../../../shared/components/ImageUpload.vue'
+import { generateIdempotencyKey } from '../../../utils/idempotency.js'
 
 // 相册内页：编辑信息（独立页）/ 批量上传 / 每张照片写故事（内联）/ 分页无限加载
 const route = useRoute()
@@ -24,6 +25,8 @@ const storyText = ref('')
 const observatoryUpdating = ref(new Set())
 
 const uploadUrls = ref([])
+const addingPhotos = ref(false)
+const addPhotoKeys = new Map()
 
 async function loadAlbum() {
   album.value = await getAlbum(route.params.id)
@@ -56,16 +59,33 @@ onMounted(async () => {
 onUnmounted(() => observer?.disconnect())
 
 async function addUploaded() {
-  if (!uploadUrls.value.length) return
-  const count = uploadUrls.value.length
-  for (const u of uploadUrls.value) {
-    if (!u?.id) continue
-    await addPhoto(album.value.id, { fileId: u.id })
+  if (addingPhotos.value || !uploadUrls.value.length) return
+  addingPhotos.value = true
+  const addedIds = new Set()
+  let failed = 0
+  try {
+    for (const u of uploadUrls.value) {
+      if (!u?.id) continue
+      const key = addPhotoKeys.get(u.id) || generateIdempotencyKey()
+      addPhotoKeys.set(u.id, key)
+      try {
+        await addPhoto(album.value.id, { fileId: u.id }, key)
+        addedIds.add(u.id)
+        addPhotoKeys.delete(u.id)
+      } catch (e) {
+        failed += 1
+        toast(`${u.name || '文件'}加入失败：${e.message}`)
+      }
+    }
+    uploadUrls.value = uploadUrls.value.filter((u) => !addedIds.has(u?.id))
+    if (addedIds.size) {
+      await loadPhotos(true)
+      await loadAlbum()
+    }
+    if (addedIds.size) toast(`已加入 ${addedIds.size} 个文件${failed ? `，${failed} 个失败` : ''}`)
+  } finally {
+    addingPhotos.value = false
   }
-  uploadUrls.value = []
-  await loadPhotos(true)
-  await loadAlbum()
-  toast(`已加入 ${count} 个文件`)
 }
 
 async function removePhoto(p) {
@@ -186,9 +206,9 @@ function openPhoto(photo) {
     <div class="glass p-5">
       <h3 class="mb-3 text-sm text-white/70">批量上传照片 / 视频</h3>
       <ImageUpload v-model="uploadUrls" accept="all" />
-      <button v-if="uploadUrls.length" class="btn-primary mt-3" @click="addUploaded">
-        将 {{ uploadUrls.length }} 个文件加入相册
-      </button>
+       <button v-if="uploadUrls.length" class="btn-primary mt-3" :disabled="addingPhotos" @click="addUploaded">
+         {{ addingPhotos ? '加入中…' : `将 ${uploadUrls.length} 个文件加入相册` }}
+       </button>
     </div>
 
     <!-- 照片网格 -->
