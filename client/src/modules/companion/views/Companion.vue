@@ -464,18 +464,13 @@ onMounted(async () => {
 <style scoped>
 .companion-layout { display: flex; flex-direction: column; }
 .companion-sidebar { max-height: 12rem; }
-.companion-chat { min-height: 34rem; }
-.companion-message-list { overscroll-behavior: contain; }
+.companion-chat { flex: 0 0 auto; height: clamp(20rem, calc(100dvh - 10rem), 34rem); }
 .companion-textarea { color: var(--text-primary); }
 .companion-textarea::placeholder { color: rgb(var(--text-secondary-rgb) / 0.58); }
-
-@media (max-width: 767px) {
-  .companion-chat { min-height: min(34rem, calc(100dvh - 10rem)); }
-}
 
 @media (min-width: 768px) {
   .companion-layout { min-height: 36rem; flex-direction: row; }
   .companion-sidebar { width: 12.5rem; max-height: 42rem; flex: 0 0 12.5rem; }
-  .companion-chat { min-height: 0; }
+  .companion-chat { flex: 1 1 0%; height: clamp(24rem, calc(100dvh - 8rem), 42rem); }
 }
 </style>
