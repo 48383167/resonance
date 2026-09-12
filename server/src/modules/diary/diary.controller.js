@@ -2,7 +2,7 @@ import * as diaryService from './diary.service.js'
 
 export async function list(req, res, next) {
   try {
-    res.success(diaryService.getList())
+    res.success(diaryService.getList(req.user.id))
   } catch (error) {
     next(error)
   }
@@ -10,7 +10,7 @@ export async function list(req, res, next) {
 
 export async function calendar(req, res, next) {
   try {
-    res.success(diaryService.getCalendar(req.query))
+    res.success(diaryService.getCalendar(req.query, req.user.id))
   } catch (error) {
     next(error)
   }

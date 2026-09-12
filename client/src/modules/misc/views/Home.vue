@@ -3,6 +3,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getDashboard, getTreeState, setFirstMeetAt } from '../misc.api.js'
 import { session, initSession } from '../../../stores/session'
+import { commentUnread } from '../../../stores/commentUnread'
 import { socket } from '../../../socket'
 import { toast } from '../../../stores/toast'
 import { useGreeting } from '../../../composables/useTime'
@@ -103,6 +104,13 @@ const statCards = (s) => [
   { icon: '🎉', label: '心愿完成', value: s.wishesDone, route: '/wishes' },
   { icon: '⏳', label: '时间胶囊', value: s.capsules, route: '/capsules' },
 ]
+
+// 评论未读角标：日记 / 恋爱瞬间模块入口
+function unreadOfModule(name) {
+  if (name === 'diary-list') return commentUnread.entry
+  if (name === 'moments') return commentUnread.moment
+  return 0
+}
 </script>
 
 <template>
@@ -192,7 +200,7 @@ const statCards = (s) => [
     <!-- 模块入口 -->
     <div class="grid grid-cols-2 gap-3 md:grid-cols-3">
       <button v-for="m in modules" :key="m.name" @click="router.push(`/${m.name}`)"
-        class="glass group p-4 text-left transition-all hover:-translate-y-0.5 hover:bg-white/10">
+        class="glass group relative p-4 text-left transition-all hover:-translate-y-0.5 hover:bg-white/10">
         <div class="flex items-center gap-3">
           <span class="flex h-10 w-10 items-center justify-center rounded-xl text-lg" :style="{ background: m.color }">
             {{ m.icon }}
@@ -202,6 +210,10 @@ const statCards = (s) => [
             <div class="break-words text-xs text-white/45">{{ m.desc }}</div>
           </div>
         </div>
+        <span v-if="unreadOfModule(m.name)"
+          class="absolute right-3 top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white">
+          {{ unreadOfModule(m.name) }}
+        </span>
       </button>
     </div>
   </div>

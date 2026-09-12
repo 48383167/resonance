@@ -10,8 +10,8 @@ function coupleIdOf(userId) {
   return coupleService.getUserCouple(userId)?.pairCode || null
 }
 
-export function list(query) {
-  return momentRepository.list(query)
+export function list(query, userId) {
+  return commentService.attachCounts('moment', momentRepository.list(query), userId)
 }
 
 export function listMap() {

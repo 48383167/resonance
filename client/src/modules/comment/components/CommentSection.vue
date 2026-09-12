@@ -5,12 +5,15 @@ import { session } from '../../../stores/session'
 import { toast } from '../../../stores/toast'
 import { confirmDialog } from '../../../stores/confirm'
 import { generateIdempotencyKey } from '../../../utils/idempotency'
-import { listComments, createComment, removeComment } from '../comment.api.js'
+import { applyCommentUnread } from '../../../stores/commentUnread'
+import { listComments, createComment, markCommentsRead, removeComment } from '../comment.api.js'
 
 const props = defineProps({
   targetType: { type: String, required: true },
   targetId: { type: String, required: true },
 })
+
+const emit = defineEmits(['read'])
 
 const comments = ref([])
 const loading = ref(true)
@@ -150,6 +153,8 @@ function upsert(comment) {
   if (!sameTarget(comment)) return
   if (comments.value.some((c) => c.id === comment.id)) return
   comments.value = [...comments.value, comment].sort(byTimeAsc)
+  // 正在看评论区时收到对方新评论，立即视为已读
+  if (comment.user_id !== session.userId) markRead()
 }
 
 // 墓碑化：清空正文并标记删除时间，其下回复保持可见
@@ -165,10 +170,20 @@ function drop(payload) {
   else comments.value = comments.value.filter((c) => c.id !== payload.id)
 }
 
+// 打开评论区即已读：上报后直接用响应里的全局未读总览刷新角标
+async function markRead() {
+  try {
+    const result = await markCommentsRead({ targetType: props.targetType, targetId: props.targetId })
+    applyCommentUnread(result?.unread)
+    emit('read', { targetType: props.targetType, targetId: props.targetId })
+  } catch { /* 已读上报失败不影响评论阅读 */ }
+}
+
 async function load() {
   loading.value = true
   try {
     comments.value = await listComments(props.targetType, props.targetId)
+    markRead()
   } catch (error) {
     toast(error.message || '评论加载失败', 'error')
   } finally {

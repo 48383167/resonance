@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { weatherLabel } from '../../../composables/useAmbient'
+import CommentCountBadge from '../../../shared/components/CommentCountBadge.vue'
 
 // 时间轴卡片（日记）
 const props = defineProps({
@@ -36,6 +37,9 @@ const dateText = computed(() => new Date(props.entry.created_at).toLocaleString(
     </div>
     <h3 class="serif mt-3 break-words text-lg font-semibold">{{ entry.title || '无题日记' }}</h3>
     <p v-if="snippet" class="mt-2 break-words text-sm text-white/60">{{ snippet }}</p>
-    <div class="mt-3 text-xs text-white/35">{{ dateText }}</div>
+    <div class="mt-3 flex items-center justify-between gap-3 text-xs text-white/35">
+      <span>{{ dateText }}</span>
+      <CommentCountBadge :count="entry.comment_count" :unread="entry.unread_comment_count" />
+    </div>
   </div>
 </template>

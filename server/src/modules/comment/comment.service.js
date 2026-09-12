@@ -50,6 +50,37 @@ export function list(userId, query) {
   return commentRepository.list(targetType, targetId)
 }
 
+// 未读统计范围：当前情侣空间的成员 ID；未配对时只统计本人
+function coupleMemberIds(userId) {
+  const couple = coupleService.getUserCouple(userId)
+  if (!couple) return [userId]
+  const ids = couple.members.map((member) => member.id)
+  return ids.includes(userId) ? ids : [...ids, userId]
+}
+
+// 打开评论区：记录已读时间点，返回最新未读总览（供底部导航 / 首页角标）
+export function markRead(userId, raw) {
+  const { targetType, targetId } = commentSchema.validateRead(raw)
+  assertTargetAccessible(userId, targetType, targetId)
+  const lastReadAt = commentRepository.markRead(userId, targetType, targetId)
+  return {
+    targetType,
+    targetId,
+    lastReadAt,
+    unread: commentRepository.countUnread(userId, coupleMemberIds(userId)),
+  }
+}
+
+// 全局未读总览（不改变已读状态）
+export function unreadSummary(userId) {
+  return commentRepository.countUnread(userId, coupleMemberIds(userId))
+}
+
+// 列表计数挂载：日记 / 瞬间列表调用，避免 N+1 查询
+export function attachCounts(targetType, targets, userId) {
+  return commentRepository.attachCounts(targetType, targets, userId)
+}
+
 export function create(userId, raw) {
   const data = commentSchema.validateCreate(raw)
   assertTargetAccessible(userId, data.targetType, data.targetId)
@@ -87,4 +118,5 @@ export function remove(userId, id) {
 // 目标资源删除时的级联清理（不单独广播，资源自身的 deleted 事件负责前端刷新）
 export function removeByTarget(targetType, targetId) {
   commentRepository.removeByTarget(targetType, targetId)
+  commentRepository.removeReadsByTarget(targetType, targetId)
 }

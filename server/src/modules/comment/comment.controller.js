@@ -8,6 +8,22 @@ export async function list(req, res, next) {
   }
 }
 
+export async function unread(req, res, next) {
+  try {
+    res.success(commentService.unreadSummary(req.user.id))
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function markRead(req, res, next) {
+  try {
+    res.success(commentService.markRead(req.user.id, req.body))
+  } catch (error) {
+    next(error)
+  }
+}
+
 export async function create(req, res, next) {
   try {
     res.success(commentService.create(req.user.id, req.body))

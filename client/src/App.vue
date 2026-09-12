@@ -10,6 +10,7 @@ import MusicPlayer from './modules/music/components/MusicPlayer.vue'
 import { session, initSession, logout } from './stores/session'
 import { socket } from './socket'
 import { toasts, toast } from './stores/toast'
+import { loadCommentUnread, resetCommentUnread, bumpCommentUnread } from './stores/commentUnread'
 import { currentTheme, loadTheme, resetTheme } from './stores/theme'
 
 const router = useRouter()
@@ -20,6 +21,22 @@ watch(() => [session.me?.id, route.meta.auth], ([userId, isPrivateRoute]) => {
   if (userId && isPrivateRoute) loadTheme(userId)
   else resetTheme()
 }, { immediate: true })
+
+// 登录后拉取评论未读角标，退出时清零
+watch(() => session.userId, (userId) => {
+  if (userId) loadCommentUnread()
+  else resetCommentUnread()
+}, { immediate: true })
+
+// 对方的新评论让角标 +1；删除后重新拉取（负载不含作者与已读状态）
+function onCommentCreated(comment) {
+  if (!comment || comment.user_id === session.userId) return
+  bumpCommentUnread(comment.target_type)
+}
+
+function onCommentDeleted() {
+  loadCommentUnread()
+}
 
 function doLogout() {
   logout()
@@ -37,10 +54,14 @@ onMounted(() => {
       if (p.nickname) toast(`${p.nickname} 下线了`)
     }
   })
+  socket.on('comment:created', onCommentCreated)
+  socket.on('comment:deleted', onCommentDeleted)
 })
 
 onUnmounted(() => {
   socket.off('user_presence')
+  socket.off('comment:created', onCommentCreated)
+  socket.off('comment:deleted', onCommentDeleted)
 })
 </script>
 

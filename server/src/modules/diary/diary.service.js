@@ -12,13 +12,13 @@ function coupleIdOf(userId) {
   return coupleService.getUserCouple(userId)?.pairCode || null
 }
 
-export function getList() {
-  return diaryRepository.listAll()
+export function getList(userId) {
+  return commentService.attachCounts('entry', diaryRepository.listAll(), userId)
 }
 
-export function getCalendar(query) {
+export function getCalendar(query, userId) {
   const { year, month } = diarySchema.validateCalendar(query)
-  return diaryRepository.listByMonth(year, month)
+  return commentService.attachCounts('entry', diaryRepository.listByMonth(year, month), userId)
 }
 
 export function getDetail(id) {

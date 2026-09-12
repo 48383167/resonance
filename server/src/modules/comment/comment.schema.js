@@ -31,6 +31,13 @@ export function validateList(query = {}) {
   }
 }
 
+export function validateRead(body = {}) {
+  return {
+    targetType: normalizeTargetType(body.targetType),
+    targetId: normalizeTargetId(body.targetId),
+  }
+}
+
 export function validateCreate(body = {}) {
   const targetType = normalizeTargetType(body.targetType)
   const targetId = normalizeTargetId(body.targetId)

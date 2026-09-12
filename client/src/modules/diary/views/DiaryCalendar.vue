@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { calendarDiary } from '../diary.api.js'
 import { session } from '../../../stores/session'
+import CommentCountBadge from '../../../shared/components/CommentCountBadge.vue'
 
 // 日记日历：按月份展示有日记的日期，点日期看当天日记
 const router = useRouter()
@@ -103,6 +104,7 @@ const todayStr = (() => {
             <span class="rounded-full bg-white/10 px-2 py-0.5 text-white/60">日记</span>
             <span class="break-words text-white/50">{{ e.title || '无题日记' }}</span>
             <span class="text-white/35">by {{ e.contents.find((c) => c.user_id === session.userId)?.content ? session.me?.nickname : session.partner?.nickname }}</span>
+            <CommentCountBadge :count="e.comment_count" :unread="e.unread_comment_count" />
           </div>
            <p class="mt-2 break-words text-sm text-white/70 line-clamp-2">{{ e.contents[0]?.content }}</p>
         </div>

@@ -1,8 +1,10 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { listDiary, setVisibility } from '../diary.api.js'
 import EntryCard from '../components/EntryCard.vue'
+import { socket } from '../../../socket'
+import { session } from '../../../stores/session'
 
 // 日记列表：全部日记的专属列表页
 const router = useRouter()
@@ -17,7 +19,32 @@ async function load() {
     loading.value = false
   }
 }
-onMounted(load)
+
+// 评论实时更新：自己发的只加总数，对方发的未读 +1
+function onCommentCreated(comment) {
+  if (comment?.target_type !== 'entry') return
+  const entry = entries.value.find((item) => item.id === comment.target_id)
+  if (!entry) return
+  entry.comment_count = (entry.comment_count || 0) + 1
+  if (comment.user_id !== session.userId) entry.unread_comment_count = (entry.unread_comment_count || 0) + 1
+}
+
+function onCommentDeleted(payload) {
+  if (payload?.targetType !== 'entry') return
+  const entry = entries.value.find((item) => item.id === payload.targetId)
+  if (entry) entry.comment_count = Math.max(0, (entry.comment_count || 0) - 1)
+}
+
+onMounted(() => {
+  load()
+  socket.on('comment:created', onCommentCreated)
+  socket.on('comment:deleted', onCommentDeleted)
+})
+
+onUnmounted(() => {
+  socket.off('comment:created', onCommentCreated)
+  socket.off('comment:deleted', onCommentDeleted)
+})
 
 async function togglePublic(entry) {
   await setVisibility(entry.id, !entry.is_public)

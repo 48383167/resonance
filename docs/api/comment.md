@@ -23,7 +23,23 @@ CREATE TABLE IF NOT EXISTS comments (
 );
 CREATE INDEX IF NOT EXISTS idx_comments_target ON comments(target_type, target_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parent_id);
+
+-- 已读状态：每个用户对每个目标最后一次查看评论区的时间点
+CREATE TABLE IF NOT EXISTS comment_reads (
+    user_id TEXT NOT NULL,
+    target_type TEXT NOT NULL,       -- 'entry' | 'moment'
+    target_id TEXT NOT NULL,
+    last_read_at TEXT NOT NULL,      -- ISO8601，与 comments.created_at 同格式
+    PRIMARY KEY (user_id, target_type, target_id)
+);
 ```
+
+### 已读与未读判定
+
+- 「打开评论区即已读」：客户端进入日记详情或展开瞬间评论、评论加载完成后调用 `POST /api/comments/read`，服务端把该用户对该目标的 `last_read_at` 更新为当前时间。
+- 未读评论 = **对方**（`user_id != 当前用户`）在 `last_read_at` 之后发表的、未删除评论（`deleted_at IS NULL`）。自己的评论永远不算未读。
+- 从未调用过已读接口（`comment_reads` 无行）时，该目标的全部对方评论都算未读。
+- 计数与未读的查询范围限定在当前用户所属情侣空间内；对方未配对时只统计本人（结果恒为 0）。
 
 ### 回复模型（单层）
 
@@ -65,6 +81,17 @@ CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parent_id);
 - 墓碑化的评论：`content` 为空字符串、`deleted_at` 有值。
 - 列表返回**平铺**数组（按创建时间升序，含墓碑与回复）；前端按 `parent_id` 分组渲染：顶层升序，回复升序挂在对应顶层下（显示为两层）。
 - 客户端用 `reply_to_comment_id` 在列表内定位被回复评论，渲染引用摘要；`reply_to_user_id` 作为旧数据回退（显示「回复 @某人」）。
+
+### 列表计数（日记 / 瞬间）
+
+`GET /api/entries`、`GET /api/entries/calendar`、`GET /api/moments` 返回的每个条目额外挂载：
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| `comment_count` | number | 该目标未删除评论数（含回复），无评论为 `0` |
+| `unread_comment_count` | number | 该目标对方未读评论数，无未读为 `0` |
+
+计数随列表接口批量下发（单条 SQL，无 N+1）；`GET /api/entries/:id` 详情接口不追加这两个字段。
 
 ## API 契约
 
@@ -143,6 +170,41 @@ CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parent_id);
 - 非作者：`403` `{ code: "FORBIDDEN", message: "只能删除自己的评论" }`
 - 未登录：`401` `{ code: "UNAUTHORIZED", message: "未登录或登录已过期" }`
 
+### 4. GET /api/comments/unread（需登录）
+
+全局未读总览，供底部导航 / 首页角标使用；只读，不改变已读状态。
+
+成功响应（`200`）：
+
+```json
+{ "ok": true, "data": { "entry": 2, "moment": 1, "total": 3 } }
+```
+
+### 5. POST /api/comments/read（需登录）
+
+打开评论区时上报已读。请求体：
+
+```json
+{ "targetType": "entry", "targetId": "e_xxxxxxxx" }
+```
+
+成功响应（`200`）：`lastReadAt` 为本次已读时间点，`unread` 为更新后的全局未读总览（前端用它直接刷新角标，无需再请求接口）。
+
+```json
+{
+  "ok": true,
+  "data": {
+    "targetType": "entry",
+    "targetId": "e_xxxxxxxx",
+    "lastReadAt": "2026-09-12T08:30:00.123Z",
+    "unread": { "entry": 0, "moment": 1, "total": 1 }
+  }
+}
+```
+
+失败响应：与 `GET /api/comments` 相同（`targetType` / `targetId` 校验、目标不存在、跨情侣空间 `403`、未登录 `401`）。
+该接口天然幂等，无需 `Idempotency-Key`。
+
 ## Socket.IO 事件
 
 向情侣空间房间 `couple:{pairCode}` 广播（与现有业务事件一致）。
@@ -156,6 +218,13 @@ CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parent_id);
 - 创建者本人也会收到 `comment:created`，前端需按评论 `id` 去重。
 - `comment:deleted` 按 `tombstoned` 区分处理：`true` → 本地标记墓碑（正文清空 + `deleted_at`），`false` → 从列表移除。
 - 级联删除（日记 / 瞬间被删除时清理其全部评论）不单独广播评论事件，由对应资源的 `diary:deleted` / `moment:deleted` 事件负责刷新。
+
+### 未读角标联动
+
+- 全局监听 `comment:created`：`user_id` 为对方时，对应模块（`entry` / `moment`）未读数 +1；自己的评论不计数。
+- `comment:deleted` 后重新拉取 `GET /api/comments/unread` 校正角标（删除事件负载不含作者与已读状态）。
+- 打开评论区的 `POST /api/comments/read` 响应携带最新 `unread`，直接覆盖全局角标。
+- 列表页收到 `comment:created` / `comment:deleted` 时按 `target_type` + `target_id` 就地增减该条目的 `comment_count` / `unread_comment_count`（`comment:deleted` 无法判断作者，未读数以服务端下次返回为准）。
 
 ## 权限规则
 

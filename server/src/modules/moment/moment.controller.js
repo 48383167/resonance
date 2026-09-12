@@ -2,7 +2,7 @@ import * as momentService from './moment.service.js'
 
 export async function list(req, res, next) {
   try {
-    res.success(momentService.list(req.query))
+    res.success(momentService.list(req.query, req.user.id))
   } catch (error) {
     next(error)
   }

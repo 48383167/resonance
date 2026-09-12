@@ -206,6 +206,16 @@ CREATE TABLE IF NOT EXISTS comments (
 );
 CREATE INDEX IF NOT EXISTS idx_comments_target ON comments(target_type, target_id, created_at);
 
+-- 评论已读：每个用户对每个目标（日记 / 瞬间）最后一次查看评论区的时间点。
+-- 未读数 = 对方在该时间之后发表的、未删除的评论数；无行 = 从未查看，全部未读。
+CREATE TABLE IF NOT EXISTS comment_reads (
+    user_id TEXT NOT NULL,
+    target_type TEXT NOT NULL,       -- 'entry' | 'moment'
+    target_id TEXT NOT NULL,
+    last_read_at TEXT NOT NULL,      -- ISO8601，与 comments.created_at 同格式
+    PRIMARY KEY (user_id, target_type, target_id)
+);
+
 -- 文件表：每个文件的元信息（ID 为雪花 ID 十进制字符串，见 common/utils/snowflake.js）
 -- path 为相对 MEDIA_DIR 的路径（yyyy/MM/dd/哈希名.ext），对外 URL = /media/{path}
 -- 软删除 + 墓碑：删除时物理文件移入 .trash，status 置 0，原 URL 立即失效且文件可恢复

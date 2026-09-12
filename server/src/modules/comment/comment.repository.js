@@ -52,3 +52,71 @@ export function remove(id) {
 export function removeByTarget(targetType, targetId) {
   db.prepare('DELETE FROM comments WHERE target_type = ? AND target_id = ?').run(targetType, targetId)
 }
+
+// 已读时间点：同一用户重复查看只更新时间
+export function markRead(userId, targetType, targetId) {
+  const now = db.prepare("SELECT strftime('%Y-%m-%dT%H:%M:%fZ','now') AS now").get().now
+  db.prepare(
+    `INSERT OR REPLACE INTO comment_reads (user_id, target_type, target_id, last_read_at)
+     VALUES (?, ?, ?, ?)`
+  ).run(userId, targetType, targetId, now)
+  return now
+}
+
+// 目标删除时清理已读记录
+export function removeReadsByTarget(targetType, targetId) {
+  db.prepare('DELETE FROM comment_reads WHERE target_type = ? AND target_id = ?').run(targetType, targetId)
+}
+
+// 批量挂载计数：comment_count=未删除评论数（含回复）；
+// unread_comment_count=对方在本人上次查看之后发表的未删除评论数（无已读记录 = 全部未读）
+export function attachCounts(targetType, targets, userId) {
+  if (!targets.length) return targets
+  const placeholders = targets.map(() => '?').join(', ')
+  const rows = db.prepare(
+    `SELECT c.target_id,
+            COUNT(*) AS comment_count,
+            SUM(CASE WHEN c.user_id != ?
+                      AND (r.last_read_at IS NULL OR c.created_at > r.last_read_at)
+                     THEN 1 ELSE 0 END) AS unread_comment_count
+       FROM comments c
+       LEFT JOIN comment_reads r
+         ON r.user_id = ? AND r.target_type = c.target_type AND r.target_id = c.target_id
+      WHERE c.target_type = ? AND c.target_id IN (${placeholders})
+        AND c.deleted_at IS NULL
+      GROUP BY c.target_id`
+  ).all(userId, userId, targetType, ...targets.map((target) => target.id))
+  const byTarget = new Map(rows.map((row) => [row.target_id, row]))
+  for (const target of targets) {
+    const row = byTarget.get(target.id)
+    target.comment_count = row?.comment_count || 0
+    target.unread_comment_count = row?.unread_comment_count || 0
+  }
+  return targets
+}
+
+// 全局未读总览：只统计当前情侣空间内、对方发表的未删除评论
+export function countUnread(userId, memberIds) {
+  if (!memberIds.length) return { entry: 0, moment: 0, total: 0 }
+  const placeholders = memberIds.map(() => '?').join(', ')
+  const row = db.prepare(
+    `SELECT
+       COALESCE(SUM(CASE WHEN c.target_type = 'entry' THEN 1 ELSE 0 END), 0) AS entry,
+       COALESCE(SUM(CASE WHEN c.target_type = 'moment' THEN 1 ELSE 0 END), 0) AS moment
+     FROM comments c
+     LEFT JOIN comment_reads r
+       ON r.user_id = ? AND r.target_type = c.target_type AND r.target_id = c.target_id
+     WHERE c.deleted_at IS NULL
+       AND c.user_id != ?
+       AND (r.last_read_at IS NULL OR c.created_at > r.last_read_at)
+       AND (
+         (c.target_type = 'entry' AND c.target_id IN (
+            SELECT DISTINCT ec.entry_id FROM entry_contents ec WHERE ec.user_id IN (${placeholders})
+         ))
+         OR (c.target_type = 'moment' AND c.target_id IN (
+            SELECT m.id FROM moments m WHERE m.user_id IN (${placeholders})
+         ))
+       )`
+  ).get(userId, userId, ...memberIds, ...memberIds)
+  return { entry: row.entry, moment: row.moment, total: row.entry + row.moment }
+}

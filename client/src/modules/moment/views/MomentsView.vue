@@ -1,13 +1,16 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { listMoments, removeMoment, updateMomentShareVisibility } from '../moment.api.js'
 import { toast } from '../../../stores/toast'
 import { confirmDialog } from '../../../stores/confirm'
 import { openLightbox } from '../../../stores/lightbox'
+import { socket } from '../../../socket'
+import { session } from '../../../stores/session'
 import { mediaTypeOf } from '../../../utils/media'
 import AppDatePicker from '../../../shared/components/AppDatePicker.vue'
 import AppSelect from '../../../shared/components/AppSelect.vue'
+import CommentCountBadge from '../../../shared/components/CommentCountBadge.vue'
 import CommentSection from '../../comment/components/CommentSection.vue'
 
 const router = useRouter()
@@ -78,7 +81,38 @@ function reset() {
   load()
 }
 
-onMounted(load)
+// 评论实时更新：自己发的只加总数，对方发的未读 +1（评论区展开时不加未读，加载后会标记已读）
+function onCommentCreated(comment) {
+  if (comment?.target_type !== 'moment') return
+  const moment = list.value.find((item) => item.id === comment.target_id)
+  if (!moment) return
+  moment.comment_count = (moment.comment_count || 0) + 1
+  if (comment.user_id !== session.userId && !commentsOpen.value.has(moment.id)) {
+    moment.unread_comment_count = (moment.unread_comment_count || 0) + 1
+  }
+}
+
+function onCommentDeleted(payload) {
+  if (payload?.targetType !== 'moment') return
+  const moment = list.value.find((item) => item.id === payload.targetId)
+  if (moment) moment.comment_count = Math.max(0, (moment.comment_count || 0) - 1)
+}
+
+function onCommentsRead({ targetId }) {
+  const moment = list.value.find((item) => item.id === targetId)
+  if (moment) moment.unread_comment_count = 0
+}
+
+onMounted(() => {
+  load()
+  socket.on('comment:created', onCommentCreated)
+  socket.on('comment:deleted', onCommentDeleted)
+})
+
+onUnmounted(() => {
+  socket.off('comment:created', onCommentCreated)
+  socket.off('comment:deleted', onCommentDeleted)
+})
 
 const shown = computed(() => list.value.slice(0, visible.value))
 function loadMore() {
@@ -192,12 +226,13 @@ function openMomentPhoto(photos, photo) {
         </div>
         <div class="mt-3">
           <button type="button"
-            class="min-h-8 rounded-full border border-theme surface-soft px-3 py-1.5 text-[11px] font-medium text-theme-secondary transition-colors hover-text-accent"
+            class="inline-flex min-h-8 items-center gap-2 rounded-full border border-theme surface-soft px-3 py-1.5 text-[11px] font-medium text-theme-secondary transition-colors hover-text-accent"
             @click="toggleComments(m.id)">
-            💬 {{ commentsOpen.has(m.id) ? '收起评论' : '评论' }}
+            <span>💬 {{ commentsOpen.has(m.id) ? '收起评论' : '评论' }}</span>
+            <CommentCountBadge :count="m.comment_count" :unread="m.unread_comment_count" />
           </button>
         </div>
-        <CommentSection v-if="commentsOpen.has(m.id)" target-type="moment" :target-id="m.id" />
+        <CommentSection v-if="commentsOpen.has(m.id)" target-type="moment" :target-id="m.id" @read="onCommentsRead" />
       </article>
       <div v-if="list.length > visible" class="flex justify-center">
         <button class="btn-ghost" @click="loadMore">加载更多（还有 {{ list.length - visible }} 条）</button>

@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { navigationGroups, navigationItems, primaryNavigationNames } from '../navigation.js'
+import { commentUnread } from '../../stores/commentUnread'
 
 const route = useRoute()
 const dock = ref(null)
@@ -9,6 +10,13 @@ const moreOpen = ref(false)
 
 const primaryItems = computed(() => navigationItems.filter((item) => primaryNavigationNames.includes(item.name)))
 const moreActive = computed(() => navigationItems.some((item) => !primaryNavigationNames.includes(item.name) && isItemActive(item)))
+
+// 评论未读角标：日记在主导航，瞬间在「更多」里（••• 按钮上同步提示）
+function unreadOf(item) {
+  if (item.name === 'diary-list') return commentUnread.entry
+  if (item.name === 'moments') return commentUnread.moment
+  return 0
+}
 
 function isItemActive(item) {
   return item.activeRoutes.includes(route.name)
@@ -43,11 +51,12 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
           <div v-for="group in navigationGroups" :key="group.label" class="rounded-xl bg-white/[0.04] p-2">
             <div class="mb-1 px-2 text-[10px] uppercase tracking-[0.18em] text-theme-tertiary">{{ group.label }}</div>
             <router-link v-for="item in group.items" :key="item.name" :to="{ name: item.route }"
-              class="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs transition-colors hover:bg-white/10"
+              class="relative flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs transition-colors hover:bg-white/10"
               :class="isItemActive(item) ? 'bg-white/10 text-accent' : 'text-theme-secondary'"
               :aria-current="isItemActive(item) ? 'page' : undefined" @click="closeMore">
               <span class="flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.06] text-sm">{{ item.icon }}</span>
               <span>{{ item.label }}</span>
+              <span v-if="unreadOf(item)" class="app-dock__badge">{{ unreadOf(item) }}</span>
             </router-link>
           </div>
         </div>
@@ -60,6 +69,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
         :aria-label="item.label" :title="item.label" :aria-current="isItemActive(item) ? 'page' : undefined">
         <span class="app-dock__icon">{{ item.icon }}</span>
         <span class="app-dock__tooltip">{{ item.label }}</span>
+        <span v-if="unreadOf(item)" class="app-dock__badge">{{ unreadOf(item) }}</span>
       </router-link>
       <router-link :to="{ name: 'write-solo' }" class="app-dock__item app-dock__item--create group"
         :class="{ 'app-dock__item--active': route.name === 'write-solo' }" aria-label="写日记" title="写日记">
@@ -70,6 +80,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
         aria-label="更多功能" title="更多功能" :aria-expanded="moreOpen" @click="moreOpen = !moreOpen">
         <span class="app-dock__icon text-xl tracking-widest">•••</span>
         <span class="app-dock__tooltip">更多功能</span>
+        <span v-if="commentUnread.moment" class="app-dock__badge">{{ commentUnread.moment }}</span>
       </button>
     </div>
   </div>
@@ -136,6 +147,25 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
 
 .app-dock__icon {
   font-size: 1.25rem;
+  line-height: 1;
+}
+
+.app-dock__badge {
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  display: flex;
+  min-width: 1.05rem;
+  height: 1.05rem;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgb(var(--page-bg-rgb) / 0.9);
+  border-radius: 999px;
+  background: #f43f5e;
+  padding: 0 0.2rem;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 600;
   line-height: 1;
 }
 

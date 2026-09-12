@@ -6,7 +6,9 @@ import { idempotency } from '../../middleware/idempotency.middleware.js'
 const router = express.Router()
 
 router.get('/', requireAuth, commentController.list)
+router.get('/unread', requireAuth, commentController.unread)
 router.post('/', requireAuth, idempotency, commentController.create)
+router.post('/read', requireAuth, commentController.markRead)
 router.delete('/:id', requireAuth, commentController.remove)
 
 export default router
