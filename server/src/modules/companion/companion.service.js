@@ -1,12 +1,41 @@
 import { AppError } from '../../common/errors/AppError.js'
 import { COMPANION_DAILY_MODEL_REPLY_LIMIT } from '../../config/companion.js'
 import { transaction } from '../../config/database.js'
-import { assertDeepSeekConfigured, createEmotionalReply } from '../../infrastructure/ai/deepseek.adapter.js'
-import { CRISIS_RESPONSE, isImmediateCrisis, LOCAL_SAFETY_MODEL } from './companion.policy.js'
+import { assertDeepSeekConfigured, createEmotionalReply, createConversationTitle } from '../../infrastructure/ai/deepseek.adapter.js'
+import {
+  CONVERSATION_TITLE_MAX_LENGTH,
+  CRISIS_RESPONSE,
+  DEFAULT_CONVERSATION_TITLE,
+  isImmediateCrisis,
+  LOCAL_SAFETY_MODEL,
+} from './companion.policy.js'
 import * as companionRepository from './companion.repository.js'
 import * as companionSchema from './companion.schema.js'
 
 const MAX_ENABLED_MEMORIES = 8
+const TITLE_FALLBACK_LENGTH = 14
+
+// 模型标题清洗：单行、去引号与首尾标点，超长截断；空结果交由兜底处理
+function normalizeGeneratedTitle(raw) {
+  if (typeof raw !== 'string') return ''
+  const cleaned = raw
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^["'“”‘’《〈【（(]+/, '')
+    .replace(/["'“”‘’》〉】）)]+$/, '')
+    .replace(/[。！？!?，,、；;：:~～\-—…]+$/, '')
+    .trim()
+  return cleaned ? cleaned.slice(0, CONVERSATION_TITLE_MAX_LENGTH) : ''
+}
+
+// 兜底标题：单行化后截取首句前 14 字；空白内容保持默认标题
+function fallbackConversationTitle(content) {
+  const cleaned = String(content || '').replace(/\s+/g, ' ').trim()
+  if (!cleaned) return DEFAULT_CONVERSATION_TITLE
+  return cleaned.length > TITLE_FALLBACK_LENGTH
+    ? `${cleaned.slice(0, TITLE_FALLBACK_LENGTH)}…`
+    : cleaned
+}
 
 function conversationOrThrow(ownerId, conversationId) {
   const found = companionRepository.findConversation(ownerId, conversationId)
@@ -93,15 +122,21 @@ export function getConversation(ownerId, conversationId) {
 
 export async function createMessage(ownerId, conversationId, raw) {
   const { content } = companionSchema.validateMessage(raw)
-  conversationOrThrow(ownerId, conversationId)
+  const conversation = conversationOrThrow(ownerId, conversationId)
   assertConsent(ownerId)
+
+  // 自动命名：标题仍是默认值时触发；模型标题只在首条消息时生成
+  const needsTitle = !conversation.title || conversation.title === DEFAULT_CONVERSATION_TITLE
+  const isFirstMessage = needsTitle && !companionRepository.hasAnyMessage(ownerId, conversationId)
+  const crisis = isImmediateCrisis(content)
 
   let answer
   let model = LOCAL_SAFETY_MODEL
   let promptTokens = 0
   let completionTokens = 0
+  let generatedTitle = ''
 
-  if (isImmediateCrisis(content)) {
+  if (crisis) {
     // 即时危机文本不离开本服务；用确定性安全回复优先引导现实中的帮助。
     answer = CRISIS_RESPONSE
   } else {
@@ -112,6 +147,10 @@ export async function createMessage(ownerId, conversationId, raw) {
       throw new AppError('今天的情感咨询次数已用完，请明天再来聊聊', 429, 'COMPANION_RATE_LIMITED')
     }
     let reply
+    // 标题与回复并行：标题是极小请求，通常先返回；若未及时返回则用首句兜底，绝不让回复等待标题
+    const titlePromise = isFirstMessage
+      ? createConversationTitle({ userId: ownerId, content }).catch(() => '')
+      : Promise.resolve('')
     try {
       reply = await createEmotionalReply({
         userId: ownerId,
@@ -122,6 +161,10 @@ export async function createMessage(ownerId, conversationId, raw) {
       companionRepository.releaseModelReply(ownerId, reservation.usageDate)
       throw error
     }
+    generatedTitle = normalizeGeneratedTitle(await Promise.race([
+      titlePromise,
+      new Promise((resolve) => { setTimeout(() => resolve(''), 0) }),
+    ]))
     answer = reply.content
     model = reply.model
     promptTokens = reply.promptTokens
@@ -139,13 +182,39 @@ export async function createMessage(ownerId, conversationId, raw) {
       completionTokens,
     })
     companionRepository.touchConversation(ownerId, conversationId)
-    return { userMessage, assistantMessage }
+    if (needsTitle) {
+      const title = generatedTitle
+        || fallbackConversationTitle(
+          isFirstMessage
+            ? content
+            : (companionRepository.firstUserMessageContent(ownerId, conversationId) || content)
+        )
+      companionRepository.setConversationTitle(ownerId, conversationId, title)
+    }
+    return {
+      userMessage,
+      assistantMessage,
+      conversation: companionRepository.findConversation(ownerId, conversationId),
+    }
   })
 
   return {
     ...result,
     remainingToday: Math.max(0, COMPANION_DAILY_MODEL_REPLY_LIMIT - companionRepository.countModelRepliesToday(ownerId)),
   }
+}
+
+// 启动时一次性回填历史会话标题：只处理标题仍为默认值且已有用户消息的会话。
+// 幂等、不调用模型、不改变 updated_at，因此不会打乱会话列表排序。
+export function backfillConversationTitles() {
+  const rows = companionRepository.listDefaultTitledConversations()
+  if (!rows.length) return 0
+  transaction(() => {
+    for (const row of rows) {
+      companionRepository.setConversationTitle(row.owner_id, row.id, fallbackConversationTitle(row.first_content))
+    }
+  })
+  return rows.length
 }
 
 export function removeConversation(ownerId, conversationId) {

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import {
   createMemory,
   createConversation,
@@ -27,6 +27,10 @@ const draft = ref('')
 const busy = ref(false)
 const loadingConversation = ref(false)
 const messageList = ref(null)
+const composerRef = ref(null)
+const atBottom = ref(true)
+const newMessagesHint = ref(false)
+const historyOpen = ref(false)
 const remainingToday = ref(null)
 const pendingConversationCreation = ref(null)
 const failedMessageRetry = ref(null)
@@ -39,6 +43,12 @@ const editingMemoryContent = ref('')
 const PENDING_CONVERSATION_STORAGE_KEY = 'resonance.companion.pending-conversation'
 const PENDING_MESSAGE_STORAGE_KEY = 'resonance.companion.pending-message'
 const activeMemoryCount = computed(() => memories.value.filter((memory) => memory.enabled).length)
+
+// 触摸设备（手机）回车换行、按钮发送；桌面保留 Enter 发送
+const isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches ?? false
+const composerPlaceholder = computed(() => (isTouchDevice
+  ? '说说你现在的感受…'
+  : '说说你现在的感受…（Enter 发送，Shift + Enter 换行）'))
 
 function loadPending(key, userId) {
   try {
@@ -66,11 +76,70 @@ function setFailedMessageRetry(value) {
   savePending(PENDING_MESSAGE_STORAGE_KEY, value)
 }
 
-function scrollToBottom() {
+const NEAR_BOTTOM_PX = 80
+const MAX_COMPOSER_HEIGHT = 144
+
+// 只有贴底或显式强制时才滚到底，避免打断用户回看历史
+function scrollToBottom(force = true) {
   nextTick(() => {
-    if (messageList.value) messageList.value.scrollTop = messageList.value.scrollHeight
+    const el = messageList.value
+    if (!el) return
+    if (!force && !atBottom.value) {
+      newMessagesHint.value = true
+      return
+    }
+    el.scrollTop = el.scrollHeight
+    newMessagesHint.value = false
+    atBottom.value = true
   })
 }
+
+function onListScroll() {
+  const el = messageList.value
+  if (!el) return
+  atBottom.value = el.scrollHeight - el.scrollTop - el.clientHeight < NEAR_BOTTOM_PX
+  if (atBottom.value) newMessagesHint.value = false
+}
+
+// 输入框自动增高（约 1–5 行）
+function autoGrow() {
+  const el = composerRef.value
+  if (!el) return
+  el.style.height = 'auto'
+  el.style.height = `${Math.min(el.scrollHeight, MAX_COMPOSER_HEIGHT)}px`
+}
+
+// 中文输入法组合期间不触发发送；触摸设备回车换行，桌面 Enter 发送
+function onComposerEnter(event) {
+  if (event.isComposing || event.keyCode === 229) return
+  if (event.shiftKey || isTouchDevice) return
+  event.preventDefault()
+  sendMessage()
+}
+
+function closeSheets() {
+  memoryOpen.value = false
+  historyOpen.value = false
+}
+
+// 键盘弹起时按 visualViewport 收缩全屏容器，保证输入条不被遮挡；顶栏高度实测后供高度计算
+function syncAppViewport() {
+  const viewport = window.visualViewport
+  if (viewport) {
+    document.documentElement.style.setProperty('--app-vvh', `${Math.round(viewport.height)}px`)
+  }
+  const header = document.querySelector('header')
+  if (header) {
+    document.documentElement.style.setProperty('--app-header-h', `${Math.round(header.offsetHeight)}px`)
+  }
+}
+
+function onViewportResize() {
+  syncAppViewport()
+  if (atBottom.value) scrollToBottom(true)
+}
+
+watch(draft, () => nextTick(autoGrow))
 
 function formatTime(value) {
   if (!value) return ''
@@ -174,6 +243,9 @@ async function deleteMemory(memory) {
 
 async function selectConversation(conversation) {
   if (loadingConversation.value || busy.value) return
+  historyOpen.value = false
+  newMessagesHint.value = false
+  atBottom.value = true
   loadingConversation.value = true
   try {
     const detail = await getConversation(conversation.id)
@@ -188,6 +260,7 @@ async function selectConversation(conversation) {
 }
 
 async function startConversation() {
+  historyOpen.value = false
   const pending = pendingConversationCreation.value || {
     userId: session.userId,
     idempotencyKey: generateIdempotencyKey(),
@@ -226,6 +299,7 @@ async function withdrawConsent() {
   if (!confirmed) return
   try {
     consent.value = await updateConsent(false)
+    memoryOpen.value = false
     toast('已停止发送新消息')
   } catch (error) {
     toast(error.message)
@@ -269,10 +343,11 @@ async function sendMessage() {
     if (pendingIndex >= 0) messages.value.splice(pendingIndex, 1, result.userMessage, result.assistantMessage)
     else messages.value.push(result.userMessage, result.assistantMessage)
     remainingToday.value = result.remainingToday
-    const updatedConversation = { ...conversation, updatedAt: result.assistantMessage.createdAt }
+    // 首条消息后服务端会自动命名，直接采用返回的最新会话
+    const updatedConversation = result.conversation || { ...conversation, updatedAt: result.assistantMessage.createdAt }
     activeConversation.value = updatedConversation
     moveConversationToTop(updatedConversation)
-    scrollToBottom()
+    scrollToBottom(false)
   } catch (error) {
     // 对相同内容的再次发送复用键，安全重放已完成但未送达浏览器的响应。
     messages.value = messages.value.filter((message) => message.id !== temporaryMessage.id)
@@ -306,6 +381,8 @@ async function deleteActiveConversation() {
 }
 
 onMounted(async () => {
+  syncAppViewport()
+  window.visualViewport?.addEventListener('resize', onViewportResize)
   if (!session.me) await initSession()
   try {
     pendingConversationCreation.value = loadPending(PENDING_CONVERSATION_STORAGE_KEY, session.userId)
@@ -326,11 +403,17 @@ onMounted(async () => {
     toast(error.message)
   }
 })
+
+onUnmounted(() => {
+  window.visualViewport?.removeEventListener('resize', onViewportResize)
+  document.documentElement.style.removeProperty('--app-vvh')
+  document.documentElement.style.removeProperty('--app-header-h')
+})
 </script>
 
 <template>
-  <div class="fade-up space-y-4">
-    <section class="glass overflow-hidden p-5 sm:p-6">
+  <div class="fade-up space-y-4" :class="{ 'companion-page': consent?.consented }">
+    <section class="glass hidden overflow-hidden p-5 sm:p-6 md:block">
       <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p class="text-xs tracking-[0.18em] text-accent">PRIVATE COMPANION</p>
@@ -346,7 +429,12 @@ onMounted(async () => {
       </div>
     </section>
 
-    <section v-if="memoryOpen" class="glass space-y-4 p-5 sm:p-6">
+    <div v-if="memoryOpen || historyOpen" class="companion-sheet-mask md:hidden" @click="closeSheets" />
+
+    <section v-if="memoryOpen" class="companion-memory-sheet glass space-y-4 p-5 sm:p-6">
+      <div class="flex items-center justify-end md:hidden">
+        <button type="button" class="text-xs text-theme-tertiary transition-colors hover-text-accent" @click="memoryOpen = false">收起</button>
+      </div>
       <div>
         <p class="text-xs tracking-[0.18em] text-accent">MY MEMORY</p>
         <h3 class="serif mt-1 text-xl">我的相处偏好</h3>
@@ -389,6 +477,7 @@ onMounted(async () => {
           </template>
         </article>
       </div>
+      <button v-if="consent?.consented" class="btn-ghost w-full text-sm md:hidden" @click="withdrawConsent">停止使用</button>
     </section>
 
     <section v-if="consent && !consent.consented" class="glass space-y-4 p-5 sm:p-6">
@@ -403,11 +492,15 @@ onMounted(async () => {
     </section>
 
     <section v-else-if="consent" class="companion-layout glass overflow-hidden">
-      <aside class="companion-sidebar border-b border-theme p-3 md:border-b-0 md:border-r">
+      <aside class="companion-sidebar border-b border-theme p-3 md:border-b-0 md:border-r" :class="{ 'is-open': historyOpen }">
+        <div class="mb-2 flex items-center justify-between md:hidden">
+          <span class="text-sm font-medium">倾诉记录</span>
+          <button type="button" class="text-xs text-theme-tertiary transition-colors hover-text-accent" @click="historyOpen = false">收起</button>
+        </div>
         <button class="btn-primary w-full !px-3 text-sm" :disabled="busy" @click="startConversation">＋ 新的倾诉</button>
-        <div class="mt-3 flex gap-2 overflow-x-auto pb-1 md:block md:space-y-1 md:overflow-y-auto md:pb-0">
+        <div class="mt-3 space-y-1 md:min-h-0 md:flex-1 md:overflow-y-auto">
           <button v-for="conversation in conversations" :key="conversation.id"
-            class="min-w-32 rounded-xl px-3 py-2 text-left text-sm transition-colors md:block md:w-full"
+            class="block w-full rounded-xl px-3 py-2 text-left text-sm transition-colors"
             :class="activeConversation?.id === conversation.id ? 'bg-accent-soft text-accent' : 'text-theme-secondary surface-hover hover:text-theme-primary'"
             :disabled="busy" @click="selectConversation(conversation)">
             <span class="block truncate">{{ conversation.title }}</span>
@@ -417,37 +510,48 @@ onMounted(async () => {
       </aside>
 
       <div class="companion-chat flex min-w-0 flex-1 flex-col">
-        <div class="flex items-center justify-between border-b border-theme px-4 py-3 sm:px-5">
-          <div class="min-w-0">
+        <div class="flex items-center gap-2 border-b border-theme px-4 py-3 sm:px-5">
+          <button type="button" class="companion-header-btn md:hidden" aria-label="倾诉记录" @click="historyOpen = true">☰</button>
+          <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-medium">{{ activeConversation?.title || '新的倾诉' }}</p>
             <p class="mt-0.5 text-[11px] text-theme-tertiary">仅限情感咨询 · 仅本人可见</p>
           </div>
+          <button type="button" class="companion-header-btn md:hidden" aria-label="我的记忆" @click="memoryOpen = true">
+            记忆<span v-if="activeMemoryCount" class="ml-1 text-accent">{{ activeMemoryCount }}</span>
+          </button>
           <button v-if="activeConversation" class="danger-link shrink-0 text-xs transition-colors" :disabled="busy" @click="deleteActiveConversation">删除</button>
         </div>
 
-        <div ref="messageList" class="companion-message-list min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
-          <div v-if="!activeConversation && !loadingConversation" class="flex h-full min-h-60 flex-col items-center justify-center text-center text-theme-tertiary">
-            <span class="text-3xl">✦</span>
-            <p class="mt-3 text-sm">现在的你，想从哪里说起？</p>
-            <p class="mt-1 text-xs">说一句话就会开始一段新的倾诉。</p>
-          </div>
-          <div v-for="message in messages" :key="message.id" class="flex" :class="message.role === 'user' ? 'justify-end' : 'justify-start'">
-            <div class="max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-6 sm:max-w-[78%]"
-              :class="message.role === 'user' ? 'bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[var(--accent-contrast)]' : 'surface-soft text-theme-primary'">
-              <p class="whitespace-pre-wrap break-words">{{ message.content }}</p>
-              <p class="mt-1 text-right text-[10px] opacity-55">{{ message.pending ? '正在发送…' : formatTime(message.createdAt) }}</p>
+        <div class="relative flex min-h-0 flex-1 flex-col">
+          <div ref="messageList" class="companion-message-list min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5"
+            @scroll.passive="onListScroll">
+            <div v-if="!activeConversation && !loadingConversation" class="flex h-full min-h-60 flex-col items-center justify-center text-center text-theme-tertiary">
+              <span class="text-3xl">✦</span>
+              <p class="mt-3 text-sm">现在的你，想从哪里说起？</p>
+              <p class="mt-1 text-xs">说一句话就会开始一段新的倾诉。</p>
+            </div>
+            <div v-for="message in messages" :key="message.id" class="flex" :class="message.role === 'user' ? 'justify-end' : 'justify-start'">
+              <div class="max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-6 sm:max-w-[78%]"
+                :class="message.role === 'user' ? 'bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[var(--accent-contrast)]' : 'surface-soft text-theme-primary'">
+                <p class="whitespace-pre-wrap break-words">{{ message.content }}</p>
+                <p class="mt-1 text-right text-[10px] opacity-55">{{ message.pending ? '正在发送…' : formatTime(message.createdAt) }}</p>
+              </div>
+            </div>
+            <div v-if="busy" class="flex justify-start">
+              <div class="surface-soft rounded-2xl px-4 py-3 text-xs text-theme-secondary">正在认真听你说…</div>
             </div>
           </div>
-          <div v-if="busy" class="flex justify-start">
-            <div class="surface-soft rounded-2xl px-4 py-3 text-xs text-theme-secondary">正在认真听你说…</div>
-          </div>
+          <button v-if="newMessagesHint" type="button"
+            class="companion-new-messages absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1.5 text-xs font-medium"
+            @click="scrollToBottom(true)">↓ 新消息</button>
         </div>
 
-        <div class="border-t border-theme p-3 sm:p-4">
+        <div class="border-t border-theme p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:p-4 sm:pb-4">
           <div class="companion-composer surface-soft rounded-2xl border border-theme p-2 focus-within:border-[var(--accent)]">
-            <textarea v-model="draft" rows="3" maxlength="2000" class="companion-textarea w-full resize-none bg-transparent px-2 py-1 text-sm leading-6 outline-none"
-              :disabled="busy" placeholder="说说你现在的感受…（Enter 发送，Shift + Enter 换行）"
-              @keydown.enter.exact.prevent="sendMessage" />
+            <textarea ref="composerRef" v-model="draft" rows="1" maxlength="2000"
+              class="companion-textarea w-full resize-none bg-transparent px-2 py-1 text-sm leading-6 outline-none"
+              :placeholder="composerPlaceholder" :enterkeyhint="isTouchDevice ? 'enter' : 'send'"
+              @keydown.enter="onComposerEnter" @input="autoGrow" />
             <div class="flex items-center justify-between gap-3 px-2 pb-1 pt-1">
               <span class="text-[10px] text-theme-tertiary">{{ draft.length }}/2000<span v-if="remainingToday != null"> · 今日还可咨询 {{ remainingToday }} 次</span></span>
               <button class="btn-primary !min-h-9 !px-4 !py-1.5 text-sm" :disabled="busy || !draft.trim()" @click="sendMessage">
@@ -465,12 +569,87 @@ onMounted(async () => {
 .companion-layout { display: flex; flex-direction: column; }
 .companion-sidebar { max-height: 12rem; }
 .companion-chat { flex: 0 0 auto; height: clamp(20rem, calc(100dvh - 10rem), 34rem); }
-.companion-textarea { color: var(--text-primary); }
+.companion-message-list { overscroll-behavior: contain; }
+.companion-textarea { color: var(--text-primary); overflow-y: auto; }
 .companion-textarea::placeholder { color: rgb(var(--text-secondary-rgb) / 0.58); }
+
+.companion-header-btn {
+  display: inline-flex;
+  min-height: 2rem;
+  flex-shrink: 0;
+  align-items: center;
+  border: 1px solid rgb(var(--border-subtle-rgb) / var(--glass-border-alpha));
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+.companion-header-btn:hover { background: rgb(var(--text-primary-rgb) / 0.08); color: var(--text-primary); }
+
+.companion-new-messages {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: var(--accent-contrast);
+  box-shadow: 0 6px 20px rgb(var(--accent-rgb) / 0.35);
+}
+
+@media (max-width: 767px) {
+  .companion-page {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: calc(var(--app-vvh, 100svh) - var(--app-header-h, 4rem));
+    overflow: hidden;
+  }
+  .companion-page > .companion-layout { flex: 1 1 auto; min-height: 0; margin-top: 0; }
+  .companion-chat { flex: 1 1 0%; height: auto; min-height: 0; }
+  .companion-sidebar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    display: none;
+    max-height: min(72%, 32rem);
+    overflow-y: auto;
+    border-radius: 1.25rem 1.25rem 0 0;
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
+    background: var(--page-bg);
+    box-shadow: 0 -12px 40px rgb(var(--shadow-rgb) / 0.35);
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+  .companion-sidebar.is-open { display: block; }
+  .companion-memory-sheet {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    max-height: min(80%, 40rem);
+    overflow-y: auto;
+    border-radius: 1.25rem 1.25rem 0 0;
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
+    background: var(--page-bg);
+    box-shadow: 0 -12px 40px rgb(var(--shadow-rgb) / 0.35);
+    padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  }
+  .companion-memory-sheet .input-dark { font-size: 1rem; }
+  .companion-sheet-mask {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    background: rgb(0 0 0 / 0.5);
+  }
+  .companion-textarea { font-size: 1rem; line-height: 1.6; }
+}
 
 @media (min-width: 768px) {
   .companion-layout { min-height: 36rem; flex-direction: row; }
-  .companion-sidebar { width: 12.5rem; max-height: 42rem; flex: 0 0 12.5rem; }
+  .companion-sidebar { display: flex; flex-direction: column; width: 12.5rem; max-height: 42rem; flex: 0 0 12.5rem; }
   .companion-chat { flex: 1 1 0%; height: clamp(24rem, calc(100dvh - 8rem), 42rem); }
 }
 </style>

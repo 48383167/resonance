@@ -84,7 +84,7 @@ onUnmounted(() => {
         </button>
       </div>
     </header>
-    <main class="app-main mx-auto max-w-3xl px-4 pb-32">
+    <main class="app-main mx-auto max-w-3xl px-4 pb-32" :class="{ 'app-main--companion': route.name === 'companion' }">
       <router-view />
     </main>
 
@@ -99,7 +99,7 @@ onUnmounted(() => {
         </div>
       </TransitionGroup>
     </div>
-    <AppDock v-if="session.me" />
+    <AppDock v-if="session.me" :class="{ 'app-dock--companion': route.name === 'companion' }" />
   </div>
 </template>
 
@@ -111,5 +111,11 @@ onUnmounted(() => {
 .app-main { padding-bottom: calc(8rem + env(safe-area-inset-bottom)); }
 @media (max-width: 640px) {
   .app-toast { bottom: calc(5.75rem + env(safe-area-inset-bottom)); }
+}
+
+/* 心语陪伴移动端：全屏聊天，隐藏底部导航并去掉底部留白 */
+@media (max-width: 767px) {
+  .app-main--companion { padding-bottom: 0; }
+  .app-dock--companion { display: none; }
 }
 </style>

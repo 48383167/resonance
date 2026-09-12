@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { db } from '../../config/database.js'
-import { COMPANION_EXTERNAL_PROCESSING_CONSENT_VERSION } from './companion.policy.js'
+import { COMPANION_EXTERNAL_PROCESSING_CONSENT_VERSION, DEFAULT_CONVERSATION_TITLE } from './companion.policy.js'
 
 function conversation(row) {
   if (!row) return null
@@ -135,6 +135,47 @@ export function createConversation(ownerId, title) {
     'INSERT INTO companion_conversations (id, owner_id, title) VALUES (?, ?, ?)'
   ).run(id, ownerId, title)
   return findConversation(ownerId, id)
+}
+
+// 是否存在任何消息：用于判断是否为本会话首条消息（首条才触发自动命名）
+export function hasAnyMessage(ownerId, conversationId) {
+  return Boolean(db.prepare(
+    `SELECT 1 FROM companion_messages m
+     INNER JOIN companion_conversations c ON c.id = m.conversation_id
+     WHERE m.conversation_id = ? AND c.owner_id = ?
+     LIMIT 1`
+  ).get(conversationId, ownerId))
+}
+
+// 首条用户消息内容：自动命名的兜底来源（老会话重命名时同样适用）
+export function firstUserMessageContent(ownerId, conversationId) {
+  const row = db.prepare(
+    `SELECT m.content FROM companion_messages m
+     INNER JOIN companion_conversations c ON c.id = m.conversation_id
+     WHERE m.conversation_id = ? AND c.owner_id = ? AND m.role = 'user'
+     ORDER BY datetime(m.created_at) ASC, m.rowid ASC
+     LIMIT 1`
+  ).get(conversationId, ownerId)
+  return row?.content ?? null
+}
+
+// 仅更新标题，不改变 updated_at（回填历史标题时不打乱会话排序）
+export function setConversationTitle(ownerId, conversationId, title) {
+  db.prepare(
+    'UPDATE companion_conversations SET title = ? WHERE id = ? AND owner_id = ?'
+  ).run(title, conversationId, ownerId)
+}
+
+// 回填候选：标题仍为默认值、且已有用户消息的历史会话
+export function listDefaultTitledConversations() {
+  return db.prepare(
+    `SELECT c.owner_id, c.id,
+            (SELECT m.content FROM companion_messages m
+              WHERE m.conversation_id = c.id AND m.role = 'user'
+              ORDER BY datetime(m.created_at) ASC, m.rowid ASC LIMIT 1) AS first_content
+     FROM companion_conversations c
+     WHERE TRIM(COALESCE(c.title, '')) = '' OR c.title = ?`
+  ).all(DEFAULT_CONVERSATION_TITLE).filter((row) => row.first_content)
 }
 
 export function listMessages(ownerId, conversationId) {

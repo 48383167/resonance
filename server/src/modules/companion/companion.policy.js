@@ -33,3 +33,11 @@ export const CRISIS_RESPONSE = '听到你现在可能正处在很难熬、甚至
 
 // 本地安全回复不会发往模型，也不会计入正常模型咨询额度。
 export const LOCAL_SAFETY_MODEL = 'local-safety'
+
+// —— 会话标题 ——
+// 创建时的默认标题；用户发出第一条消息后由服务端自动命名（模型短标题，失败时截取首句）。
+export const DEFAULT_CONVERSATION_TITLE = '新的倾诉'
+// 自动标题的存储上限（留出模型输出清洗后的余量）。
+export const CONVERSATION_TITLE_MAX_LENGTH = 20
+
+export const CONVERSATION_TITLE_SYSTEM_PROMPT = `你负责为一段私密的情感倾诉生成标题。根据用户的第一句话，用不超过 12 个字概括这段话的主题或感受，只输出标题本身：不要引号、标点、emoji、编号或任何解释。`

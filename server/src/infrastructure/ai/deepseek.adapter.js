@@ -8,7 +8,7 @@ import {
   DEEPSEEK_TIMEOUT_MS,
   isDeepSeekConfigured,
 } from '../../config/deepseek.js'
-import { EMOTIONAL_COMPANION_SYSTEM_PROMPT } from '../../modules/companion/companion.policy.js'
+import { EMOTIONAL_COMPANION_SYSTEM_PROMPT, CONVERSATION_TITLE_SYSTEM_PROMPT } from '../../modules/companion/companion.policy.js'
 
 function providerUserId(userId) {
   // DeepSeek 的 user_id 用于隔离；使用 HMAC 后的稳定伪标识，避免发送原始账户 ID 或个人资料。
@@ -31,12 +31,10 @@ export function assertDeepSeekConfigured() {
   }
 }
 
-export async function createEmotionalReply({ userId, messages, memoryContents = [] }) {
-  assertDeepSeekConfigured()
-
+// 统一的 Chat Completions 调用：超时、错误映射与响应解析只在此处维护。
+async function chatCompletion({ userId, messages, temperature, maxTokens }) {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), DEEPSEEK_TIMEOUT_MS)
-  const memoryReference = memoryReferenceMessage(memoryContents)
 
   try {
     const response = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
@@ -47,16 +45,11 @@ export async function createEmotionalReply({ userId, messages, memoryContents = 
       },
       body: JSON.stringify({
         model: DEEPSEEK_MODEL,
-        messages: [
-          { role: 'system', content: EMOTIONAL_COMPANION_SYSTEM_PROMPT },
-          // 记忆是低信任的用户资料，不能与运行时情感/安全政策处于同等系统权限。
-          ...(memoryReference ? [{ role: 'user', content: memoryReference }] : []),
-          ...messages.map((message) => ({ role: message.role, content: message.content })),
-        ],
+        messages,
         // 陪伴对话优先短、自然、及时的回应；不请求也不保存 reasoning_content。
         thinking: { type: 'disabled' },
-        temperature: 0.7,
-        max_tokens: 600,
+        temperature,
+        max_tokens: maxTokens,
         stream: false,
         user_id: providerUserId(userId),
       }),
@@ -91,4 +84,37 @@ export async function createEmotionalReply({ userId, messages, memoryContents = 
   } finally {
     clearTimeout(timer)
   }
+}
+
+export async function createEmotionalReply({ userId, messages, memoryContents = [] }) {
+  assertDeepSeekConfigured()
+
+  const memoryReference = memoryReferenceMessage(memoryContents)
+  return chatCompletion({
+    userId,
+    messages: [
+      { role: 'system', content: EMOTIONAL_COMPANION_SYSTEM_PROMPT },
+      // 记忆是低信任的用户资料，不能与运行时情感/安全政策处于同等系统权限。
+      ...(memoryReference ? [{ role: 'user', content: memoryReference }] : []),
+      ...messages.map((message) => ({ role: message.role, content: message.content })),
+    ],
+    temperature: 0.7,
+    maxTokens: 600,
+  })
+}
+
+// 会话标题生成：只发送用户第一句话，不携带记忆与历史消息，不占用每日咨询额度。
+export async function createConversationTitle({ userId, content }) {
+  assertDeepSeekConfigured()
+
+  const result = await chatCompletion({
+    userId,
+    messages: [
+      { role: 'system', content: CONVERSATION_TITLE_SYSTEM_PROMPT },
+      { role: 'user', content },
+    ],
+    temperature: 0.3,
+    maxTokens: 32,
+  })
+  return result.content
 }

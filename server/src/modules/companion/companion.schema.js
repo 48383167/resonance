@@ -1,4 +1,5 @@
 import { BadRequestError } from '../../common/errors/BadRequestError.js'
+import { DEFAULT_CONVERSATION_TITLE } from './companion.policy.js'
 
 export const MAX_MESSAGE_LENGTH = 2000
 export const MAX_TITLE_LENGTH = 40
@@ -19,7 +20,7 @@ export function validateConsent(body = {}) {
 }
 
 export function validateCreateConversation(body = {}) {
-  if (body.title == null || body.title === '') return { title: '新的倾诉' }
+  if (body.title == null || body.title === '') return { title: DEFAULT_CONVERSATION_TITLE }
   return { title: normalizeText(body.title, '标题', MAX_TITLE_LENGTH) }
 }
 

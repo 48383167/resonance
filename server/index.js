@@ -28,6 +28,7 @@ import musicRoutes from './src/modules/music/music.routes.js'
 import themeRoutes from './src/modules/theme/theme.routes.js'
 import commentRoutes from './src/modules/comment/comment.routes.js'
 import companionRoutes from './src/modules/companion/companion.routes.js'
+import { backfillConversationTitles } from './src/modules/companion/companion.service.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PORT = process.env.PORT || 4000
@@ -80,6 +81,14 @@ if (fs.existsSync(distDir)) {
 app.use(errorHandler)
 
 setupSocket(io)
+
+// 历史情感会话标题回填：幂等，失败不阻塞启动
+try {
+  const renamed = backfillConversationTitles()
+  if (renamed) console.log(`[companion] 已回填 ${renamed} 个历史会话标题`)
+} catch (error) {
+  console.error('[companion] 历史会话标题回填失败', error)
+}
 
 server.listen(PORT, () => {
   console.log(`♫ 共鸣 (Resonance) 已启动: http://localhost:${PORT}`)
