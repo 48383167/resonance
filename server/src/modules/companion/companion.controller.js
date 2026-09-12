@@ -16,6 +16,38 @@ export async function updateConsent(req, res, next) {
   }
 }
 
+export async function listMemories(req, res, next) {
+  try {
+    res.success(companionService.listMemories(req.user.id))
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function createMemory(req, res, next) {
+  try {
+    res.success(companionService.createMemory(req.user.id, req.body))
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function updateMemory(req, res, next) {
+  try {
+    res.success(companionService.updateMemory(req.user.id, req.params.id, req.body))
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function removeMemory(req, res, next) {
+  try {
+    res.success(companionService.removeMemory(req.user.id, req.params.id))
+  } catch (error) {
+    next(error)
+  }
+}
+
 export async function listConversations(req, res, next) {
   try {
     res.success(companionService.listConversations(req.user.id))

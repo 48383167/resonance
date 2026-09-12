@@ -6,6 +6,8 @@ import { CRISIS_RESPONSE, isImmediateCrisis, LOCAL_SAFETY_MODEL } from './compan
 import * as companionRepository from './companion.repository.js'
 import * as companionSchema from './companion.schema.js'
 
+const MAX_ENABLED_MEMORIES = 8
+
 function conversationOrThrow(ownerId, conversationId) {
   const found = companionRepository.findConversation(ownerId, conversationId)
   if (!found) {
@@ -21,6 +23,21 @@ function assertConsent(ownerId) {
   }
 }
 
+function memoryOrThrow(ownerId, memoryId) {
+  const found = companionRepository.findMemory(ownerId, memoryId)
+  if (!found) {
+    // 与不存在使用同一错误，避免通过 ID 探测其他用户的私有记忆。
+    throw new AppError('个人记忆不存在', 404, 'COMPANION_MEMORY_NOT_FOUND')
+  }
+  return found
+}
+
+function assertEnabledMemoryCapacity(ownerId) {
+  if (companionRepository.countEnabledMemories(ownerId) >= MAX_ENABLED_MEMORIES) {
+    throw new AppError(`最多只能启用 ${MAX_ENABLED_MEMORIES} 条个人记忆，请先暂停一条再继续`, 400, 'COMPANION_ACTIVE_MEMORY_LIMIT')
+  }
+}
+
 export function getConsent(ownerId) {
   return companionRepository.getConsent(ownerId)
 }
@@ -32,6 +49,36 @@ export function updateConsent(ownerId, raw) {
 
 export function listConversations(ownerId) {
   return companionRepository.listConversations(ownerId)
+}
+
+export function listMemories(ownerId) {
+  return companionRepository.listMemories(ownerId)
+}
+
+export function createMemory(ownerId, raw) {
+  const { content } = companionSchema.validateCreateMemory(raw)
+  return transaction(() => {
+    assertEnabledMemoryCapacity(ownerId)
+    return companionRepository.createMemory(ownerId, content)
+  })
+}
+
+export function updateMemory(ownerId, memoryId, raw) {
+  const changes = companionSchema.validateUpdateMemory(raw)
+  const current = memoryOrThrow(ownerId, memoryId)
+  if (changes.enabled === true && !current.enabled) {
+    return transaction(() => {
+      assertEnabledMemoryCapacity(ownerId)
+      return companionRepository.updateMemory(ownerId, memoryId, changes)
+    })
+  }
+  return companionRepository.updateMemory(ownerId, memoryId, changes)
+}
+
+export function removeMemory(ownerId, memoryId) {
+  memoryOrThrow(ownerId, memoryId)
+  transaction(() => companionRepository.removeMemory(ownerId, memoryId))
+  return null
 }
 
 export function createConversation(ownerId, raw) {
@@ -69,6 +116,7 @@ export async function createMessage(ownerId, conversationId, raw) {
       reply = await createEmotionalReply({
         userId: ownerId,
         messages: [...companionRepository.listRecentMessages(ownerId, conversationId), { role: 'user', content }],
+        memoryContents: companionRepository.listEnabledMemoryContents(ownerId, MAX_ENABLED_MEMORIES),
       })
     } catch (error) {
       companionRepository.releaseModelReply(ownerId, reservation.usageDate)

@@ -1,12 +1,16 @@
 <script setup>
-import { nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import {
+  createMemory,
   createConversation,
   createMessage,
   getConsent,
   getConversation,
+  listMemories,
   listConversations,
+  removeMemory,
   removeConversation,
+  updateMemory,
   updateConsent,
 } from '../companion.api.js'
 import { initSession, session } from '../../../stores/session'
@@ -15,6 +19,7 @@ import { confirmDialog } from '../../../stores/confirm'
 import { generateIdempotencyKey } from '../../../utils/idempotency.js'
 
 const consent = ref(null)
+const memories = ref([])
 const conversations = ref([])
 const activeConversation = ref(null)
 const messages = ref([])
@@ -25,8 +30,15 @@ const messageList = ref(null)
 const remainingToday = ref(null)
 const pendingConversationCreation = ref(null)
 const failedMessageRetry = ref(null)
+const memoryOpen = ref(false)
+const newMemory = ref('')
+const creatingMemory = ref(false)
+const memoryBusyId = ref('')
+const editingMemoryId = ref('')
+const editingMemoryContent = ref('')
 const PENDING_CONVERSATION_STORAGE_KEY = 'resonance.companion.pending-conversation'
 const PENDING_MESSAGE_STORAGE_KEY = 'resonance.companion.pending-message'
+const activeMemoryCount = computed(() => memories.value.filter((memory) => memory.enabled).length)
 
 function loadPending(key, userId) {
   try {
@@ -69,6 +81,95 @@ function moveConversationToTop(updated) {
   const index = conversations.value.findIndex((item) => item.id === updated.id)
   if (index >= 0) conversations.value.splice(index, 1)
   conversations.value.unshift(updated)
+}
+
+function sortMemories() {
+  memories.value.sort((left, right) => {
+    if (left.enabled !== right.enabled) return Number(right.enabled) - Number(left.enabled)
+    return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime()
+  })
+}
+
+function replaceMemory(updated) {
+  const index = memories.value.findIndex((memory) => memory.id === updated.id)
+  if (index >= 0) memories.value.splice(index, 1, updated)
+  else memories.value.push(updated)
+  sortMemories()
+}
+
+async function addMemory() {
+  const content = newMemory.value.trim()
+  if (!content || creatingMemory.value) return
+  creatingMemory.value = true
+  try {
+    const created = await createMemory({ content }, generateIdempotencyKey())
+    replaceMemory(created)
+    newMemory.value = ''
+    toast('已保存并启用这条记忆')
+  } catch (error) {
+    toast(error.message)
+  } finally {
+    creatingMemory.value = false
+  }
+}
+
+function startEditingMemory(memory) {
+  editingMemoryId.value = memory.id
+  editingMemoryContent.value = memory.content
+}
+
+function cancelEditingMemory() {
+  editingMemoryId.value = ''
+  editingMemoryContent.value = ''
+}
+
+async function saveMemoryEdit(memory) {
+  const content = editingMemoryContent.value.trim()
+  if (!content || memoryBusyId.value) return
+  memoryBusyId.value = memory.id
+  try {
+    replaceMemory(await updateMemory(memory.id, { content }))
+    cancelEditingMemory()
+    toast('记忆已更新')
+  } catch (error) {
+    toast(error.message)
+  } finally {
+    memoryBusyId.value = ''
+  }
+}
+
+async function toggleMemory(memory) {
+  if (memoryBusyId.value) return
+  memoryBusyId.value = memory.id
+  try {
+    const updated = await updateMemory(memory.id, { enabled: !memory.enabled })
+    replaceMemory(updated)
+    toast(updated.enabled ? '这条记忆已启用' : '这条记忆已暂停')
+  } catch (error) {
+    toast(error.message)
+  } finally {
+    memoryBusyId.value = ''
+  }
+}
+
+async function deleteMemory(memory) {
+  if (memoryBusyId.value) return
+  const confirmed = await confirmDialog({
+    title: '删除这条记忆？',
+    message: '删除后，后续咨询将不再使用它；已经发送给模型的历史请求无法撤回。',
+  })
+  if (!confirmed) return
+  memoryBusyId.value = memory.id
+  try {
+    await removeMemory(memory.id)
+    memories.value = memories.value.filter((item) => item.id !== memory.id)
+    if (editingMemoryId.value === memory.id) cancelEditingMemory()
+    toast('这条记忆已删除')
+  } catch (error) {
+    toast(error.message)
+  } finally {
+    memoryBusyId.value = ''
+  }
 }
 
 async function selectConversation(conversation) {
@@ -213,9 +314,10 @@ onMounted(async () => {
       failedMessageRetry.value = restoredMessage
       draft.value = restoredMessage.content
     }
-    const [consentState, items] = await Promise.all([getConsent(), listConversations()])
+    const [consentState, items, memoryItems] = await Promise.all([getConsent(), listConversations(), listMemories()])
     consent.value = consentState
     conversations.value = items
+    memories.value = memoryItems
     const retryConversation = items.find((item) => item.id === restoredMessage?.conversationId)
     if (retryConversation) await selectConversation(retryConversation)
     else if (restoredMessage) setFailedMessageRetry(null)
@@ -235,7 +337,57 @@ onMounted(async () => {
           <h2 class="serif mt-1 text-2xl">心语陪伴</h2>
           <p class="mt-2 max-w-xl text-sm leading-6 text-theme-secondary">只听你说，陪你理清感受与关系里的话。不读取日记，也不会把对话告诉 Ta。</p>
         </div>
-        <button v-if="consent?.consented" class="btn-ghost !min-h-9 !px-3 !py-1.5 text-xs" @click="withdrawConsent">停止使用</button>
+        <div class="flex flex-wrap items-center gap-2">
+          <button class="btn-ghost !min-h-9 !px-3 !py-1.5 text-xs" :aria-expanded="memoryOpen" @click="memoryOpen = !memoryOpen">
+            我的记忆 <span class="ml-1 text-theme-tertiary">{{ activeMemoryCount }}</span>
+          </button>
+          <button v-if="consent?.consented" class="btn-ghost !min-h-9 !px-3 !py-1.5 text-xs" @click="withdrawConsent">停止使用</button>
+        </div>
+      </div>
+    </section>
+
+    <section v-if="memoryOpen" class="glass space-y-4 p-5 sm:p-6">
+      <div>
+        <p class="text-xs tracking-[0.18em] text-accent">MY MEMORY</p>
+        <h3 class="serif mt-1 text-xl">我的相处偏好</h3>
+        <p class="mt-2 text-sm leading-6 text-theme-secondary">由你主动保存、仅你可见。启用后会在你发送正常情感咨询时作为简短背景发送给模型；不会自动读取日记或情书，危机求助也不会使用它。</p>
+      </div>
+
+      <form class="flex flex-col gap-2 sm:flex-row" @submit.prevent="addMemory">
+        <input v-model="newMemory" maxlength="160" class="input-dark flex-1 text-sm" :disabled="creatingMemory"
+          placeholder="例如：我希望先被倾听，再讨论解决方案" aria-label="新增个人记忆" />
+        <button class="btn-primary shrink-0 !px-4 text-sm" :disabled="creatingMemory || !newMemory.trim()">
+          {{ creatingMemory ? '保存中…' : '保存并启用' }}
+        </button>
+      </form>
+      <p class="text-xs text-theme-tertiary">已启用 {{ activeMemoryCount }} 条 · 单条最多 160 字。达到启用上限时，请先暂停一条；暂停或删除后，后续咨询不会再使用它。</p>
+
+      <div v-if="!memories.length" class="surface-soft rounded-2xl p-4 text-sm text-theme-secondary">还没有记忆。只保存你希望助手长期记住的相处偏好，不必记录具体隐私细节。</div>
+      <div v-else class="space-y-2">
+        <article v-for="memory in memories" :key="memory.id" class="surface-soft rounded-2xl p-3 sm:p-4">
+          <template v-if="editingMemoryId === memory.id">
+            <textarea v-model="editingMemoryContent" maxlength="160" rows="3" class="companion-textarea input-dark min-h-20 resize-y text-sm" :disabled="memoryBusyId === memory.id" />
+            <div class="mt-2 flex justify-end gap-2">
+              <button class="btn-ghost !min-h-9 !px-3 !py-1.5 text-xs" :disabled="memoryBusyId === memory.id" @click="cancelEditingMemory">取消</button>
+              <button class="btn-primary !min-h-9 !px-3 !py-1.5 text-xs" :disabled="memoryBusyId === memory.id || !editingMemoryContent.trim()" @click="saveMemoryEdit(memory)">保存</button>
+            </div>
+          </template>
+          <template v-else>
+            <div class="flex items-start justify-between gap-3">
+              <p class="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm leading-6 text-theme-primary">{{ memory.content }}</p>
+              <span class="shrink-0 rounded-full px-2 py-1 text-[10px]" :class="memory.enabled ? 'bg-accent-soft text-accent' : 'surface-soft text-theme-tertiary'">
+                {{ memory.enabled ? '启用中' : '已暂停' }}
+              </span>
+            </div>
+            <div class="mt-3 flex flex-wrap justify-end gap-2">
+              <button class="btn-ghost !min-h-9 !px-3 !py-1.5 text-xs" :disabled="memoryBusyId === memory.id" @click="startEditingMemory(memory)">编辑</button>
+              <button class="btn-ghost !min-h-9 !px-3 !py-1.5 text-xs" :disabled="memoryBusyId === memory.id" @click="toggleMemory(memory)">
+                {{ memory.enabled ? '暂停' : '启用' }}
+              </button>
+              <button class="danger-action min-h-9 rounded-full px-3 py-1.5 text-xs transition-colors" :disabled="memoryBusyId === memory.id" @click="deleteMemory(memory)">删除</button>
+            </div>
+          </template>
+        </article>
       </div>
     </section>
 
@@ -244,7 +396,7 @@ onMounted(async () => {
         <span class="mt-0.5 text-xl">☾</span>
         <div>
           <h3 class="font-medium">开始前的一点说明</h3>
-          <p class="mt-2 text-sm leading-6 text-theme-secondary">你主动输入的消息会发送给 DeepSeek 生成回复。聊天仅你自己可见；助手只处理情感与关系沟通，不替代心理诊疗或紧急援助。</p>
+          <p class="mt-2 text-sm leading-6 text-theme-secondary">你主动输入的消息，以及你主动保存并启用的个人记忆，会发送给 DeepSeek 生成回复。聊天仅你自己可见；助手只处理情感与关系沟通，不替代心理诊疗或紧急援助。</p>
         </div>
       </div>
       <button class="btn-primary w-full sm:w-auto" @click="acceptConsent">我已了解，开始倾诉</button>

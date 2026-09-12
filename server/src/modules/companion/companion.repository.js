@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { db } from '../../config/database.js'
+import { COMPANION_EXTERNAL_PROCESSING_CONSENT_VERSION } from './companion.policy.js'
 
 function conversation(row) {
   if (!row) return null
@@ -21,20 +22,37 @@ function message(row) {
   }
 }
 
+function memory(row) {
+  if (!row) return null
+  return {
+    id: row.id,
+    content: row.content,
+    enabled: Boolean(row.enabled),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
 export function getConsent(ownerId) {
-  const row = db.prepare('SELECT consented_at FROM companion_consents WHERE owner_id = ?').get(ownerId)
-  return { consented: Boolean(row?.consented_at), consentedAt: row?.consented_at || null }
+  const row = db.prepare(
+    'SELECT consented_at, consent_version FROM companion_consents WHERE owner_id = ?'
+  ).get(ownerId)
+  const consented = Boolean(row?.consented_at)
+    && Number(row.consent_version) >= COMPANION_EXTERNAL_PROCESSING_CONSENT_VERSION
+  return { consented, consentedAt: consented ? row.consented_at : null }
 }
 
 export function setConsent(ownerId, accepted) {
   const consentedAt = accepted ? new Date().toISOString() : null
+  const consentVersion = accepted ? COMPANION_EXTERNAL_PROCESSING_CONSENT_VERSION : 0
   db.prepare(
-    `INSERT INTO companion_consents (owner_id, consented_at, updated_at)
-     VALUES (?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+    `INSERT INTO companion_consents (owner_id, consented_at, consent_version, updated_at)
+     VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'))
      ON CONFLICT(owner_id) DO UPDATE SET
        consented_at = excluded.consented_at,
+       consent_version = excluded.consent_version,
        updated_at = excluded.updated_at`
-  ).run(ownerId, consentedAt)
+  ).run(ownerId, consentedAt, consentVersion)
   return getConsent(ownerId)
 }
 
@@ -45,6 +63,63 @@ export function listConversations(ownerId) {
      WHERE owner_id = ?
      ORDER BY datetime(updated_at) DESC, rowid DESC`
   ).all(ownerId).map(conversation)
+}
+
+export function listMemories(ownerId) {
+  return db.prepare(
+    `SELECT id, content, enabled, created_at, updated_at
+     FROM companion_memories
+     WHERE owner_id = ?
+     ORDER BY enabled DESC, datetime(updated_at) DESC, rowid DESC`
+  ).all(ownerId).map(memory)
+}
+
+export function findMemory(ownerId, id) {
+  return memory(db.prepare(
+    `SELECT id, content, enabled, created_at, updated_at
+     FROM companion_memories
+     WHERE id = ? AND owner_id = ?`
+  ).get(id, ownerId))
+}
+
+export function countEnabledMemories(ownerId) {
+  return db.prepare(
+    'SELECT COUNT(*) AS count FROM companion_memories WHERE owner_id = ? AND enabled = 1'
+  ).get(ownerId).count
+}
+
+// 发给模型的记忆只取启用项，不携带 ID、时间或任何业务资源元数据。
+export function listEnabledMemoryContents(ownerId, limit) {
+  return db.prepare(
+    `SELECT content
+     FROM companion_memories
+     WHERE owner_id = ? AND enabled = 1
+     ORDER BY datetime(updated_at) DESC, rowid DESC
+     LIMIT ?`
+  ).all(ownerId, limit).map((row) => row.content)
+}
+
+export function createMemory(ownerId, content) {
+  const id = 'cm_' + randomUUID().slice(0, 12)
+  db.prepare(
+    'INSERT INTO companion_memories (id, owner_id, content, enabled) VALUES (?, ?, ?, 1)'
+  ).run(id, ownerId, content)
+  return findMemory(ownerId, id)
+}
+
+export function updateMemory(ownerId, id, changes) {
+  const current = findMemory(ownerId, id)
+  if (!current) return null
+  db.prepare(
+    `UPDATE companion_memories
+     SET content = ?, enabled = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+     WHERE id = ? AND owner_id = ?`
+  ).run(changes.content ?? current.content, Number(changes.enabled ?? current.enabled), id, ownerId)
+  return findMemory(ownerId, id)
+}
+
+export function removeMemory(ownerId, id) {
+  db.prepare('DELETE FROM companion_memories WHERE id = ? AND owner_id = ?').run(id, ownerId)
 }
 
 export function findConversation(ownerId, id) {

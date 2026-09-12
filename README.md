@@ -59,6 +59,7 @@ npm run backup       # 将 database.sqlite 拷贝为 backups/database-YYYY-MM-DD
 | `GET` | `/api/auth/me` | 本人 + 伴侣 + 配对码（未配对时） |
 | `POST` | `/api/auth/change-password` | 修改密码 |
 | `GET/PUT` | `/api/companion/consent` | 情感陪伴助手的第三方处理同意状态 |
+| `GET/POST/PUT/DELETE` | `/api/companion/memories` | 本人主动保存、可启停的私有相处偏好 |
 | `GET/POST/DELETE` | `/api/companion/conversations` | 本人私有的情感对话管理 |
 
 业务接口：

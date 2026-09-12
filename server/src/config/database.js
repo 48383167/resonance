@@ -264,6 +264,7 @@ CREATE TABLE IF NOT EXISTS idempotency_records (
 CREATE TABLE IF NOT EXISTS companion_consents (
     owner_id TEXT PRIMARY KEY REFERENCES users(id),
     consented_at TEXT,
+    consent_version INTEGER NOT NULL DEFAULT 0,
     updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
@@ -289,6 +290,18 @@ CREATE TABLE IF NOT EXISTS companion_messages (
 );
 CREATE INDEX IF NOT EXISTS idx_companion_messages_conversation_created
     ON companion_messages(conversation_id, created_at);
+
+-- 用户主动确认的短记忆：严格 owner_id 私有；仅 enabled 条目会在正常模型咨询中作为背景。
+CREATE TABLE IF NOT EXISTS companion_memories (
+    id TEXT PRIMARY KEY,
+    owner_id TEXT NOT NULL REFERENCES users(id),
+    content TEXT NOT NULL,
+    enabled INTEGER NOT NULL DEFAULT 1 CHECK (enabled IN (0, 1)),
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_companion_memories_owner_enabled_updated
+    ON companion_memories(owner_id, enabled, updated_at);
 
 -- 用量独立于会话保存：删除私密对话不会重置已发出的模型调用额度。
 CREATE TABLE IF NOT EXISTS companion_daily_usage (
@@ -332,6 +345,7 @@ ensureColumns('share_tokens', {
   include_entries: 'INTEGER NOT NULL DEFAULT 1',
   include_anniversaries: 'INTEGER NOT NULL DEFAULT 1',
 })
+ensureColumns('companion_consents', { consent_version: 'INTEGER NOT NULL DEFAULT 0' })
 ensureColumns('comments', {
   parent_id: 'TEXT',
   reply_to_user_id: 'TEXT',
