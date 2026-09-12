@@ -5,9 +5,12 @@ database.sqlite
 database.sqlite-*
 backups/
 .npm-cache/
-.smoke-data/
+.smoke-data*/
 media/*
 !media/.gitkeep
 *.log
+.env
+.env.local
+.env.*.local
 .DS_Store
 .idea/

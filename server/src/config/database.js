@@ -258,6 +258,45 @@ CREATE TABLE IF NOT EXISTS idempotency_records (
     completed_at TEXT,
     UNIQUE(user_id, request_key, route_scope)
 );
+
+-- 情感陪伴助手：严格按 owner_id 私有化，不进入 couple 共享数据域。
+-- 只保存用户主动输入和最终回复；不存模型思考过程或供应商原始请求/响应。
+CREATE TABLE IF NOT EXISTS companion_consents (
+    owner_id TEXT PRIMARY KEY REFERENCES users(id),
+    consented_at TEXT,
+    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+CREATE TABLE IF NOT EXISTS companion_conversations (
+    id TEXT PRIMARY KEY,
+    owner_id TEXT NOT NULL REFERENCES users(id),
+    title TEXT NOT NULL DEFAULT '新的倾诉',
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_companion_conversations_owner_updated
+    ON companion_conversations(owner_id, updated_at);
+
+CREATE TABLE IF NOT EXISTS companion_messages (
+    id TEXT PRIMARY KEY,
+    conversation_id TEXT NOT NULL REFERENCES companion_conversations(id),
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    model TEXT,
+    prompt_tokens INTEGER NOT NULL DEFAULT 0,
+    completion_tokens INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_companion_messages_conversation_created
+    ON companion_messages(conversation_id, created_at);
+
+-- 用量独立于会话保存：删除私密对话不会重置已发出的模型调用额度。
+CREATE TABLE IF NOT EXISTS companion_daily_usage (
+    owner_id TEXT NOT NULL REFERENCES users(id),
+    usage_date TEXT NOT NULL,
+    model_reply_count INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (owner_id, usage_date)
+);
 `)
 
 // 兼容旧库：观测台开关 singleton 行缺省初始化 enabled=1，保证已有行为不变（幂等）

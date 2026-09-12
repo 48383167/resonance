@@ -25,6 +25,7 @@ const modules = [
   { name: 'moments', icon: '✨', label: '恋爱瞬间', desc: '此刻的心情与地点', color: 'rgb(var(--accent-rgb) / 0.22)' },
   { name: 'map', icon: '🗺️', label: '恋爱地图', desc: '一起走过的足迹', color: 'rgb(var(--accent-2-rgb) / 0.22)' },
   { name: 'letters', icon: '💌', label: '情书', desc: '写给 Ta 的话', color: 'rgb(var(--accent-rgb) / 0.22)' },
+  { name: 'companion', icon: '☾', label: '心语陪伴', desc: '只听你说说', color: 'rgb(var(--accent-2-rgb) / 0.2)' },
   { name: 'albums', icon: '📷', label: '相册', desc: '照片与回忆', color: 'rgb(var(--accent-2-rgb) / 0.2)' },
   { name: 'wishes', icon: '🧭', label: '心愿清单', desc: '一起完成的事', color: 'rgb(var(--accent-rgb) / 0.2)' },
   { name: 'capsules', icon: '⏳', label: '时间胶囊', desc: '寄给未来的话', color: 'rgb(var(--accent-2-rgb) / 0.22)' },

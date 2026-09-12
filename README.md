@@ -16,6 +16,7 @@ npm run dev          # 同时启动后端(:4000) 与前端(:5173)
 1. **注册**：第一个人注册（用户名+密码+昵称）后生成 6 位**配对码**；把配对码发给 Ta，第二个人注册时填写即完成配对。此后**严格锁定为两人**，无法注册第三个账号。
 2. **登录**：之后每次用账号密码登录即可（JWT 有效期 7 天）。
 3. **首页**：恋爱树随两人的记录成长（种子→嫩芽→小树→开花→繁茂），统计卡片与全部模块入口。
+4. **心语陪伴**：仅本人可见的情感倾诉与关系沟通助手；首次使用会说明第三方模型处理，默认不会读取日记或伴侣内容。
 4. **时光时间线**：日记、瞬间、情书、心愿、胶囊、纪念日、照片全部汇入一条发光时间线，按日期分组并标注「在一起第 N 天」。
 5. **写日记**：情绪墨水实时采集打字速度/删改/停顿，文字按情绪渲染；保存时采集环境底片（时间映射色、天气、音量）。
 5. **恋爱瞬间**：心情 + 地点（地图选点）+ 照片 + 日期；支持心情/关键词/日期筛选。
@@ -57,6 +58,8 @@ npm run backup       # 将 database.sqlite 拷贝为 backups/database-YYYY-MM-DD
 | `POST` | `/api/auth/login` | 登录，返回 JWT |
 | `GET` | `/api/auth/me` | 本人 + 伴侣 + 配对码（未配对时） |
 | `POST` | `/api/auth/change-password` | 修改密码 |
+| `GET/PUT` | `/api/companion/consent` | 情感陪伴助手的第三方处理同意状态 |
+| `GET/POST/DELETE` | `/api/companion/conversations` | 本人私有的情感对话管理 |
 
 业务接口：
 
@@ -80,6 +83,8 @@ npm run backup       # 将 database.sqlite 拷贝为 backups/database-YYYY-MM-DD
 | `POST/GET/DELETE` | `/api/share/create`、`/api/share/current` | 分享链接管理 |
 | `GET` | `/api/public/observatory`、`/api/public/share/:token` | 公开观测台 / 只读分享（可选密码） |
 | `GET` | `/api/export` | 导出时光机 zip |
+
+情感陪伴助手需要服务端配置 DeepSeek 密钥；复制 `.env.example` 为 `.env` 后填写 `DEEPSEEK_API_KEY`，或在部署环境中设置同名变量。模型默认使用官方 `deepseek-v4-flash`，可通过 `DEEPSEEK_MODEL` 替换为官方后续模型标识。详见 `docs/api/companion.md`。
 
 ## WebSocket 事件（Socket.io）
 

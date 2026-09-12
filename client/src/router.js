@@ -4,6 +4,7 @@ import { isLoggedIn } from './stores/session'
 const routes = [
   { path: '/login', name: 'login', component: () => import('./modules/auth/views/Login.vue') },
   { path: '/register', name: 'register', component: () => import('./modules/auth/views/Register.vue') },
+  { path: '/companion', name: 'companion', component: () => import('./modules/companion/views/Companion.vue'), meta: { auth: true } },
   { path: '/', name: 'root-entry', component: () => import('./modules/misc/views/RootEntry.vue') },
   { path: '/home', name: 'home', component: () => import('./modules/misc/views/Home.vue'), meta: { auth: true } },
   { path: '/timeline', name: 'timeline', component: () => import('./modules/timeline/views/Timeline.vue'), meta: { auth: true } },

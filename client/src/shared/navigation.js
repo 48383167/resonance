@@ -25,6 +25,7 @@ export const navigationItems = [
     group: '连接',
     activeRoutes: ['letters', 'letter-write', 'letter-edit', 'letter-read'],
   },
+  { name: 'companion', route: 'companion', label: '心语陪伴', icon: '☾', group: '连接', activeRoutes: ['companion'] },
   { name: 'albums', route: 'albums', label: '相册', icon: '▧', group: '回忆', activeRoutes: ['albums', 'album-new', 'album-edit', 'album-detail'] },
   { name: 'map', route: 'map', label: '地图', icon: '⌖', group: '回忆', activeRoutes: ['map'] },
   { name: 'wishes', route: 'wishes', label: '心愿', icon: '◇', group: '计划', activeRoutes: ['wishes', 'wish-new', 'wish-edit', 'wish-read'] },

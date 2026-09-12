@@ -7,4 +7,8 @@ services:
     volumes:
       # 数据库与媒体文件持久化（极简备份：直接拷贝本目录下的 database.sqlite）
       - ./data:/data
+    environment:
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-v4-flash}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
     restart: unless-stopped

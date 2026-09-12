@@ -55,6 +55,29 @@ assert('新密码可登录', loginA2.ok === true)
 const tokenA = loginA2.data.token
 const tokenB = regB.data.token
 
+console.log('== 2. 情感陪伴助手 ==')
+const companionConsent0 = await http('GET', '/api/companion/consent', null, tokenA)
+assert('情感助手初始未同意第三方处理', companionConsent0.ok && companionConsent0.data.consented === false)
+const companionConsent = await http('PUT', '/api/companion/consent', { accepted: true }, tokenA)
+assert('可明确同意第三方处理', companionConsent.ok && companionConsent.data.consented === true)
+const companionConversation = await http('POST', '/api/companion/conversations', { title: '今晚想聊聊' }, tokenA)
+assert('创建本人私有情感对话', companionConversation.ok && companionConversation.data.title === '今晚想聊聊')
+const companionDetail = await http('GET', `/api/companion/conversations/${companionConversation.data.id}`, null, tokenA)
+assert('本人可读取空情感对话', companionDetail.ok && companionDetail.data.messages.length === 0)
+const companionCrossAccess = await http('GET', `/api/companion/conversations/${companionConversation.data.id}`, null, tokenB)
+assert('伴侣不能读取私有情感对话', companionCrossAccess.ok === false
+  && companionCrossAccess.error?.code === 'COMPANION_CONVERSATION_NOT_FOUND')
+const companionList = await http('GET', '/api/companion/conversations', null, tokenA)
+assert('情感对话只出现在本人列表', companionList.ok && companionList.data.some((item) => item.id === companionConversation.data.id))
+const companionCrisis = await http('POST', `/api/companion/conversations/${companionConversation.data.id}/messages`, { content: '我吞了一瓶药' }, tokenA)
+assert('危机文本由本地安全回复处理', companionCrisis.ok && companionCrisis.data.assistantMessage.content.includes('120'))
+const companionEnglishCrisis = await http('POST', `/api/companion/conversations/${companionConversation.data.id}/messages`, { content: 'I will jump off a bridge' }, tokenA)
+assert('英文危机文本不发送给模型', companionEnglishCrisis.ok && companionEnglishCrisis.data.assistantMessage.content.includes('120'))
+const companionDelete = await http('DELETE', `/api/companion/conversations/${companionConversation.data.id}`, null, tokenA)
+assert('可删除本人情感对话', companionDelete.ok === true)
+const companionAfterDelete = await http('GET', `/api/companion/conversations/${companionConversation.data.id}`, null, tokenA)
+assert('删除后情感对话不可读取', companionAfterDelete.ok === false)
+
 await http('POST', '/api/share/create', { password: '', expireDays: 0 }, tokenA)
 const shareProbe = await fetch(BASE + '/api/share/current', { headers: { Authorization: `Bearer ${tokenA}` } })
 const shareEtag = shareProbe.headers.get('etag')
@@ -66,7 +89,7 @@ assert('动态接口不返回无响应体的 304', conditionalShare.status !== 3
 await conditionalShare.arrayBuffer()
 await http('DELETE', '/api/share/current', null, tokenA)
 
-console.log('== 2. 用户独立主题 ==')
+console.log('== 3. 用户独立主题 ==')
 const themeA0 = await http('GET', '/api/users/me/theme', null, tokenA)
 const themeB0 = await http('GET', '/api/users/me/theme', null, tokenB)
 assert('两个用户都有默认主题', themeA0.ok && themeB0.ok && themeA0.data.themeKey === 'starlight'
@@ -100,7 +123,7 @@ const unreadableTheme = await http('PUT', '/api/users/me/theme', {
 assert('任意颜色组合可保存', unreadableTheme.ok && unreadableTheme.data.primaryColor === '#000000'
   && unreadableTheme.data.secondaryColor === '#ffffff' && unreadableTheme.data.ambientColor === '#ffffff')
 
-console.log('== 3. 日记 ==')
+console.log('== 4. 日记 ==')
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64')
 const fd = new FormData()
 fd.append('file', new Blob([png], { type: 'image/png' }), 't.png')
@@ -123,7 +146,7 @@ const del = await http('DELETE', `/api/entries/${temp.data.id}`, null, tokenA)
 const afterDel = await http('GET', '/api/entries', null, tokenA)
 assert('删除日记成功', del.ok === true && afterDel.data.length === 1)
 
-console.log('== 4. 恋爱瞬间与地图 ==')
+console.log('== 5. 恋爱瞬间与地图 ==')
 const m1 = await http('POST', '/api/moments', {
   content: '西湖边的晚风', mood: 'sweet', location: '杭州西湖', longitude: 120.15, latitude: 30.24, momentDate: '2026-08-20',
 }, tokenA)
@@ -141,13 +164,13 @@ assert('地图数据含坐标且按时间升序', mMap.data.length === 2 && mMap
 const mUpd = await http('PUT', `/api/moments/${m1.data.id}`, { content: '西湖边的晚风（改）' }, tokenA)
 assert('编辑瞬间', mUpd.data.content.includes('（改）'))
 
-console.log('== 5. 情书 ==')
+console.log('== 6. 情书 ==')
 const letter = await http('POST', '/api/letters', { title: '给你', content: '今晚月色真美。', isSecret: true }, tokenA)
 assert('写情书', letter.ok)
 const lRead = await http('GET', `/api/letters/${letter.data.id}`, null, tokenB)
 assert('对方查看后标记已读', lRead.data.is_read === 1)
 
-console.log('== 6. 相册 ==')
+console.log('== 7. 相册 ==')
 const fd1 = new FormData()
 fd1.append('file', new Blob([png], { type: 'image/png' }), 'a.png')
 const up1 = await http('POST', '/api/upload', fd1, tokenB, true)
@@ -174,7 +197,7 @@ assert('修改相册信息', updAlbum.data.name.includes('改') && updAlbum.data
 const story = await http('PUT', `/api/albums/${album.data.id}/photos/${page1.data.items[0].id}`, { caption: '湖边的合影' }, tokenA)
 assert('为照片写故事', story.ok && story.data.caption === '湖边的合影')
 
-console.log('== 7. 心愿清单 ==')
+console.log('== 8. 心愿清单 ==')
 const wish = await http('POST', '/api/wishes', { title: '一起看极光', category: 'travel', priority: 2 }, tokenA)
 assert('许愿', wish.ok && wish.data.status === 'todo')
 const wishMoved = await http('PUT', `/api/wishes/${wish.data.id}/status`, { status: 'doing' }, tokenB)
@@ -184,7 +207,7 @@ assert('完成记录完成时间', wishDone.data.status === 'done' && Boolean(wi
 const wishBack = await http('PUT', `/api/wishes/${wish.data.id}/status`, { status: 'doing' }, tokenA)
 assert('撤回后清空完成时间', wishBack.data.status === 'doing' && wishBack.data.completed_at == null)
 
-console.log('== 8. 时间胶囊 ==')
+console.log('== 9. 时间胶囊 ==')
 const capFuture = await http('POST', '/api/capsules', { title: '给一年后', content: '一年后的我们好吗', unlockDate: '2027-08-24' }, tokenA)
 const capPast = await http('POST', '/api/capsules', { title: '昨日', content: '已经可以打开了', unlockDate: '2026-08-01' }, tokenB)
 assert('密封两枚胶囊', capFuture.ok && capPast.ok)
@@ -194,13 +217,13 @@ const p = caps.data.find((c) => c.title === '昨日')
 assert('未到期内容被遮蔽', f && f.isUnlocked === 0 && f.content.includes('***'))
 assert('已到期内容可见', p && p.isUnlocked === 1 && p.content === '已经可以打开了')
 
-console.log('== 9. 纪念日 ==')
+console.log('== 10. 纪念日 ==')
 const localNow = new Date()
 const localToday = `${localNow.getFullYear()}-${String(localNow.getMonth() + 1).padStart(2, '0')}-${String(localNow.getDate()).padStart(2, '0')}`
 const ann = await http('POST', '/api/anniversaries', { title: '在一起', type: 'together', date: localToday }, tokenA)
 assert('添加纪念日且今天纪念', ann.ok && ann.data.isToday === true)
 
-console.log('== 10. 分享链接 ==')
+console.log('== 11. 分享链接 ==')
 const share = await http('POST', '/api/share/create', { password: 'honey', expireDays: 7 }, tokenA)
 assert('创建带密码分享', share.ok && share.data.token)
 const noPw = await http('GET', `/api/public/share/${share.data.token}`)
@@ -213,7 +236,7 @@ const shareOff = await http('DELETE', '/api/share/current', null, tokenA)
 const afterOff = await http('GET', `/api/public/share/${share.data.token}`)
 assert('停用后访问 404', afterOff.ok === false)
 
-console.log('== 11. 聚合 / 日历 ==')
+console.log('== 12. 聚合 / 日历 ==')
 const dash = await http('GET', '/api/dashboard', null, tokenA)
 assert('Dashboard 聚合', dash.ok && dash.data.stats.moments === 2 && dash.data.partner?.username === 'bob')
 const tree = await http('GET', '/api/tree/state', null, tokenA)
@@ -226,7 +249,7 @@ const kinds = new Set(tl.data.events.map((e) => e.kind))
 assert('时光时间线聚合多种类型且倒序', tl.ok && kinds.has('entry') && kinds.has('moment') && kinds.has('letter')
   && tl.data.events[0].ts >= tl.data.events[tl.data.events.length - 1].ts)
 
-console.log('== 12. 评论 ==')
+console.log('== 13. 评论 ==')
 const comments0 = await http('GET', `/api/comments?targetType=entry&targetId=${solo.data.id}`, null, tokenA)
 assert('新日记暂无评论', comments0.ok && comments0.data.length === 0)
 
@@ -302,7 +325,7 @@ const cascadeDel = await http('DELETE', `/api/moments/${tempMoment.data.id}`, nu
 const cascadeList = await http('GET', `/api/comments?targetType=moment&targetId=${tempMoment.data.id}`, null, tokenA)
 assert('瞬间删除后评论目标不可达', cascadeDel.ok === true && cascadeList.ok === false)
 
-console.log('== 13. 导出时光机 ==')
+console.log('== 14. 导出时光机 ==')
 const exp = await fetch(BASE + '/api/export')
 const buf = await exp.arrayBuffer()
 assert('导出 zip 非空', exp.status === 200 && buf.byteLength > 0, `bytes=${buf.byteLength}`)
