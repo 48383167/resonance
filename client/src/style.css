@@ -155,6 +155,8 @@ body {
   color: var(--danger-text);
 }
 .danger-action:hover { background: rgb(var(--danger-rgb) / 0.1); }
+.danger-link { color: var(--danger-text); }
+.danger-link:hover { color: rgb(var(--danger-rgb) / 0.78); }
 .bg-accent { background: var(--accent); }
 .bg-accent-2 { background: var(--accent-2); }
 .bg-accent-soft { background: rgb(var(--accent-rgb) / 0.18); }

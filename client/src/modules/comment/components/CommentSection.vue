@@ -19,30 +19,77 @@ const draft = ref('')
 const replyTarget = ref(null)
 const inputRef = ref(null)
 const collapsed = ref(false)
-const expandedRoots = ref(new Set())
 
 const roots = computed(() => comments.value.filter((c) => !c.parent_id))
 const repliesOf = (parentId) => comments.value.filter((c) => c.parent_id === parentId)
 
+const ROOT_PREVIEW = 3
+// 一级评论视图：preview=默认 3 条 / all=全部展开 / none=全部收起
+const rootsView = ref('preview')
+
+const visibleRoots = computed(() => {
+  if (rootsView.value === 'all') return roots.value
+  if (rootsView.value === 'none') return []
+  return roots.value.slice(0, ROOT_PREVIEW)
+})
+
+function rootsToggleText() {
+  if (rootsView.value === 'all') return '收起'
+  if (rootsView.value === 'none') {
+    return roots.value.length ? `展开全部 ${roots.value.length} 条评论` : ''
+  }
+  const hidden = roots.value.length - ROOT_PREVIEW
+  if (hidden > 0) return `展开其余 ${hidden} 条评论`
+  return roots.value.length ? '收起' : ''
+}
+
+function toggleRoots() {
+  if (rootsView.value === 'none') rootsView.value = 'all'
+  else if (rootsView.value === 'all') rootsView.value = 'none'
+  else rootsView.value = roots.value.length > ROOT_PREVIEW ? 'all' : 'none'
+}
+
 const REPLY_PREVIEW = 2
+const expandedRoots = ref(new Set())
+const collapsedRoots = ref(new Set())
 
 function visibleReplies(rootId) {
+  if (collapsedRoots.value.has(rootId)) return []
   const list = repliesOf(rootId)
   if (expandedRoots.value.has(rootId) || list.length <= REPLY_PREVIEW) return list
   return list.slice(0, REPLY_PREVIEW)
 }
 
-function repliesToggleText(rootId) {
-  if (expandedRoots.value.has(rootId)) return '收起回复'
+// 一级评论上的按钮：收起该评论全部子评论 / 重新展开
+function repliesInlineText(rootId) {
+  const total = repliesOf(rootId).length
+  if (!total) return ''
+  return collapsedRoots.value.has(rootId) ? `展开 ${total} 条回复` : '收起回复'
+}
+
+function toggleRepliesInline(rootId) {
+  const next = new Set(collapsedRoots.value)
+  if (next.has(rootId)) next.delete(rootId)
+  else next.add(rootId)
+  collapsedRoots.value = next
+}
+
+// 预览态底部的「展开其余 N 条回复」：展开到全部（收起由一级评论上的按钮负责）
+function repliesMoreText(rootId) {
+  if (collapsedRoots.value.has(rootId) || expandedRoots.value.has(rootId)) return ''
   const hidden = repliesOf(rootId).length - REPLY_PREVIEW
   return hidden > 0 ? `展开其余 ${hidden} 条回复` : ''
 }
 
-function toggleReplies(rootId) {
-  const next = new Set(expandedRoots.value)
-  if (next.has(rootId)) next.delete(rootId)
-  else next.add(rootId)
-  expandedRoots.value = next
+function expandReplies(rootId) {
+  expandedRoots.value = new Set(expandedRoots.value).add(rootId)
+}
+
+function revealReplies(rootId) {
+  const next = new Set(collapsedRoots.value)
+  next.delete(rootId)
+  collapsedRoots.value = next
+  expandedRoots.value = new Set(expandedRoots.value).add(rootId)
 }
 
 function nicknameOf(userId) {
@@ -77,9 +124,9 @@ function jumpTo(comment) {
   const id = comment.reply_to_comment_id
   if (!id) return
   const target = comments.value.find((c) => c.id === id)
-  if (target?.parent_id && !expandedRoots.value.has(target.parent_id)) {
-    expandedRoots.value = new Set(expandedRoots.value).add(target.parent_id)
-  }
+  // 目标可能被一级评论折叠或回复折叠隐藏：先展开再定位
+  if (rootsView.value !== 'all') rootsView.value = 'all'
+  if (target?.parent_id) revealReplies(target.parent_id)
   nextTick(() => {
     const el = document.getElementById(commentDomId(id))
     if (!el) return
@@ -138,6 +185,9 @@ async function submit() {
     if (replyTarget.value) payload.parentId = replyTarget.value.id
     const comment = await createComment(payload, generateIdempotencyKey())
     upsert(comment)
+    // 自己新发的顶层评论若被折叠，自动展开到可见；自己发的回复确保其所在评论展开
+    if (!comment.parent_id) rootsView.value = 'all'
+    else revealReplies(comment.parent_id)
     draft.value = ''
     replyTarget.value = null
   } catch (error) {
@@ -210,7 +260,7 @@ onUnmounted(() => {
     <div v-if="loading" class="py-2 text-xs text-theme-tertiary">加载中…</div>
     <div v-else-if="!comments.length" class="py-2 text-xs text-theme-tertiary">还没有评论，说点什么吧</div>
     <div v-else class="mt-2 space-y-3">
-      <div v-for="root in roots" :key="root.id" class="space-y-2">
+      <div v-for="root in visibleRoots" :key="root.id" class="space-y-2">
         <div :id="commentDomId(root.id)" class="surface-soft rounded-xl px-3 py-2"
           :style="highlightId === root.id ? { boxShadow: '0 0 0 2px var(--accent)' } : null">
           <p v-if="root.deleted_at" class="text-sm italic text-theme-tertiary">该评论已删除</p>
@@ -219,14 +269,19 @@ onUnmounted(() => {
               <span class="text-accent">{{ root.author?.nickname || 'Ta' }}</span>
               <span class="text-theme-tertiary">{{ timeText(root.created_at) }}</span>
               <button v-if="root.user_id === session.userId"
-                class="ml-auto text-rose-300/80 transition-colors hover:text-rose-300"
+                class="danger-link ml-auto transition-colors"
                 @click="remove(root)">删除</button>
             </div>
             <p class="mt-1 break-words whitespace-pre-wrap text-sm leading-relaxed">{{ root.content }}</p>
-            <div class="mt-1 text-xs text-theme-tertiary">
-              <button class="transition-colors hover-text-accent" @click="startReply(root)">回复</button>
-            </div>
           </template>
+          <div class="mt-1 flex items-center gap-3 text-xs text-theme-tertiary">
+            <button v-if="!root.deleted_at" class="transition-colors hover-text-accent"
+              @click="startReply(root)">回复</button>
+            <button v-if="repliesInlineText(root.id)" class="transition-colors hover-text-accent"
+              @click="toggleRepliesInline(root.id)">
+              {{ repliesInlineText(root.id) }}
+            </button>
+          </div>
         </div>
 
         <div v-for="r in visibleReplies(root.id)" :key="r.id" class="ml-4 border-l border-theme pl-3">
@@ -238,7 +293,7 @@ onUnmounted(() => {
                 <span class="text-accent">{{ r.author?.nickname || 'Ta' }}</span>
                 <span class="text-theme-tertiary">{{ timeText(r.created_at) }}</span>
                 <button v-if="r.user_id === session.userId"
-                  class="ml-auto text-rose-300/80 transition-colors hover:text-rose-300"
+                  class="danger-link ml-auto transition-colors"
                   @click="remove(r)">删除</button>
               </div>
               <button v-if="r.reply_to_comment_id" type="button"
@@ -255,12 +310,18 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <button v-if="repliesToggleText(root.id)" type="button"
+        <button v-if="repliesMoreText(root.id)" type="button"
           class="ml-4 text-xs text-theme-tertiary transition-colors hover-text-accent"
-          @click="toggleReplies(root.id)">
-          {{ repliesToggleText(root.id) }}
+          @click="expandReplies(root.id)">
+          {{ repliesMoreText(root.id) }}
         </button>
       </div>
+
+      <button v-if="rootsToggleText()" type="button"
+        class="text-xs text-theme-tertiary transition-colors hover-text-accent"
+        @click="toggleRoots">
+        {{ rootsToggleText() }}
+      </button>
     </div>
 
     <div v-if="replyTarget" class="mt-2 flex items-center gap-2 text-xs text-theme-tertiary">
