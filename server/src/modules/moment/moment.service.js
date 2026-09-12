@@ -2,6 +2,7 @@ import { NotFoundError } from '../../common/errors/NotFoundError.js'
 import * as coupleService from '../couple/couple.service.js'
 import { emitMomentCreated, emitMomentUpdated, emitMomentDeleted } from '../../infrastructure/socket/moment.socket.js'
 import { softDeleteQuietly } from '../file/file.service.js'
+import * as commentService from '../comment/comment.service.js'
 import * as momentRepository from './moment.repository.js'
 import * as momentSchema from './moment.schema.js'
 
@@ -63,6 +64,7 @@ export function remove(userId, id) {
     if (p.id) softDeleteQuietly(p.id, userId)
   }
   momentRepository.remove(id)
+  commentService.removeByTarget('moment', id)
   const coupleId = coupleIdOf(userId)
   if (coupleId) emitMomentDeleted(coupleId, id)
   return null

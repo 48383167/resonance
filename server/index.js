@@ -26,6 +26,7 @@ import miscRoutes from './src/modules/misc/misc.routes.js'
 import fileRoutes from './src/modules/file/file.routes.js'
 import musicRoutes from './src/modules/music/music.routes.js'
 import themeRoutes from './src/modules/theme/theme.routes.js'
+import commentRoutes from './src/modules/comment/comment.routes.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PORT = process.env.PORT || 4000
@@ -59,6 +60,7 @@ app.use('/api/albums', albumRoutes)
 app.use('/api/wishes', wishRoutes)
 app.use('/api/capsules', capsuleRoutes)
 app.use('/api/anniversaries', anniversaryRoutes)
+app.use('/api/comments', commentRoutes)
 app.use('/api/share', shareRoutes)
 app.use('/api/music', musicRoutes)
 app.use('/api/users/me/theme', themeRoutes)

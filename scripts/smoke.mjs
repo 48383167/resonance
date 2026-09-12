@@ -1,4 +1,4 @@
-// 端到端冒烟测试：注册/登录 → 用户主题隔离 → 日记 → 全模块 → 分享 → 导出
+// 端到端冒烟测试：注册/登录 → 用户主题隔离 → 日记 → 全模块 → 分享 → 评论 → 导出
 // 前置：服务端已启动（建议 RESONANCE_DATA_DIR 指向临时目录，避免污染真实数据）
 const BASE = process.env.RESONANCE_BASE || 'http://localhost:4000'
 let failed = 0
@@ -8,10 +8,12 @@ function assert(name, cond, extra = '') {
   else { failed++; console.error(`  ✗ ${name} ${extra}`) }
 }
 
-async function http(method, url, body, token, isForm) {
+async function http(method, url, body, token, isForm, idempotencyKey) {
   const headers = {}
   if (!isForm) headers['Content-Type'] = 'application/json'
   if (token) headers['Authorization'] = `Bearer ${token}`
+  // 创建类 POST 接口要求 Idempotency-Key；默认每次生成新 key，测试重放时可显式传入
+  if (method === 'POST') headers['Idempotency-Key'] = idempotencyKey || crypto.randomUUID()
   const res = await fetch(BASE + url, {
     method,
     headers,
@@ -99,16 +101,22 @@ assert('任意颜色组合可保存', unreadableTheme.ok && unreadableTheme.data
   && unreadableTheme.data.secondaryColor === '#ffffff' && unreadableTheme.data.ambientColor === '#ffffff')
 
 console.log('== 3. 日记 ==')
+const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64')
+const fd = new FormData()
+fd.append('file', new Blob([png], { type: 'image/png' }), 't.png')
+const up = await http('POST', '/api/upload', fd, tokenA, true)
+assert('图片上传返回 /media URL', up.ok && String(up.data.url).startsWith('/media/'))
+
 const solo = await http('POST', '/api/entries/solo',
-  { title: '夜航', content: '窗外的雨声像你说话的语气。', typingSpeed: 58, deleteCount: 3, pauseDuration: 1200, weatherCode: 61, timeColorHex: '#0b1d3a', media: ['/media/a.jpg', '/media/b.mp4'] }, tokenA)
+  { title: '夜航', content: '窗外的雨声像你说话的语气。', typingSpeed: 58, deleteCount: 3, pauseDuration: 1200, weatherCode: 61, timeColorHex: '#0b1d3a', media: [{ fileId: up.data.id, type: 'image' }] }, tokenA)
 assert('写日记成功（含情绪墨水与附件）', solo.ok === true && solo.data.contents.length === 1
-  && solo.data.contents[0].typing_speed === 58 && solo.data.media.length === 2)
+  && solo.data.contents[0].typing_speed === 58 && solo.data.media.length === 1)
 
 const vis = await http('PATCH', `/api/entries/${solo.data.id}/visibility`, { isPublic: true }, tokenA)
 assert('切换公开成功', Number(vis.data.is_public) === 1)
 
 const obs = await http('GET', '/api/public/observatory')
-assert('观测台仅见公开篇', obs.data.entries.length === 1 && obs.data.entries[0].id === solo.data.id)
+assert('观测台公开接口返回开关与照片', obs.ok === true && typeof obs.data.enabled === 'boolean' && Array.isArray(obs.data.photos))
 
 const temp = await http('POST', '/api/entries/solo', { title: '临时', content: '待删除', typingSpeed: 10 }, tokenA)
 const del = await http('DELETE', `/api/entries/${temp.data.id}`, null, tokenA)
@@ -140,14 +148,20 @@ const lRead = await http('GET', `/api/letters/${letter.data.id}`, null, tokenB)
 assert('对方查看后标记已读', lRead.data.is_read === 1)
 
 console.log('== 6. 相册 ==')
+const fd1 = new FormData()
+fd1.append('file', new Blob([png], { type: 'image/png' }), 'a.png')
+const up1 = await http('POST', '/api/upload', fd1, tokenB, true)
+const fd2 = new FormData()
+fd2.append('file', new Blob([png], { type: 'image/png' }), 'b.png')
+const up2 = await http('POST', '/api/upload', fd2, tokenB, true)
 const album = await http('POST', '/api/albums', { name: '第一次旅行', description: '杭州' }, tokenA)
 assert('创建相册', album.ok)
-const ap = await http('POST', `/api/albums/${album.data.id}/photos`, { url: '/media/fake.jpg', caption: '合影' }, tokenB)
+const ap = await http('POST', `/api/albums/${album.data.id}/photos`, { fileId: up1.data.id, caption: '合影' }, tokenB)
 assert('添加照片', ap.ok && ap.data.photos.length === 1)
 assert('封面与照片集独立（不自动设封面）', ap.ok && ap.data.cover_url === '')
-const ap2 = await http('POST', `/api/albums/${album.data.id}/photos`, { url: '/media/fake2.jpg', caption: '第二张' }, tokenB)
-const cover = await http('PUT', `/api/albums/${album.data.id}/cover`, { url: '/media/fake2.jpg' }, tokenA)
-assert('手动设置封面', cover.ok && cover.data.cover_url === '/media/fake2.jpg')
+const ap2 = await http('POST', `/api/albums/${album.data.id}/photos`, { fileId: up2.data.id, caption: '第二张' }, tokenB)
+const cover = await http('PUT', `/api/albums/${album.data.id}/cover`, { fileId: up2.data.id }, tokenA)
+assert('手动设置封面', cover.ok && String(cover.data.cover_url).startsWith('/media/'))
 const delPhoto = await http('DELETE', `/api/albums/${album.data.id}/photos/${ap2.data.photos[1].id}`, null, tokenA)
 assert('删除照片', delPhoto.ok && delPhoto.data.photos.length === 1)
 const albums = await http('GET', '/api/albums', null, tokenA)
@@ -199,18 +213,12 @@ const shareOff = await http('DELETE', '/api/share/current', null, tokenA)
 const afterOff = await http('GET', `/api/public/share/${share.data.token}`)
 assert('停用后访问 404', afterOff.ok === false)
 
-console.log('== 11. 上传 / 聚合 / 日历 ==')
-const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64')
-const fd = new FormData()
-fd.append('file', new Blob([png], { type: 'image/png' }), 't.png')
-const up = await http('POST', '/api/upload', fd, tokenA, true)
-assert('图片上传返回 /media URL', up.ok && String(up.data.url).startsWith('/media/'))
-
+console.log('== 11. 聚合 / 日历 ==')
 const dash = await http('GET', '/api/dashboard', null, tokenA)
 assert('Dashboard 聚合', dash.ok && dash.data.stats.moments === 2 && dash.data.partner?.username === 'bob')
 const tree = await http('GET', '/api/tree/state', null, tokenA)
 assert('恋爱树状态', tree.ok && typeof tree.data.progress === 'number' && tree.data.total >= 5)
-const cal = await http('GET', '/api/entries/calendar?year=2026&month=8', null, tokenA)
+const cal = await http('GET', `/api/entries/calendar?year=${localNow.getFullYear()}&month=${localNow.getMonth() + 1}`, null, tokenA)
 assert('日记日历按月份', cal.ok && cal.data.length === 1)
 
 const tl = await http('GET', '/api/timeline', null, tokenA)
@@ -218,7 +226,83 @@ const kinds = new Set(tl.data.events.map((e) => e.kind))
 assert('时光时间线聚合多种类型且倒序', tl.ok && kinds.has('entry') && kinds.has('moment') && kinds.has('letter')
   && tl.data.events[0].ts >= tl.data.events[tl.data.events.length - 1].ts)
 
-console.log('== 12. 导出时光机 ==')
+console.log('== 12. 评论 ==')
+const comments0 = await http('GET', `/api/comments?targetType=entry&targetId=${solo.data.id}`, null, tokenA)
+assert('新日记暂无评论', comments0.ok && comments0.data.length === 0)
+
+const c1 = await http('POST', '/api/comments', { targetType: 'entry', targetId: solo.data.id, content: '好温柔的雨声' }, tokenB)
+assert('B 评论 A 的日记', c1.ok && c1.data.author?.username === 'bob' && c1.data.target_type === 'entry')
+const c2 = await http('POST', '/api/comments', { targetType: 'entry', targetId: solo.data.id, content: '贴贴' }, tokenA)
+assert('A 追加评论', c2.ok === true)
+
+const comments1 = await http('GET', `/api/comments?targetType=entry&targetId=${solo.data.id}`, null, tokenA)
+assert('评论按时间升序返回', comments1.data.length === 2 && comments1.data[0].id === c1.data.id)
+
+const mComment = await http('POST', '/api/comments', { targetType: 'moment', targetId: m1.data.id, content: '这里好美' }, tokenB)
+assert('B 评论恋爱瞬间', mComment.ok && mComment.data.target_type === 'moment')
+
+const reply1 = await http('POST', '/api/comments',
+  { targetType: 'entry', targetId: solo.data.id, content: '我也这么觉得', parentId: c1.data.id }, tokenA)
+assert('A 回复 B 的顶层评论', reply1.ok && reply1.data.parent_id === c1.data.id
+  && reply1.data.reply_to_user_id === regB.data.me.id && reply1.data.reply_to_comment_id === c1.data.id)
+const reply2 = await http('POST', '/api/comments',
+  { targetType: 'entry', targetId: solo.data.id, content: '抱住', parentId: reply1.data.id }, tokenB)
+assert('回复的回复扁平化到顶层并记录精确目标', reply2.ok && reply2.data.parent_id === c1.data.id
+  && reply2.data.reply_to_user_id === regA.data.me.id && reply2.data.reply_to_comment_id === reply1.data.id)
+
+const badType = await http('POST', '/api/comments', { targetType: 'letter', targetId: 'x', content: 'hi' }, tokenA)
+assert('非法目标类型被拒绝', badType.ok === false)
+const emptyContent = await http('POST', '/api/comments', { targetType: 'entry', targetId: solo.data.id, content: '   ' }, tokenA)
+assert('空白评论被拒绝', emptyContent.ok === false)
+const missingTarget = await http('GET', '/api/comments?targetType=entry&targetId=e_not_exist', null, tokenA)
+assert('目标不存在返回失败', missingTarget.ok === false)
+const crossParent = await http('POST', '/api/comments',
+  { targetType: 'entry', targetId: solo.data.id, content: 'x', parentId: mComment.data.id }, tokenA)
+assert('父评论不属于该目标被拒绝', crossParent.ok === false)
+const missingParent = await http('POST', '/api/comments',
+  { targetType: 'entry', targetId: solo.data.id, content: 'x', parentId: 'cm_not_exist' }, tokenA)
+assert('父评论不存在被拒绝', missingParent.ok === false)
+
+const dupKey = 'smoke-comment-replay'
+const dup1 = await http('POST', '/api/comments', { targetType: 'entry', targetId: solo.data.id, content: '幂等评论' }, tokenA, false, dupKey)
+const dup2 = await http('POST', '/api/comments', { targetType: 'entry', targetId: solo.data.id, content: '幂等评论' }, tokenA, false, dupKey)
+assert('同 Idempotency-Key 重放返回同一条评论', dup1.ok && dup2.ok && dup1.data.id === dup2.data.id)
+
+const delOther = await http('DELETE', `/api/comments/${c1.data.id}`, null, tokenA)
+assert('不能删除伴侣的评论', delOther.ok === false)
+const delRoot = await http('DELETE', `/api/comments/${c1.data.id}`, null, tokenB)
+assert('有回复的评论删除后墓碑化', delRoot.ok && delRoot.data.tombstoned === true)
+
+const afterTomb = await http('GET', `/api/comments?targetType=entry&targetId=${solo.data.id}`, null, tokenA)
+const tomb = afterTomb.data.find((c) => c.id === c1.data.id)
+assert('墓碑保留且正文清空', tomb && tomb.deleted_at && tomb.content === '')
+assert('墓碑下的回复仍可见', afterTomb.data.some((c) => c.id === reply1.data.id)
+  && afterTomb.data.some((c) => c.id === reply2.data.id))
+
+const replyToTomb = await http('POST', '/api/comments',
+  { targetType: 'entry', targetId: solo.data.id, content: 'x', parentId: c1.data.id }, tokenA)
+assert('墓碑评论不可回复', replyToTomb.ok === false)
+
+const delPlain = await http('DELETE', `/api/comments/${c2.data.id}`, null, tokenA)
+assert('无回复的评论物理删除', delPlain.ok && delPlain.data.tombstoned === false)
+const delReply = await http('DELETE', `/api/comments/${reply1.data.id}`, null, tokenA)
+assert('被引用的回复删除后墓碑化', delReply.ok && delReply.data.tombstoned === true)
+
+const comments2 = await http('GET', `/api/comments?targetType=entry&targetId=${solo.data.id}`, null, tokenA)
+assert('删除后列表状态正确', comments2.data.length === 4
+  && comments2.data.some((c) => c.id === c1.data.id && c.deleted_at && c.content === '')
+  && comments2.data.some((c) => c.id === dup1.data.id)
+  && comments2.data.some((c) => c.id === reply1.data.id && c.deleted_at && c.content === '')
+  && comments2.data.some((c) => c.id === reply2.data.id)
+  && !comments2.data.some((c) => c.id === c2.data.id))
+
+const tempMoment = await http('POST', '/api/moments', { content: '待删除的瞬间' }, tokenA)
+await http('POST', '/api/comments', { targetType: 'moment', targetId: tempMoment.data.id, content: '随瞬间一起消失' }, tokenB)
+const cascadeDel = await http('DELETE', `/api/moments/${tempMoment.data.id}`, null, tokenA)
+const cascadeList = await http('GET', `/api/comments?targetType=moment&targetId=${tempMoment.data.id}`, null, tokenA)
+assert('瞬间删除后评论目标不可达', cascadeDel.ok === true && cascadeList.ok === false)
+
+console.log('== 13. 导出时光机 ==')
 const exp = await fetch(BASE + '/api/export')
 const buf = await exp.arrayBuffer()
 assert('导出 zip 非空', exp.status === 200 && buf.byteLength > 0, `bytes=${buf.byteLength}`)

@@ -11,6 +11,7 @@ import { openLightbox } from '../../../stores/lightbox'
 import { mediaTypeOf } from '../../../utils/media'
 import EmotionText from '../components/EmotionText.vue'
 import AmbientBackground from '../../../shared/components/AmbientBackground.vue'
+import CommentSection from '../../comment/components/CommentSection.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -122,6 +123,8 @@ const named = computed(() => (entry.value?.contents || []).map((c) => ({
           📄 {{ u.name || decodeURIComponent((u.url || '').split('/').pop()) }}
         </a>
       </div>
+
+      <CommentSection target-type="entry" :target-id="entry.id" />
 
       <div class="mt-8 flex justify-center">
         <button class="danger-action rounded-full px-4 py-1.5 text-xs transition-colors"

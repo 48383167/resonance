@@ -8,6 +8,7 @@ import { openLightbox } from '../../../stores/lightbox'
 import { mediaTypeOf } from '../../../utils/media'
 import AppDatePicker from '../../../shared/components/AppDatePicker.vue'
 import AppSelect from '../../../shared/components/AppSelect.vue'
+import CommentSection from '../../comment/components/CommentSection.vue'
 
 const router = useRouter()
 const list = ref([])
@@ -16,6 +17,14 @@ const searching = ref(false)
 const PAGE = 15
 const visible = ref(PAGE)
 const sharing = ref(new Set())
+const commentsOpen = ref(new Set())
+
+function toggleComments(id) {
+  const next = new Set(commentsOpen.value)
+  if (next.has(id)) next.delete(id)
+  else next.add(id)
+  commentsOpen.value = next
+}
 
 const MOODS = [
   { key: 'normal', emoji: '😌', label: '平静' },
@@ -181,6 +190,14 @@ function openMomentPhoto(photos, photo) {
           <img v-for="(u, pi) in m.photos" :key="u.id || u.url || pi" :src="u.url" class="h-24 w-24 cursor-zoom-in rounded-lg object-cover"
             loading="lazy" @click="openMomentPhoto(m.photos, u)" />
         </div>
+        <div class="mt-3">
+          <button type="button"
+            class="min-h-8 rounded-full border border-theme surface-soft px-3 py-1.5 text-[11px] font-medium text-theme-secondary transition-colors hover-text-accent"
+            @click="toggleComments(m.id)">
+            💬 {{ commentsOpen.has(m.id) ? '收起评论' : '评论' }}
+          </button>
+        </div>
+        <CommentSection v-if="commentsOpen.has(m.id)" target-type="moment" :target-id="m.id" />
       </article>
       <div v-if="list.length > visible" class="flex justify-center">
         <button class="btn-ghost" @click="loadMore">加载更多（还有 {{ list.length - visible }} 条）</button>

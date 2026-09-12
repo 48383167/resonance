@@ -189,6 +189,23 @@ CREATE TABLE IF NOT EXISTS anniversaries (
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
+-- 评论：挂在日记（entry）或恋爱瞬间（moment）上，支持一级回复
+-- parent_id 为空 = 顶层评论；回复统一挂到顶层评论（回复的回复会扁平化）
+-- 删除策略：有回复的评论墓碑化（content 清空 + deleted_at），无回复物理删除
+CREATE TABLE IF NOT EXISTS comments (
+    id TEXT PRIMARY KEY,
+    target_type TEXT NOT NULL,       -- 'entry'（日记） | 'moment'（恋爱瞬间）
+    target_id TEXT NOT NULL,         -- 目标资源 ID
+    user_id TEXT NOT NULL,           -- 评论作者
+    content TEXT NOT NULL,           -- 评论正文（1~500 字）
+    parent_id TEXT,                  -- 所属顶层评论 ID（NULL = 顶层）
+    reply_to_user_id TEXT,           -- 被回复人（回复的回复时用于 @显示）
+    reply_to_comment_id TEXT,        -- 直接回复的目标评论 ID（用于引用标注/跳转）
+    deleted_at TEXT,                 -- 墓碑时间（NULL = 正常）
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_comments_target ON comments(target_type, target_id, created_at);
+
 -- 文件表：每个文件的元信息（ID 为雪花 ID 十进制字符串，见 common/utils/snowflake.js）
 -- path 为相对 MEDIA_DIR 的路径（yyyy/MM/dd/哈希名.ext），对外 URL = /media/{path}
 -- 软删除 + 墓碑：删除时物理文件移入 .trash，status 置 0，原 URL 立即失效且文件可恢复
@@ -276,3 +293,11 @@ ensureColumns('share_tokens', {
   include_entries: 'INTEGER NOT NULL DEFAULT 1',
   include_anniversaries: 'INTEGER NOT NULL DEFAULT 1',
 })
+ensureColumns('comments', {
+  parent_id: 'TEXT',
+  reply_to_user_id: 'TEXT',
+  reply_to_comment_id: 'TEXT',
+  deleted_at: 'TEXT',
+})
+// parent_id 索引须在补列之后创建（老库 comments 表可能尚无该列）
+db.exec('CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parent_id)')

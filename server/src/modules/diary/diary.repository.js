@@ -71,6 +71,11 @@ export function createContent({ entryId, userId, content, typingSpeed, deleteCou
   return db.prepare('SELECT * FROM entry_contents WHERE id = ?').get(id)
 }
 
+// 正文作者列表：供评论模块做情侣空间归属校验
+export function listContentUserIds(entryId) {
+  return db.prepare('SELECT user_id FROM entry_contents WHERE entry_id = ?').all(entryId).map((r) => r.user_id)
+}
+
 export function findContentByUser(entryId, userId) {
   return db.prepare(
     'SELECT * FROM entry_contents WHERE entry_id = ? AND user_id = ? ORDER BY rowid ASC LIMIT 1'
