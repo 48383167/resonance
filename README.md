@@ -84,7 +84,7 @@ npm run backup       # 将 database.sqlite 拷贝为 backups/database-YYYY-MM-DD
 | `GET` | `/api/public/observatory`、`/api/public/share/:token` | 公开观测台 / 只读分享（可选密码） |
 | `GET` | `/api/export` | 导出时光机 zip |
 
-情感陪伴助手需要服务端配置 DeepSeek 密钥；复制 `.env.example` 为 `.env` 后填写 `DEEPSEEK_API_KEY`，或在部署环境中设置同名变量。模型默认使用官方 `deepseek-v4-flash`，可通过 `DEEPSEEK_MODEL` 替换为官方后续模型标识。详见 `docs/api/companion.md`。
+情感陪伴助手需要服务端配置 DeepSeek 密钥；复制 `.env.example` 为 `.env` 后填写 `DEEPSEEK_API_KEY`，或在部署环境中设置同名变量。模型默认使用官方 `deepseek-v4-flash`，可通过 `DEEPSEEK_MODEL` 替换为官方后续模型标识。`COMPANION_DAILY_MODEL_REPLY_LIMIT` 可设置每位用户每天的正常模型回复上限（默认 100，范围 1–10000；修改后重启后端生效）。详见 `docs/api/companion.md`。
 
 ## WebSocket 事件（Socket.io）
 

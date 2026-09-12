@@ -104,7 +104,7 @@
 | --- | --- | --- |
 | `COMPANION_CONSENT_REQUIRED` | 403 | 尚未同意第三方模型处理 |
 | `COMPANION_CONVERSATION_NOT_FOUND` | 404 | 会话不存在或不属于当前用户 |
-| `COMPANION_RATE_LIMITED` | 429 | 已超过每用户每日 100 次正常模型咨询额度 |
+| `COMPANION_RATE_LIMITED` | 429 | 已超过当前部署配置的每用户每日正常模型咨询额度 |
 | `AI_NOT_CONFIGURED` | 503 | 服务端未配置 `DEEPSEEK_API_KEY` |
 | `AI_UNAVAILABLE` | 503 | 模型供应商暂不可用或超时 |
 | `AI_RESPONSE_INVALID` | 502 | 模型返回不可用内容 |
@@ -116,6 +116,9 @@ DEEPSEEK_API_KEY=...
 DEEPSEEK_MODEL=deepseek-v4-flash
 # 可选，默认 https://api.deepseek.com
 DEEPSEEK_BASE_URL=https://api.deepseek.com
+# 可选，默认 100；范围 1–10000。按每用户、每个 UTC 自然日的正常模型回复计数。
+# 即时危机文本走本地安全回复，不占用该额度。
+COMPANION_DAILY_MODEL_REPLY_LIMIT=100
 ```
 
 密钥仅保存在服务端环境变量中，绝不下发给浏览器。`DEEPSEEK_MODEL` 可在官方发布新模型标识时替换；默认值使用当前官方 Flash 标识。

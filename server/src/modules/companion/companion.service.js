@@ -1,11 +1,10 @@
 import { AppError } from '../../common/errors/AppError.js'
+import { COMPANION_DAILY_MODEL_REPLY_LIMIT } from '../../config/companion.js'
 import { transaction } from '../../config/database.js'
 import { assertDeepSeekConfigured, createEmotionalReply } from '../../infrastructure/ai/deepseek.adapter.js'
 import { CRISIS_RESPONSE, isImmediateCrisis, LOCAL_SAFETY_MODEL } from './companion.policy.js'
 import * as companionRepository from './companion.repository.js'
 import * as companionSchema from './companion.schema.js'
-
-const DAILY_MODEL_REPLY_LIMIT = 100
 
 function conversationOrThrow(ownerId, conversationId) {
   const found = companionRepository.findConversation(ownerId, conversationId)
@@ -61,7 +60,7 @@ export async function createMessage(ownerId, conversationId, raw) {
   } else {
     // 密钥不存在时不预留额度；正常请求在出站前原子占位，防止删除/并发绕过日限额。
     assertDeepSeekConfigured()
-    const reservation = companionRepository.reserveModelReply(ownerId, DAILY_MODEL_REPLY_LIMIT)
+    const reservation = companionRepository.reserveModelReply(ownerId, COMPANION_DAILY_MODEL_REPLY_LIMIT)
     if (!reservation.reserved) {
       throw new AppError('今天的情感咨询次数已用完，请明天再来聊聊', 429, 'COMPANION_RATE_LIMITED')
     }
@@ -97,7 +96,7 @@ export async function createMessage(ownerId, conversationId, raw) {
 
   return {
     ...result,
-    remainingToday: Math.max(0, DAILY_MODEL_REPLY_LIMIT - companionRepository.countModelRepliesToday(ownerId)),
+    remainingToday: Math.max(0, COMPANION_DAILY_MODEL_REPLY_LIMIT - companionRepository.countModelRepliesToday(ownerId)),
   }
 }
 
