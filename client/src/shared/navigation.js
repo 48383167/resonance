@@ -42,7 +42,8 @@ export const navigationItems = [
   { name: 'settings', route: 'settings', label: '设置', icon: '⚙', group: '其他', activeRoutes: ['settings'] },
 ]
 
-export const primaryNavigationNames = ['home', 'timeline', 'diary-list', 'letters']
+// 情感陪伴是高频、私有的全局入口；情书仍可在“更多功能”和首页进入。
+export const primaryNavigationNames = ['home', 'timeline', 'diary-list', 'companion']
 
 export const navigationGroups = ['日常', '记录', '连接', '回忆', '计划', '其他'].map((label) => ({
   label,

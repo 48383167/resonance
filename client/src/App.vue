@@ -7,7 +7,6 @@ import ImageLightbox from './shared/components/ImageLightbox.vue'
 import ConfirmDialog from './shared/components/ConfirmDialog.vue'
 import AppDock from './shared/components/AppDock.vue'
 import MusicPlayer from './modules/music/components/MusicPlayer.vue'
-import CompanionLauncher from './modules/companion/components/CompanionLauncher.vue'
 import { session, initSession, logout } from './stores/session'
 import { socket } from './socket'
 import { toasts, toast } from './stores/toast'
@@ -79,7 +78,6 @@ onUnmounted(() => {
         </div>
       </TransitionGroup>
     </div>
-    <CompanionLauncher v-if="session.me" />
     <AppDock v-if="session.me" />
   </div>
 </template>

@@ -233,7 +233,7 @@ onMounted(async () => {
         <div>
           <p class="text-xs tracking-[0.18em] text-accent">PRIVATE COMPANION</p>
           <h2 class="serif mt-1 text-2xl">心语陪伴</h2>
-          <p class="mt-2 max-w-xl text-sm leading-6 text-white/60">只听你说，陪你理清感受与关系里的话。不读取日记，也不会把对话告诉 Ta。</p>
+          <p class="mt-2 max-w-xl text-sm leading-6 text-theme-secondary">只听你说，陪你理清感受与关系里的话。不读取日记，也不会把对话告诉 Ta。</p>
         </div>
         <button v-if="consent?.consented" class="btn-ghost !min-h-9 !px-3 !py-1.5 text-xs" @click="withdrawConsent">停止使用</button>
       </div>
@@ -244,60 +244,60 @@ onMounted(async () => {
         <span class="mt-0.5 text-xl">☾</span>
         <div>
           <h3 class="font-medium">开始前的一点说明</h3>
-          <p class="mt-2 text-sm leading-6 text-white/60">你主动输入的消息会发送给 DeepSeek 生成回复。聊天仅你自己可见；助手只处理情感与关系沟通，不替代心理诊疗或紧急援助。</p>
+          <p class="mt-2 text-sm leading-6 text-theme-secondary">你主动输入的消息会发送给 DeepSeek 生成回复。聊天仅你自己可见；助手只处理情感与关系沟通，不替代心理诊疗或紧急援助。</p>
         </div>
       </div>
       <button class="btn-primary w-full sm:w-auto" @click="acceptConsent">我已了解，开始倾诉</button>
     </section>
 
     <section v-else-if="consent" class="companion-layout glass overflow-hidden">
-      <aside class="companion-sidebar border-b border-white/10 p-3 md:border-b-0 md:border-r">
+      <aside class="companion-sidebar border-b border-theme p-3 md:border-b-0 md:border-r">
         <button class="btn-primary w-full !px-3 text-sm" :disabled="busy" @click="startConversation">＋ 新的倾诉</button>
         <div class="mt-3 flex gap-2 overflow-x-auto pb-1 md:block md:space-y-1 md:overflow-y-auto md:pb-0">
           <button v-for="conversation in conversations" :key="conversation.id"
             class="min-w-32 rounded-xl px-3 py-2 text-left text-sm transition-colors md:block md:w-full"
-            :class="activeConversation?.id === conversation.id ? 'bg-white/12 text-accent' : 'text-white/60 hover:bg-white/8 hover:text-white'"
+            :class="activeConversation?.id === conversation.id ? 'bg-accent-soft text-accent' : 'text-theme-secondary surface-hover hover:text-theme-primary'"
             :disabled="busy" @click="selectConversation(conversation)">
             <span class="block truncate">{{ conversation.title }}</span>
-            <span class="mt-0.5 block text-[10px] text-white/35">{{ formatTime(conversation.updatedAt) }}</span>
+            <span class="mt-0.5 block text-[10px] text-theme-tertiary">{{ formatTime(conversation.updatedAt) }}</span>
           </button>
         </div>
       </aside>
 
-      <div class="flex min-h-[34rem] min-w-0 flex-1 flex-col">
-        <div class="flex items-center justify-between border-b border-white/10 px-4 py-3 sm:px-5">
+      <div class="companion-chat flex min-w-0 flex-1 flex-col">
+        <div class="flex items-center justify-between border-b border-theme px-4 py-3 sm:px-5">
           <div class="min-w-0">
             <p class="truncate text-sm font-medium">{{ activeConversation?.title || '新的倾诉' }}</p>
-            <p class="mt-0.5 text-[11px] text-white/40">仅限情感咨询 · 仅本人可见</p>
+            <p class="mt-0.5 text-[11px] text-theme-tertiary">仅限情感咨询 · 仅本人可见</p>
           </div>
-          <button v-if="activeConversation" class="shrink-0 text-xs text-white/40 transition-colors hover:text-rose-300" :disabled="busy" @click="deleteActiveConversation">删除</button>
+          <button v-if="activeConversation" class="danger-link shrink-0 text-xs transition-colors" :disabled="busy" @click="deleteActiveConversation">删除</button>
         </div>
 
-        <div ref="messageList" class="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
-          <div v-if="!activeConversation && !loadingConversation" class="flex h-full min-h-60 flex-col items-center justify-center text-center text-white/45">
+        <div ref="messageList" class="companion-message-list min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
+          <div v-if="!activeConversation && !loadingConversation" class="flex h-full min-h-60 flex-col items-center justify-center text-center text-theme-tertiary">
             <span class="text-3xl">✦</span>
             <p class="mt-3 text-sm">现在的你，想从哪里说起？</p>
             <p class="mt-1 text-xs">说一句话就会开始一段新的倾诉。</p>
           </div>
           <div v-for="message in messages" :key="message.id" class="flex" :class="message.role === 'user' ? 'justify-end' : 'justify-start'">
             <div class="max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-6 sm:max-w-[78%]"
-              :class="message.role === 'user' ? 'bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[var(--accent-contrast)]' : 'bg-white/[0.08] text-white/85'">
+              :class="message.role === 'user' ? 'bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[var(--accent-contrast)]' : 'surface-soft text-theme-primary'">
               <p class="whitespace-pre-wrap break-words">{{ message.content }}</p>
               <p class="mt-1 text-right text-[10px] opacity-55">{{ message.pending ? '正在发送…' : formatTime(message.createdAt) }}</p>
             </div>
           </div>
           <div v-if="busy" class="flex justify-start">
-            <div class="rounded-2xl bg-white/[0.08] px-4 py-3 text-xs text-white/55">正在认真听你说…</div>
+            <div class="surface-soft rounded-2xl px-4 py-3 text-xs text-theme-secondary">正在认真听你说…</div>
           </div>
         </div>
 
-        <div class="border-t border-white/10 p-3 sm:p-4">
-          <div class="rounded-2xl border border-white/10 bg-white/[0.04] p-2 focus-within:border-[var(--accent)]">
-            <textarea v-model="draft" rows="3" maxlength="2000" class="w-full resize-none bg-transparent px-2 py-1 text-sm leading-6 outline-none placeholder:text-white/35"
+        <div class="border-t border-theme p-3 sm:p-4">
+          <div class="companion-composer surface-soft rounded-2xl border border-theme p-2 focus-within:border-[var(--accent)]">
+            <textarea v-model="draft" rows="3" maxlength="2000" class="companion-textarea w-full resize-none bg-transparent px-2 py-1 text-sm leading-6 outline-none"
               :disabled="busy" placeholder="说说你现在的感受…（Enter 发送，Shift + Enter 换行）"
               @keydown.enter.exact.prevent="sendMessage" />
             <div class="flex items-center justify-between gap-3 px-2 pb-1 pt-1">
-              <span class="text-[10px] text-white/35">{{ draft.length }}/2000<span v-if="remainingToday != null"> · 今日还可咨询 {{ remainingToday }} 次</span></span>
+              <span class="text-[10px] text-theme-tertiary">{{ draft.length }}/2000<span v-if="remainingToday != null"> · 今日还可咨询 {{ remainingToday }} 次</span></span>
               <button class="btn-primary !min-h-9 !px-4 !py-1.5 text-sm" :disabled="busy || !draft.trim()" @click="sendMessage">
                 {{ busy ? '倾听中…' : '发送' }}
               </button>
@@ -312,8 +312,18 @@ onMounted(async () => {
 <style scoped>
 .companion-layout { display: flex; flex-direction: column; }
 .companion-sidebar { max-height: 12rem; }
+.companion-chat { min-height: 34rem; }
+.companion-message-list { overscroll-behavior: contain; }
+.companion-textarea { color: var(--text-primary); }
+.companion-textarea::placeholder { color: rgb(var(--text-secondary-rgb) / 0.58); }
+
+@media (max-width: 767px) {
+  .companion-chat { min-height: min(34rem, calc(100dvh - 10rem)); }
+}
+
 @media (min-width: 768px) {
   .companion-layout { min-height: 36rem; flex-direction: row; }
   .companion-sidebar { width: 12.5rem; max-height: 42rem; flex: 0 0 12.5rem; }
+  .companion-chat { min-height: 0; }
 }
 </style>
