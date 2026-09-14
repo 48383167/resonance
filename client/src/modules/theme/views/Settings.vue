@@ -266,15 +266,15 @@ function copyShare() {
         </div>
         <div class="mt-4 grid gap-3 sm:grid-cols-3">
           <label class="flex min-h-11 min-w-0 items-center gap-2 rounded-xl bg-white/5 p-3 text-xs text-white/65">
-            <input v-model="themeDraft.primaryColor" type="color" class="h-10 w-10 shrink-0 cursor-pointer rounded-lg border-0 bg-transparent p-0" @input="markCustom" />
+             <input v-model="themeDraft.primaryColor" type="color" class="h-11 w-11 shrink-0 cursor-pointer rounded-lg border-0 bg-transparent p-0" @input="markCustom" />
             <span class="min-w-0 break-words">主色<br /><b class="text-white/85">{{ themeDraft.primaryColor }}</b></span>
           </label>
           <label class="flex min-h-11 min-w-0 items-center gap-2 rounded-xl bg-white/5 p-3 text-xs text-white/65">
-            <input v-model="themeDraft.secondaryColor" type="color" class="h-10 w-10 shrink-0 cursor-pointer rounded-lg border-0 bg-transparent p-0" @input="markCustom" />
+             <input v-model="themeDraft.secondaryColor" type="color" class="h-11 w-11 shrink-0 cursor-pointer rounded-lg border-0 bg-transparent p-0" @input="markCustom" />
             <span class="min-w-0 break-words">辅助色<br /><b class="text-white/85">{{ themeDraft.secondaryColor }}</b></span>
           </label>
           <label class="flex min-h-11 min-w-0 items-center gap-2 rounded-xl bg-white/5 p-3 text-xs text-white/65">
-            <input v-model="themeDraft.ambientColor" type="color" class="h-10 w-10 shrink-0 cursor-pointer rounded-lg border-0 bg-transparent p-0" @input="markCustom" />
+             <input v-model="themeDraft.ambientColor" type="color" class="h-11 w-11 shrink-0 cursor-pointer rounded-lg border-0 bg-transparent p-0" @input="markCustom" />
             <span class="min-w-0 break-words">氛围色<br /><b class="text-white/85">{{ themeDraft.ambientColor }}</b></span>
           </label>
         </div>
@@ -295,7 +295,7 @@ function copyShare() {
           </div>
           <div class="grid gap-3 sm:grid-cols-2">
              <label v-for="item in detailOptions" :key="item.key" class="flex min-h-11 min-w-0 items-center gap-2 rounded-xl bg-white/5 p-3 text-xs text-white/65">
-               <input type="color" class="h-10 w-10 shrink-0 cursor-pointer rounded-lg border-0 bg-transparent p-0"
+                <input type="color" class="h-11 w-11 shrink-0 cursor-pointer rounded-lg border-0 bg-transparent p-0"
                  :value="detailValue(item.key)" @input="setDetailColor(item.key, $event)" />
                <span class="min-w-0 break-words">{{ item.label }}<br /><b class="text-white/85">{{ themeDraft[item.key] || '自动生成' }}</b></span>
             </label>
@@ -311,7 +311,7 @@ function copyShare() {
         <div class="text-xs opacity-70">主题预览</div>
         <div class="mt-2 flex flex-wrap items-center justify-between gap-3">
           <span class="serif text-lg font-semibold">我们的专属色</span>
-          <button type="button" class="rounded-full bg-black/15 px-3 py-1.5 text-xs" @click="previewTheme">应用预览</button>
+           <button type="button" class="tap-y rounded-full bg-black/15 px-3 py-1.5 text-xs" @click="previewTheme">应用预览</button>
         </div>
       </div>
       <button class="btn-primary w-full sm:w-auto" :disabled="themeSaving" @click="saveThemeSettings">

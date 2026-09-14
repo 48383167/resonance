@@ -29,7 +29,7 @@ const dateText = computed(() => new Date(props.entry.created_at).toLocaleString(
           {{ weatherLabel(entry.weather_code) }}
         </span>
       </div>
-      <button class="rounded-full px-2 py-1 text-sm transition-opacity hover:opacity-70"
+       <button class="tap-y rounded-full px-2 py-1 text-sm transition-opacity hover:opacity-70"
         :title="entry.is_public ? '公开中（观测台可见）' : '私密'"
         @click.stop="emit('toggle-public', entry)">
         {{ entry.is_public ? '🔭' : '🔒' }}

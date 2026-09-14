@@ -10,6 +10,6 @@ defineProps({
   <span v-if="count" class="inline-flex items-center gap-1 text-[11px] leading-none"
     :class="unread ? 'text-rose-300' : 'text-theme-tertiary'">
     <span>💬 {{ count }}</span>
-    <span v-if="unread" class="rounded-full bg-rose-500/20 px-1.5 py-0.5 text-[10px] font-medium">{{ unread }} 未读</span>
+    <span v-if="unread" class="rounded-full bg-rose-500/20 px-1.5 py-0.5 text-[11px] font-medium">{{ unread }} 未读</span>
   </span>
 </template>

@@ -88,7 +88,7 @@ const named = computed(() => (entry.value?.contents || []).map((c) => ({
       <AmbientBackground :colors="palette" :weather-code="entry.weather_code" :opacity="ambientOpacity" />
       
       <div class="relative z-10 text-center">
-        <div class="text-[10px] text-theme-tertiary">{{ dateText }}</div>
+        <div class="text-[11px] text-theme-tertiary">{{ dateText }}</div>
         <div class="serif mt-1 text-2xl" :style="{ color: fgColor }">{{ timeText }}</div>
         <h1 class="serif mt-4 break-words text-3xl font-bold">{{ entry.title || '无题' }}</h1>
         <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
@@ -119,15 +119,16 @@ const named = computed(() => (entry.value?.contents || []).map((c) => ({
         <video v-for="(u, i) in entry.media.filter((x) => (x.type || mediaTypeOf(x.url || '')) === 'video')" :key="u.id || u.url || i" :src="u.url"
           class="max-h-72 w-full rounded-xl" controls />
         <a v-for="(u, i) in entry.media.filter((x) => (x.type || mediaTypeOf(x.url || '')) === 'file')" :key="u.id || u.url || i" :href="u.url" target="_blank"
-          class="surface-soft surface-hover flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm text-accent-2">
-          📄 {{ u.name || decodeURIComponent((u.url || '').split('/').pop()) }}
+          class="surface-soft surface-hover flex min-w-0 items-center gap-2 rounded-xl px-4 py-2.5 text-sm text-accent-2">
+          <span class="shrink-0">📄</span>
+          <span class="break-anywhere min-w-0">{{ u.name || decodeURIComponent((u.url || '').split('/').pop()) }}</span>
         </a>
       </div>
 
       <CommentSection target-type="entry" :target-id="entry.id" />
 
       <div class="mt-8 flex justify-center">
-        <button class="danger-action rounded-full px-4 py-1.5 text-xs transition-colors"
+        <button class="danger-action tap-y rounded-full px-4 py-1.5 text-xs transition-colors"
           @click="remove">🗑 删除这篇日记</button>
       </div>
     </div>

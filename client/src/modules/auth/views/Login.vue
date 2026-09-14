@@ -50,15 +50,16 @@ async function doLogin() {
         <div>
           <label class="mb-1 block text-xs text-white/50">用户名</label>
           <input v-model="username" class="input-dark" placeholder="3-20 位字母/数字/下划线"
-            autocomplete="username" @keyup.enter="doLogin" />
+            autocomplete="username" inputmode="text" autocapitalize="none" autocorrect="off" spellcheck="false"
+            enterkeyhint="next" @keyup.enter="doLogin" />
         </div>
         <div>
           <label class="mb-1 block text-xs text-white/50">密码</label>
           <div class="relative">
-            <input v-model="password" :type="showPw ? 'text' : 'password'" class="input-dark pr-11"
-              placeholder="你的密码" autocomplete="current-password" @keyup.enter="doLogin" />
-            <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-base opacity-70 hover:opacity-100"
-              :title="showPw ? '隐藏密码' : '显示密码'" @click="showPw = !showPw">
+            <input v-model="password" :type="showPw ? 'text' : 'password'" class="input-dark pr-14"
+              placeholder="你的密码" autocomplete="current-password" enterkeyhint="go" @keyup.enter="doLogin" />
+            <button type="button" class="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-base opacity-70 transition-colors hover:bg-white/10 hover:opacity-100"
+              :title="showPw ? '隐藏密码' : '显示密码'" :aria-label="showPw ? '隐藏密码' : '显示密码'" @click="showPw = !showPw">
               {{ showPw ? '🙈' : '👁' }}
             </button>
           </div>

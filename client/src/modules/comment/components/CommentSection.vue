@@ -326,11 +326,11 @@ onUnmounted(() => {
 <template>
   <div class="mt-4 border-t border-theme pt-3">
     <button type="button"
-      class="flex items-center gap-2 text-xs text-theme-tertiary transition-colors hover-text-accent"
+      class="tap-y flex items-center gap-2 text-xs text-theme-tertiary transition-colors hover-text-accent"
       @click="collapsed = !collapsed">
       <span>💬 评论</span>
       <span v-if="comments.length">{{ comments.length }}</span>
-      <span class="text-[10px]">{{ collapsed ? '▸' : '▾' }}</span>
+      <span class="text-[11px]">{{ collapsed ? '▸' : '▾' }}</span>
     </button>
 
     <template v-if="!collapsed">
@@ -346,15 +346,15 @@ onUnmounted(() => {
               <span class="text-accent">{{ root.author?.nickname || 'Ta' }}</span>
               <span class="text-theme-tertiary">{{ timeText(root.created_at) }}</span>
               <button v-if="root.user_id === session.userId"
-                class="danger-link ml-auto transition-colors"
+                class="danger-link tap-y ml-auto transition-colors"
                 @click="remove(root)">删除</button>
             </div>
             <p class="mt-1 break-words whitespace-pre-wrap text-sm leading-relaxed">{{ root.content }}</p>
           </template>
           <div class="mt-1 flex items-center gap-3 text-xs text-theme-tertiary">
-            <button v-if="!root.deleted_at" class="transition-colors hover-text-accent"
+            <button v-if="!root.deleted_at" class="tap-y transition-colors hover-text-accent"
               @click="startReply(root)">回复</button>
-            <button v-if="repliesInlineText(root.id)" class="transition-colors hover-text-accent"
+            <button v-if="repliesInlineText(root.id)" class="tap-y transition-colors hover-text-accent"
               @click="toggleRepliesInline(root.id)">
               {{ repliesInlineText(root.id) }}
             </button>
@@ -370,7 +370,7 @@ onUnmounted(() => {
                 <span class="text-accent">{{ r.author?.nickname || 'Ta' }}</span>
                 <span class="text-theme-tertiary">{{ timeText(r.created_at) }}</span>
                 <button v-if="r.user_id === session.userId"
-                  class="danger-link ml-auto transition-colors"
+                  class="danger-link tap-y ml-auto transition-colors"
                   @click="remove(r)">删除</button>
               </div>
               <button v-if="r.reply_to_comment_id" type="button"
@@ -381,21 +381,21 @@ onUnmounted(() => {
               </span>
               <p class="mt-1 break-words whitespace-pre-wrap text-sm leading-relaxed">{{ r.content }}</p>
               <div class="mt-1 text-xs text-theme-tertiary">
-                <button class="transition-colors hover-text-accent" @click="startReply(r)">回复</button>
+                <button class="tap-y transition-colors hover-text-accent" @click="startReply(r)">回复</button>
               </div>
             </template>
           </div>
         </div>
 
         <button v-if="repliesMoreText(root.id)" type="button"
-          class="ml-4 text-xs text-theme-tertiary transition-colors hover-text-accent"
+          class="tap-y ml-4 text-xs text-theme-tertiary transition-colors hover-text-accent"
           @click="expandReplies(root.id)">
           {{ repliesMoreText(root.id) }}
         </button>
       </div>
 
       <button v-if="rootsToggleText()" type="button"
-        class="text-xs text-theme-tertiary transition-colors hover-text-accent"
+        class="tap-y text-xs text-theme-tertiary transition-colors hover-text-accent"
         @click="toggleRoots">
         {{ rootsToggleText() }}
       </button>
@@ -403,7 +403,7 @@ onUnmounted(() => {
 
     <div v-if="replyTarget" class="mt-2 flex items-center gap-2 text-xs text-theme-tertiary">
       <span>回复 @{{ nicknameOf(replyTarget.user_id) }}</span>
-      <button class="transition-colors hover-text-accent" @click="cancelReply">✕ 取消</button>
+      <button class="tap-y transition-colors hover-text-accent" @click="cancelReply">✕ 取消</button>
     </div>
 
     <div class="mt-2 flex items-end gap-2">
@@ -412,14 +412,14 @@ onUnmounted(() => {
         :placeholder="replyTarget ? `回复 @${nicknameOf(replyTarget.user_id)}…` : '写下你的评论…'"
         :enterkeyhint="isTouchDevice ? 'enter' : 'send'"
         @focus="onComposerFocus" @keydown.enter="onComposerEnter" />
-      <button class="btn-primary shrink-0 px-4 py-2 text-sm"
+      <button class="btn-primary min-h-11 shrink-0 px-4 py-2 text-sm"
         :disabled="!draft.trim() || submitting" @click="submit">
         {{ submitting ? '发送中…' : '发送' }}
       </button>
     </div>
     <div class="mt-1 flex items-center justify-between gap-2 text-[11px] text-theme-tertiary">
       <button v-if="inlineOverflow || isTouchDevice" type="button"
-        class="transition-colors hover-text-accent" @click="expanded = true">⤢ 展开编辑</button>
+        class="tap-y transition-colors hover-text-accent" @click="expanded = true">⤢ 展开编辑</button>
       <span v-else></span>
       <span>{{ draft.length }}/500</span>
     </div>

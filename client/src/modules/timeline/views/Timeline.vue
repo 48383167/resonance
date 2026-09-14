@@ -111,7 +111,7 @@ const anniversaryTypeLabel = (t) => ({ first_meet: '初遇', together: '在一�
     <!-- 类型筛选 -->
     <div class="mt-4 flex flex-wrap gap-2">
       <button v-for="k in KINDS" :key="k.key" @click="fKind = k.key"
-        class="rounded-full px-3 py-1 text-xs transition-all"
+         class="rounded-full px-3 py-2.5 text-xs transition-all"
          :class="fKind === k.key ? 'bg-accent-soft ring-1 ring-accent' : 'bg-white/5 text-white/60 hover:bg-white/10'">
         {{ k.label }}
         <span v-if="k.key" class="ml-1 opacity-60">{{ kindCounts[k.key] }}</span>
@@ -137,7 +137,7 @@ const anniversaryTypeLabel = (t) => ({ first_meet: '初遇', together: '在一�
         <div class="sticky top-2 z-10 mb-5 flex justify-center">
           <div class="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-4 py-1.5 shadow-lg backdrop-blur-xl">
             <span class="serif text-xs font-semibold tracking-wide text-white/90">{{ g.label }}</span>
-            <span v-if="g.day" class="rounded-full bg-amber-400/15 px-2.5 py-0.5 text-[10px] font-medium text-amber-200/90 ring-1 ring-amber-300/20">相识第 {{ g.day }} 天</span>
+            <span v-if="g.day" class="rounded-full bg-amber-400/15 px-2.5 py-0.5 text-[11px] font-medium text-amber-200/90 ring-1 ring-amber-300/20">相识第 {{ g.day }} 天</span>
           </div>
         </div>
 
@@ -169,7 +169,7 @@ const anniversaryTypeLabel = (t) => ({ first_meet: '初遇', together: '在一�
                   <template v-else-if="e.kind === 'anniversary'">{{ anniversaryTypeLabel(e.anniversaryType) }} · {{ e.title }}</template>
                   <template v-else>📷 {{ e.album }}</template>
                 </span>
-                <span class="shrink-0 text-[10px] leading-5 text-white/40">{{ timeOf(e.ts) }}</span>
+                <span class="shrink-0 text-[11px] leading-5 text-white/40">{{ timeOf(e.ts) }}</span>
               </div>
 
               <!-- 内容 -->

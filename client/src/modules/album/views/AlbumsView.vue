@@ -54,7 +54,7 @@ const coverOf = (a) => a.cover_url || a.firstPhotoUrl || ''
             <span v-else>📷</span>
             <!-- 未设置独立封面时的代替展示角标 -->
             <span v-if="!a.cover_url && a.firstPhotoUrl"
-              class="absolute bottom-1.5 left-1.5 rounded-full bg-black/50 px-2 py-0.5 text-[10px] text-white/70">暂以首图代封面</span>
+              class="absolute bottom-1.5 left-1.5 rounded-full bg-black/50 px-2 py-0.5 text-[11px] text-white/70">暂以首图代封面</span>
           </div>
           <div class="p-3">
             <div class="flex min-w-0 items-start justify-between gap-2">
@@ -65,7 +65,7 @@ const coverOf = (a) => a.cover_url || a.firstPhotoUrl || ''
           </div>
         </div>
         <button title="删除相册"
-           class="absolute right-2 top-2 rounded-full bg-black/50 px-2 py-0.5 text-[11px] text-rose-300/90 opacity-100 transition-opacity hover:text-rose-300 sm:opacity-0 sm:group-hover:opacity-100"
+           class="absolute right-2 top-2 rounded-full bg-black/50 px-2 py-0.5 text-[11px] tap-y text-rose-300/90 opacity-100 transition-opacity hover:text-rose-300 sm:opacity-0 sm:group-hover:opacity-100"
           @click="removeAlbum(a)">删除</button>
       </div>
     </div>

@@ -46,9 +46,9 @@ const dateText = (l) => (l
       <button class="btn-ghost text-sm" @click="goBack">← 信箱</button>
       <div v-if="letter" class="flex flex-wrap items-center justify-end gap-4">
         <button v-if="letter.sender_id === session.userId"
-          class="text-xs text-white/50 transition-colors hover:text-white"
+           class="tap-y text-xs text-white/50 transition-colors hover:text-white"
           @click="router.push(`/letters/${letter.id}/edit`)">✎ 编辑</button>
-        <button class="text-xs text-rose-300/70 hover:text-rose-300" @click="remove">删除</button>
+         <button class="tap-y text-xs text-rose-300/70 hover:text-rose-300" @click="remove">删除</button>
       </div>
     </div>
 

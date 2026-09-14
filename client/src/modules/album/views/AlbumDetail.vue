@@ -219,7 +219,7 @@ function openPhoto(photo) {
           <video v-else-if="p.type === 'video' || mediaTypeOf(p.url) === 'video'" :src="p.url" class="h-full w-full object-cover" controls @click.stop />
           <div v-else class="flex h-full w-full items-center justify-center bg-white/5 text-3xl">📄</div>
           <button v-if="isImagePhoto(p)" type="button"
-            class="absolute right-2 top-2 z-10 flex min-h-9 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold shadow-lg backdrop-blur-md transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60"
+             class="absolute right-2 top-2 z-10 flex min-h-11 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-semibold shadow-lg backdrop-blur-md transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60"
             :class="isInObservatory(p)
               ? 'border-accent bg-accent text-[var(--accent-contrast)]'
               : 'border-white/35 bg-black/60 text-white'"
@@ -235,22 +235,22 @@ function openPhoto(photo) {
             <textarea v-model="storyText" class="input-dark resize-none !px-3 !py-2" rows="4"
               placeholder="这张照片背后的故事…" />
             <div class="flex justify-end gap-3 text-xs">
-              <button class="text-white/45 hover:text-white" @click="cancelStory">取消</button>
-              <button class="text-accent-2 hover-text-accent-2" @click="saveStory">保存故事</button>
+               <button class="tap-y text-white/45 hover:text-white" @click="cancelStory">取消</button>
+               <button class="tap-y text-accent-2 hover-text-accent-2" @click="saveStory">保存故事</button>
             </div>
           </div>
           <!-- 普通展示 -->
           <template v-else>
-            <p v-if="p.caption" class="line-clamp-3 text-xs leading-relaxed text-white/70">{{ p.caption }}</p>
+            <p v-if="p.caption" class="line-clamp-3 break-anywhere text-xs leading-relaxed text-white/70">{{ p.caption }}</p>
             <div class="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px]">
-              <button class="text-white/45 hover:text-white" @click="openStory(p)">
+               <button class="tap-y text-white/45 hover:text-white" @click="openStory(p)">
                 {{ p.caption ? '编辑故事' : '＋ 写故事' }}
               </button>
               <span class="flex flex-wrap justify-end gap-x-2.5 gap-y-1">
-                <button class="text-white/45 hover:text-white" @click="setCover(p)">
+                 <button class="tap-y text-white/45 hover:text-white" @click="setCover(p)">
                   {{ album.cover_file_id === p.file_id ? '✓ 封面' : '设为封面' }}
                 </button>
-                <button class="text-rose-300/70 hover:text-rose-300" @click="removePhoto(p)">删除</button>
+                 <button class="tap-y text-rose-300/70 hover:text-rose-300" @click="removePhoto(p)">删除</button>
               </span>
             </div>
           </template>

@@ -1,9 +1,27 @@
 <script setup>
-import { onUnmounted, watch } from 'vue'
+import { onUnmounted, ref, watch } from 'vue'
 import { lightbox, closeLightbox, stepLightbox } from '../../stores/lightbox'
 
 let onKey = null
 let previousOverflow = ''
+const swipeStart = ref(null)
+
+// 移动端左右滑动切换图片
+function onTouchStart(event) {
+  const touch = event.changedTouches[0]
+  swipeStart.value = { x: touch.clientX, y: touch.clientY }
+}
+
+function onTouchEnd(event) {
+  const start = swipeStart.value
+  swipeStart.value = null
+  if (!start || lightbox.images.length < 2) return
+  const touch = event.changedTouches[0]
+  const dx = touch.clientX - start.x
+  const dy = touch.clientY - start.y
+  if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.2) return
+  stepLightbox(dx < 0 ? 1 : -1)
+}
 
 function unlockBody() {
   if (onKey) window.removeEventListener('keydown', onKey)
@@ -31,9 +49,9 @@ onUnmounted(unlockBody)
 
 <template>
   <Transition name="lb">
-    <div v-if="lightbox.open" class="theme-inverse image-lightbox fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4 sm:p-6"
-      @click.self="closeLightbox">
-      <button class="lightbox-close absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xl hover:bg-white/20 sm:right-5 sm:top-5"
+    <div v-if="lightbox.open" class="theme-inverse image-lightbox fixed inset-0 z-[60] flex select-none items-center justify-center bg-black/85 p-4 sm:p-6"
+      @click.self="closeLightbox" @touchstart.passive="onTouchStart" @touchend.passive="onTouchEnd">
+      <button class="lightbox-close absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-xl hover:bg-white/20 sm:right-5 sm:top-5"
         aria-label="关闭图片预览"
         @click="closeLightbox">×</button>
       <button v-if="lightbox.images.length > 1"
@@ -55,6 +73,7 @@ onUnmounted(unlockBody)
 </template>
 
 <style>
+.lightbox-image { touch-action: pan-y pinch-zoom; }
 .lightbox-close { top: max(1rem, env(safe-area-inset-top)); right: max(1rem, env(safe-area-inset-right)); }
 .lightbox-counter { bottom: max(1rem, env(safe-area-inset-bottom)); }
 .lb-enter-active, .lb-leave-active { transition: opacity 0.25s ease; }

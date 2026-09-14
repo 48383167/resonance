@@ -69,15 +69,16 @@ async function doRegister() {
         <p v-else class="text-xs text-accent-2">填上 Ta 给你的配对码，注册即完成配对。</p>
         <div>
           <label class="mb-1 block text-xs text-white/50">用户名</label>
-          <input v-model="username" class="input-dark" placeholder="3-20 位字母/数字/下划线" autocomplete="username" />
+          <input v-model="username" class="input-dark" placeholder="3-20 位字母/数字/下划线" autocomplete="username"
+            inputmode="text" autocapitalize="none" autocorrect="off" spellcheck="false" />
         </div>
         <div>
           <label class="mb-1 block text-xs text-white/50">密码</label>
           <div class="relative">
-            <input v-model="password" :type="showPw ? 'text' : 'password'" class="input-dark pr-11"
+            <input v-model="password" :type="showPw ? 'text' : 'password'" class="input-dark pr-14"
               placeholder="至少 6 位" autocomplete="new-password" />
-            <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-base opacity-70 hover:opacity-100"
-              :title="showPw ? '隐藏密码' : '显示密码'" @click="showPw = !showPw">
+            <button type="button" class="absolute right-1 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-base opacity-70 transition-colors hover:bg-white/10 hover:opacity-100"
+              :title="showPw ? '隐藏密码' : '显示密码'" :aria-label="showPw ? '隐藏密码' : '显示密码'" @click="showPw = !showPw">
               {{ showPw ? '🙈' : '👁' }}
             </button>
           </div>

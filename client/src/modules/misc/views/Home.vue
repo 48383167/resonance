@@ -151,14 +151,14 @@ function unreadOfModule(name) {
           class="relative z-20 mt-4 rounded-xl border border-white/10 bg-white/[0.04] p-4">
           <div class="flex items-center justify-between">
             <label class="text-xs text-white/55">相识日期</label>
-            <span class="text-[10px] text-white/35">选好后从这天开始计天数，双方都能改</span>
+            <span class="text-[11px] text-white/35">选好后从这天开始计天数，双方都能改</span>
           </div>
           <div class="mt-2">
             <AppDatePicker v-model="meetDate" placeholder="选择相识日期" />
           </div>
           <div class="mt-3 flex justify-end gap-2">
-            <button class="btn-ghost !min-h-9 !px-4 !py-1.5 text-sm" :disabled="meetBusy" @click="editMeet = false">取消</button>
-            <button class="btn-primary !min-h-9 !px-4 !py-1.5 text-sm" :disabled="meetBusy || !meetDate" @click="saveMeet">
+            <button class="btn-ghost !min-h-11 !px-4 !py-1.5 text-sm" :disabled="meetBusy" @click="editMeet = false">取消</button>
+            <button class="btn-primary !min-h-11 !px-4 !py-1.5 text-sm" :disabled="meetBusy || !meetDate" @click="saveMeet">
               {{ meetBusy ? '保存中…' : '保存' }}
             </button>
           </div>
@@ -211,7 +211,7 @@ function unreadOfModule(name) {
           </div>
         </div>
         <span v-if="unreadOfModule(m.name)"
-          class="absolute right-3 top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white">
+          class="absolute right-3 top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[11px] font-semibold text-white">
           {{ unreadOfModule(m.name) }}
         </span>
       </button>

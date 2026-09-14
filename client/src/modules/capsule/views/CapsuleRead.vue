@@ -46,7 +46,7 @@ const unlockText = (c) => {
   <div class="fade-up">
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
       <button class="btn-ghost text-sm" @click="goBack">← 返回</button>
-      <button v-if="capsule" class="text-xs text-rose-300/70 hover:text-rose-300" @click="remove">销毁</button>
+       <button v-if="capsule" class="tap-y text-xs text-rose-300/70 hover:text-rose-300" @click="remove">销毁</button>
     </div>
 
     <div v-if="!capsule" class="py-20 text-center text-white/40">正在打开胶囊…</div>

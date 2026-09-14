@@ -421,10 +421,10 @@ onUnmounted(() => {
           <p class="mt-2 max-w-xl text-sm leading-6 text-theme-secondary">只听你说，陪你理清感受与关系里的话。不读取日记，也不会把对话告诉 Ta。</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
-          <button class="btn-ghost !min-h-9 !px-3 !py-1.5 text-xs" :aria-expanded="memoryOpen" @click="memoryOpen = !memoryOpen">
+          <button class="btn-ghost !min-h-11 !px-3 !py-1.5 text-xs" :aria-expanded="memoryOpen" @click="memoryOpen = !memoryOpen">
             我的记忆 <span class="ml-1 text-theme-tertiary">{{ activeMemoryCount }}</span>
           </button>
-          <button v-if="consent?.consented" class="btn-ghost !min-h-9 !px-3 !py-1.5 text-xs" @click="withdrawConsent">停止使用</button>
+          <button v-if="consent?.consented" class="btn-ghost !min-h-11 !px-3 !py-1.5 text-xs" @click="withdrawConsent">停止使用</button>
         </div>
       </div>
     </section>
@@ -456,23 +456,23 @@ onUnmounted(() => {
           <template v-if="editingMemoryId === memory.id">
             <textarea v-model="editingMemoryContent" maxlength="160" rows="3" class="companion-textarea input-dark min-h-20 resize-y text-sm" :disabled="memoryBusyId === memory.id" />
             <div class="mt-2 flex justify-end gap-2">
-              <button class="btn-ghost !min-h-9 !px-3 !py-1.5 text-xs" :disabled="memoryBusyId === memory.id" @click="cancelEditingMemory">取消</button>
-              <button class="btn-primary !min-h-9 !px-3 !py-1.5 text-xs" :disabled="memoryBusyId === memory.id || !editingMemoryContent.trim()" @click="saveMemoryEdit(memory)">保存</button>
+              <button class="btn-ghost !min-h-11 !px-3 !py-1.5 text-xs" :disabled="memoryBusyId === memory.id" @click="cancelEditingMemory">取消</button>
+              <button class="btn-primary !min-h-11 !px-3 !py-1.5 text-xs" :disabled="memoryBusyId === memory.id || !editingMemoryContent.trim()" @click="saveMemoryEdit(memory)">保存</button>
             </div>
           </template>
           <template v-else>
             <div class="flex items-start justify-between gap-3">
               <p class="min-w-0 flex-1 whitespace-pre-wrap break-words text-sm leading-6 text-theme-primary">{{ memory.content }}</p>
-              <span class="shrink-0 rounded-full px-2 py-1 text-[10px]" :class="memory.enabled ? 'bg-accent-soft text-accent' : 'surface-soft text-theme-tertiary'">
+              <span class="shrink-0 rounded-full px-2 py-1 text-[11px]" :class="memory.enabled ? 'bg-accent-soft text-accent' : 'surface-soft text-theme-tertiary'">
                 {{ memory.enabled ? '启用中' : '已暂停' }}
               </span>
             </div>
             <div class="mt-3 flex flex-wrap justify-end gap-2">
-              <button class="btn-ghost !min-h-9 !px-3 !py-1.5 text-xs" :disabled="memoryBusyId === memory.id" @click="startEditingMemory(memory)">编辑</button>
-              <button class="btn-ghost !min-h-9 !px-3 !py-1.5 text-xs" :disabled="memoryBusyId === memory.id" @click="toggleMemory(memory)">
+              <button class="btn-ghost !min-h-11 !px-3 !py-1.5 text-xs" :disabled="memoryBusyId === memory.id" @click="startEditingMemory(memory)">编辑</button>
+              <button class="btn-ghost !min-h-11 !px-3 !py-1.5 text-xs" :disabled="memoryBusyId === memory.id" @click="toggleMemory(memory)">
                 {{ memory.enabled ? '暂停' : '启用' }}
               </button>
-              <button class="danger-action min-h-9 rounded-full px-3 py-1.5 text-xs transition-colors" :disabled="memoryBusyId === memory.id" @click="deleteMemory(memory)">删除</button>
+              <button class="danger-action min-h-11 rounded-full px-3 py-1.5 text-xs transition-colors" :disabled="memoryBusyId === memory.id" @click="deleteMemory(memory)">删除</button>
             </div>
           </template>
         </article>
@@ -504,7 +504,7 @@ onUnmounted(() => {
             :class="activeConversation?.id === conversation.id ? 'bg-accent-soft text-accent' : 'text-theme-secondary surface-hover hover:text-theme-primary'"
             :disabled="busy" @click="selectConversation(conversation)">
             <span class="block truncate">{{ conversation.title }}</span>
-            <span class="mt-0.5 block text-[10px] text-theme-tertiary">{{ formatTime(conversation.updatedAt) }}</span>
+            <span class="mt-0.5 block text-[11px] text-theme-tertiary">{{ formatTime(conversation.updatedAt) }}</span>
           </button>
         </div>
       </aside>
@@ -519,7 +519,7 @@ onUnmounted(() => {
           <button type="button" class="companion-header-btn md:hidden" aria-label="我的记忆" @click="memoryOpen = true">
             记忆<span v-if="activeMemoryCount" class="ml-1 text-accent">{{ activeMemoryCount }}</span>
           </button>
-          <button v-if="activeConversation" class="danger-link shrink-0 text-xs transition-colors" :disabled="busy" @click="deleteActiveConversation">删除</button>
+          <button v-if="activeConversation" class="danger-link tap-y shrink-0 text-xs transition-colors" :disabled="busy" @click="deleteActiveConversation">删除</button>
         </div>
 
         <div class="relative flex min-h-0 flex-1 flex-col">
@@ -534,7 +534,7 @@ onUnmounted(() => {
               <div class="max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-6 sm:max-w-[78%]"
                 :class="message.role === 'user' ? 'bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] text-[var(--accent-contrast)]' : 'surface-soft text-theme-primary'">
                 <p class="whitespace-pre-wrap break-words">{{ message.content }}</p>
-                <p class="mt-1 text-right text-[10px] opacity-55">{{ message.pending ? '正在发送…' : formatTime(message.createdAt) }}</p>
+                <p class="mt-1 text-right text-[11px] opacity-55">{{ message.pending ? '正在发送…' : formatTime(message.createdAt) }}</p>
               </div>
             </div>
             <div v-if="busy" class="flex justify-start">
@@ -553,8 +553,8 @@ onUnmounted(() => {
               :placeholder="composerPlaceholder" :enterkeyhint="isTouchDevice ? 'enter' : 'send'"
               @keydown.enter="onComposerEnter" @input="autoGrow" />
             <div class="flex items-center justify-between gap-3 px-2 pb-1 pt-1">
-              <span class="text-[10px] text-theme-tertiary">{{ draft.length }}/2000<span v-if="remainingToday != null"> · 今日还可咨询 {{ remainingToday }} 次</span></span>
-              <button class="btn-primary !min-h-9 !px-4 !py-1.5 text-sm" :disabled="busy || !draft.trim()" @click="sendMessage">
+              <span class="text-[11px] text-theme-tertiary">{{ draft.length }}/2000<span v-if="remainingToday != null"> · 今日还可咨询 {{ remainingToday }} 次</span></span>
+              <button class="btn-primary !min-h-11 !px-4 !py-1.5 text-sm" :disabled="busy || !draft.trim()" @click="sendMessage">
                 {{ busy ? '倾听中…' : '发送' }}
               </button>
             </div>
@@ -575,7 +575,7 @@ onUnmounted(() => {
 
 .companion-header-btn {
   display: inline-flex;
-  min-height: 2rem;
+  min-height: 2.75rem;
   flex-shrink: 0;
   align-items: center;
   border: 1px solid rgb(var(--border-subtle-rgb) / var(--glass-border-alpha));

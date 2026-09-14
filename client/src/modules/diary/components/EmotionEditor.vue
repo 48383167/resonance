@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useEmotion, emotionSummary } from '../../../composables/useEmotion'
 
 // 情绪墨水编辑器：实时采集打字情绪；支持草稿自动保存/恢复
@@ -19,6 +19,10 @@ const { metrics, onInput, setInitialValue } = useEmotion()
 const summary = computed(() => emotionSummary(metrics))
 const draftStorageKey = () => props.draftKey ? `resonance.draft.${props.draftKey}` : ''
 
+let composing = false
+let draftTimer = null
+let draftCleared = false
+
 onMounted(() => {
   if (!props.draftKey) return
   try {
@@ -33,11 +37,33 @@ onMounted(() => {
   } catch { /* 忽略损坏的草稿 */ }
 })
 
-function handleInput() {
-  onInput(text.value)
-  if (props.draftKey) {
+onUnmounted(() => {
+  clearTimeout(draftTimer)
+  persistDraft()
+})
+
+function persistDraft() {
+  if (!props.draftKey || draftCleared) return
+  try {
     localStorage.setItem(draftStorageKey(), JSON.stringify({ content: text.value, at: Date.now() }))
-  }
+  } catch { /* 隐私模式或存储配额不足时不影响写作 */ }
+}
+
+function handleInput() {
+  // 中文输入法组合期间不采集、不落盘，避免把拼音中间态写进草稿
+  if (composing) return
+  onInput(text.value)
+  clearTimeout(draftTimer)
+  draftTimer = window.setTimeout(persistDraft, 400)
+}
+
+function onCompositionStart() {
+  composing = true
+}
+
+function onCompositionEnd() {
+  composing = false
+  handleInput()
 }
 
 function setContent(value, savedMetrics = {}) {
@@ -46,7 +72,12 @@ function setContent(value, savedMetrics = {}) {
 }
 
 function clearDraft() {
-  if (props.draftKey) localStorage.removeItem(draftStorageKey())
+  draftCleared = true
+  if (props.draftKey) {
+    try {
+      localStorage.removeItem(draftStorageKey())
+    } catch { /* 忽略 */ }
+  }
 }
 
 function doSubmit() {
@@ -71,6 +102,8 @@ defineExpose({ clearDraft, setContent })
       </span>
     </div>
     <textarea v-model="text" @input="handleInput" :disabled="disabled"
+      @compositionstart="onCompositionStart" @compositionend="onCompositionEnd"
+      enterkeyhint="done"
       class="focus-ring-accent w-full resize-none rounded-xl bg-white/5 p-4 outline-none disabled:opacity-50"
       :placeholder="placeholder" rows="8" />
     <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

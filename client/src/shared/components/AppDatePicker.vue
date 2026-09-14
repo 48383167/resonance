@@ -11,6 +11,7 @@ const emit = defineEmits(['update:modelValue'])
 const open = ref(false)
 const rootEl = ref(null)
 const direction = ref('down')
+const align = ref('left')
 const today = new Date()
 const viewYear = ref(today.getFullYear())
 const viewMonth = ref(today.getMonth()) // 0-11
@@ -58,47 +59,70 @@ function clear() {
   emit('update:modelValue', '')
 }
 
+function reposition() {
+  const rect = rootEl.value?.getBoundingClientRect()
+  if (!rect) return
+  const spaceBelow = window.innerHeight - rect.bottom
+  direction.value = spaceBelow < 340 && rect.top > spaceBelow ? 'up' : 'down'
+  const width = Math.min(288, window.innerWidth - 32)
+  align.value = rect.left + width > window.innerWidth - 8 && rect.right > width ? 'right' : 'left'
+}
+
 async function toggle() {
   open.value = !open.value
   if (!open.value) return
   await nextTick()
-  const rect = rootEl.value?.getBoundingClientRect()
-  if (!rect) return
-  const spaceBelow = window.innerHeight - rect.bottom
-  direction.value = spaceBelow < 300 && rect.top > spaceBelow ? 'up' : 'down'
+  reposition()
 }
 
 function onDocClick(e) {
   if (rootEl.value && !rootEl.value.contains(e.target)) open.value = false
 }
-onMounted(() => document.addEventListener('click', onDocClick))
-onUnmounted(() => document.removeEventListener('click', onDocClick))
+
+function onViewportChange() {
+  if (open.value) reposition()
+}
+
+onMounted(() => {
+  document.addEventListener('click', onDocClick)
+  window.addEventListener('resize', onViewportChange)
+  window.addEventListener('scroll', onViewportChange, true)
+})
+onUnmounted(() => {
+  document.removeEventListener('click', onDocClick)
+  window.removeEventListener('resize', onViewportChange)
+  window.removeEventListener('scroll', onViewportChange, true)
+})
 </script>
 
 <template>
   <div ref="rootEl" class="relative">
-    <button type="button" class="input-dark flex items-center justify-between gap-2 text-left"
-      @click="toggle">
+    <div class="input-dark flex cursor-pointer items-center justify-between gap-2 text-left" role="button" tabindex="0"
+      @click="toggle" @keydown.enter.prevent="toggle" @keydown.space.prevent="toggle">
       <span :class="modelValue ? 'text-white/40' : ''">📅</span>
       <span class="flex-1 truncate" :class="modelValue ? '' : 'text-white/40'">{{ label || placeholder }}</span>
-      <span v-if="modelValue" class="text-xs text-white/40 hover:text-white" @click.stop="clear">×</span>
+      <button v-if="modelValue" type="button" class="flex h-11 w-11 -my-2 shrink-0 items-center justify-center text-sm text-white/40 transition-colors hover:text-white"
+        aria-label="清除日期" @click.stop="clear">×</button>
       <span class="text-xs text-white/40 transition-transform" :class="open ? 'rotate-180' : ''">▾</span>
-    </button>
+    </div>
     <Transition name="dp">
       <div v-if="open"
-         class="date-picker-popup theme-popup absolute left-0 z-[1100] rounded-xl border border-white/15 p-3 shadow-2xl backdrop-blur-xl"
-         :class="direction === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'">
+         class="date-picker-popup theme-popup absolute z-[1100] max-h-[min(24rem,calc(100dvh-4rem))] overflow-y-auto overscroll-contain rounded-xl border border-white/15 p-3 shadow-2xl backdrop-blur-xl"
+         :class="[
+           direction === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5',
+           align === 'right' ? 'right-0' : 'left-0',
+         ]">
         <div class="mb-2 flex items-center justify-between">
-          <button type="button" class="flex h-7 w-7 items-center justify-center rounded-lg text-white/60 hover:bg-white/10 hover:text-white"
-            @click="shift(-1)">‹</button>
+          <button type="button" class="flex h-11 w-11 items-center justify-center rounded-lg text-lg text-white/60 hover:bg-white/10 hover:text-white"
+            aria-label="上个月" @click="shift(-1)">‹</button>
           <span class="serif text-sm text-white/85">{{ viewYear }} 年 {{ viewMonth + 1 }} 月</span>
-          <button type="button" class="flex h-7 w-7 items-center justify-center rounded-lg text-white/60 hover:bg-white/10 hover:text-white"
-            @click="shift(1)">›</button>
+          <button type="button" class="flex h-11 w-11 items-center justify-center rounded-lg text-lg text-white/60 hover:bg-white/10 hover:text-white"
+            aria-label="下个月" @click="shift(1)">›</button>
         </div>
         <div class="grid grid-cols-7 gap-0.5 text-center">
           <span v-for="w in WEEKDAYS" :key="w" class="py-1 text-[11px] text-white/35">{{ w }}</span>
           <button v-for="(day, i) in cells" :key="i" type="button" :disabled="!day"
-             class="aspect-square min-h-8 rounded-lg text-[13px] transition-colors"
+             class="min-h-11 rounded-lg text-[13px] transition-colors"
             :class="[
               day ? 'text-white/80 hover:bg-accent-soft' : '',
               day === modelValue ? 'bg-accent-soft font-semibold text-accent ring-1 ring-accent' : '',

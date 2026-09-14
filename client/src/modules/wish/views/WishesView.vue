@@ -78,8 +78,8 @@ async function remove(w) {
                 <span v-if="w.priority >= 2" title="非常想">⭐ </span>{{ w.title }}
               </span>
               <div class="flex shrink-0 gap-1.5 text-xs">
-                <button v-if="col.key !== 'done'" class="text-accent-2 hover-text-accent-2" title="下一阶段" @click.stop="move(w, 1)">→</button>
-                <button v-if="col.key !== 'todo'" class="text-white/40 hover:text-white" title="上一阶段" @click.stop="move(w, -1)">←</button>
+                <button v-if="col.key !== 'done'" class="tap-y text-accent-2 hover-text-accent-2" title="下一阶段" @click.stop="move(w, 1)">→</button>
+                <button v-if="col.key !== 'todo'" class="tap-y text-white/40 hover:text-white" title="上一阶段" @click.stop="move(w, -1)">←</button>
               </div>
             </div>
             <p v-if="w.description" class="mt-1 break-words text-xs text-white/45">{{ w.description }}</p>
@@ -97,8 +97,8 @@ async function remove(w) {
               </span>
               <span v-else />
               <span class="flex shrink-0 gap-3">
-                <button class="hover:text-white" @click.stop="router.push(`/wishes/${w.id}/edit`)">编辑</button>
-                <button class="hover:text-rose-300" @click.stop="remove(w)">删除</button>
+                 <button class="tap-y hover:text-white" @click.stop="router.push(`/wishes/${w.id}/edit`)">编辑</button>
+                 <button class="tap-y hover:text-rose-300" @click.stop="remove(w)">删除</button>
               </span>
             </div>
           </div>

@@ -206,7 +206,7 @@ function openMomentPhoto(photos, photo) {
           </div>
           <div class="flex min-w-0 flex-wrap justify-end gap-2 text-xs">
             <button type="button"
-              class="min-h-8 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60"
+              class="min-h-11 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60"
               :class="isShownInShare(m)
                 ? 'border-accent bg-accent-soft text-accent'
                 : 'border-theme surface-soft text-theme-secondary hover-text-accent'"
@@ -215,8 +215,8 @@ function openMomentPhoto(photos, photo) {
               @click="toggleShareVisibility(m)">
               {{ sharing.has(m.id) ? '更新中…' : (isShownInShare(m) ? '✓ 分享页展示' : '分享页不展示') }}
             </button>
-            <button class="text-white/50 transition-colors hover:text-white" @click="router.push(`/moments/${m.id}/edit`)">编辑</button>
-            <button class="text-rose-300/80 transition-colors hover:text-rose-300" @click="remove(m)">删除</button>
+            <button class="tap-y text-white/50 transition-colors hover:text-white" @click="router.push(`/moments/${m.id}/edit`)">编辑</button>
+            <button class="tap-y text-rose-300/80 transition-colors hover:text-rose-300" @click="remove(m)">删除</button>
           </div>
         </div>
         <p class="mt-3 break-words whitespace-pre-wrap leading-relaxed">{{ m.content }}</p>
@@ -226,7 +226,7 @@ function openMomentPhoto(photos, photo) {
         </div>
         <div class="mt-3">
           <button type="button"
-            class="inline-flex min-h-8 items-center gap-2 rounded-full border border-theme surface-soft px-3 py-1.5 text-[11px] font-medium text-theme-secondary transition-colors hover-text-accent"
+            class="inline-flex min-h-11 items-center gap-2 rounded-full border border-theme surface-soft px-3 py-1.5 text-[11px] font-medium text-theme-secondary transition-colors hover-text-accent"
             @click="toggleComments(m.id)">
             <span>💬 {{ commentsOpen.has(m.id) ? '收起评论' : '评论' }}</span>
             <CommentCountBadge :count="m.comment_count" :unread="m.unread_comment_count" />

@@ -204,8 +204,8 @@ function remove(i) {
           <button type="button" class="mt-0.5 text-xs text-accent-2 hover-text-accent-2 hover:underline"
             @click="preview(u)">点击预览</button>
         </div>
-        <button type="button" title="移除"
-          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/5 text-sm text-white/50 transition-colors hover:bg-rose-500/80 hover:text-white"
+        <button type="button" title="移除" aria-label="移除"
+          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/5 text-sm text-white/50 transition-colors hover:bg-rose-500/80 hover:text-white"
           @click="remove(i)">×</button>
       </div>
     </div>

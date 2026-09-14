@@ -136,6 +136,7 @@ onUnmounted(() => {
   font-size: 1rem;
   line-height: 1.7;
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-width: none;
 }
 .ccs-textarea::-webkit-scrollbar { display: none; }

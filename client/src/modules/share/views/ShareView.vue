@@ -279,8 +279,8 @@ async function saveScrapbook() {
     <div ref="scrapbookRef" class="share-scrapbook min-h-[100svh] bg-[#f4e8dc] px-3 pb-6 pt-[calc(1.25rem+env(safe-area-inset-top))] text-[#5d4843] sm:px-6 sm:py-10">
     <div class="mx-auto max-w-5xl">
       <header class="relative overflow-hidden rounded-[0.9rem] border border-[#d9b9a3]/80 bg-[#fffaf1] px-4 pb-6 pt-16 text-center shadow-[0_10px_24px_rgba(132,91,70,.16)] sm:rounded-[1.25rem] sm:px-12 sm:py-10">
-        <span class="absolute left-5 top-4 rotate-[-8deg] rounded-sm bg-[#e8b8ae] px-2.5 py-1 text-[10px] tracking-[.2em] text-[#815b58] shadow-sm sm:left-8 sm:top-5 sm:px-3 sm:text-[11px] sm:tracking-[.24em]">OUR STORY</span>
-        <span class="absolute right-5 top-5 rotate-[7deg] rounded-sm bg-[#f2d487] px-2.5 py-1 text-[10px] tracking-[.15em] text-[#806841] shadow-sm sm:right-8 sm:top-7 sm:px-3 sm:text-[11px] sm:tracking-[.18em]">KEEP THIS</span>
+        <span class="absolute left-5 top-4 rotate-[-8deg] rounded-sm bg-[#e8b8ae] px-2.5 py-1 text-[11px] tracking-[.2em] text-[#815b58] shadow-sm sm:left-8 sm:top-5 sm:px-3 sm:text-[11px] sm:tracking-[.24em]">OUR STORY</span>
+        <span class="absolute right-5 top-5 rotate-[7deg] rounded-sm bg-[#f2d487] px-2.5 py-1 text-[11px] tracking-[.15em] text-[#806841] shadow-sm sm:right-8 sm:top-7 sm:px-3 sm:text-[11px] sm:tracking-[.18em]">KEEP THIS</span>
         <div class="relative">
           <p class="text-[11px] tracking-[.22em] text-[#b58378] sm:text-xs sm:tracking-[.32em]">A LITTLE LOVE ARCHIVE</p>
           <h1 class="serif mx-auto mt-2 max-w-full text-[clamp(1.75rem,8.5vw,2.35rem)] font-semibold leading-[1.15] tracking-[.02em] text-[#664b46] sm:mt-3 sm:text-6xl sm:tracking-wide">我们的恋爱剪贴簿</h1>

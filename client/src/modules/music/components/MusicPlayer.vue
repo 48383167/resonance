@@ -60,15 +60,15 @@ onUnmounted(() => document.removeEventListener('pointerdown', onDocPointerDown))
             <p class="truncate text-sm font-medium" :title="current.name">{{ current.name }}</p>
             <p class="truncate text-xs text-white/45">{{ current.artist }}</p>
           </div>
-          <button class="text-xs text-white/40 hover:text-white" @click="close">✕</button>
+          <button class="flex h-11 w-11 -mr-2 -mt-1 items-center justify-center rounded-full text-sm text-white/40 transition-colors hover:bg-white/10 hover:text-white" aria-label="收起播放器" @click="close">✕</button>
         </div>
-        <div class="mt-3 flex items-center justify-center gap-4">
-          <button class="text-lg text-white/70 transition-colors hover:text-white" title="上一首" @click="prev">⏮</button>
-          <button class="flex h-10 w-10 items-center justify-center rounded-full text-sm transition-transform hover:scale-105"
-            style="background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-contrast)" @click="toggle">
+        <div class="mt-1 flex items-center justify-center gap-2">
+          <button class="flex h-11 w-11 items-center justify-center rounded-full text-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white" title="上一首" aria-label="上一首" @click="prev">⏮</button>
+          <button class="flex h-11 w-11 items-center justify-center rounded-full text-sm transition-transform hover:scale-105"
+            style="background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: var(--accent-contrast)" aria-label="播放或暂停" @click="toggle">
             {{ playing ? '⏸' : '▶' }}
           </button>
-          <button class="text-lg text-white/70 transition-colors hover:text-white" title="下一首" @click="next">⏭</button>
+          <button class="flex h-11 w-11 items-center justify-center rounded-full text-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white" title="下一首" aria-label="下一首" @click="next">⏭</button>
         </div>
       </div>
     </Transition>

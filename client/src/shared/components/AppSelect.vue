@@ -33,8 +33,25 @@ async function toggle() {
 function onDocClick(e) {
   if (rootEl.value && !rootEl.value.contains(e.target)) open.value = false
 }
-onMounted(() => document.addEventListener('click', onDocClick))
-onUnmounted(() => document.removeEventListener('click', onDocClick))
+
+function reposition() {
+  if (!open.value) return
+  const rect = rootEl.value?.getBoundingClientRect()
+  if (!rect) return
+  const spaceBelow = window.innerHeight - rect.bottom
+  direction.value = spaceBelow < 240 && rect.top > spaceBelow ? 'up' : 'down'
+}
+
+onMounted(() => {
+  document.addEventListener('click', onDocClick)
+  window.addEventListener('resize', reposition)
+  window.addEventListener('scroll', reposition, true)
+})
+onUnmounted(() => {
+  document.removeEventListener('click', onDocClick)
+  window.removeEventListener('resize', reposition)
+  window.removeEventListener('scroll', reposition, true)
+})
 </script>
 
 <template>
@@ -49,7 +66,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
     </button>
     <Transition name="dd">
       <div v-if="open"
-         class="theme-popup absolute z-[65] max-h-[min(14rem,50dvh)] w-full overflow-y-auto rounded-xl border border-white/15 p-1 shadow-2xl backdrop-blur-xl"
+         class="theme-popup absolute z-[65] max-h-[min(14rem,50dvh)] w-full overflow-y-auto overscroll-contain rounded-xl border border-white/15 p-1 shadow-2xl backdrop-blur-xl"
          :class="direction === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'">
         <button v-for="o in options" :key="o.value" type="button"
           class="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/10"

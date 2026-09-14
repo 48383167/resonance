@@ -49,9 +49,9 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
         </div>
         <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
           <div v-for="group in navigationGroups" :key="group.label" class="rounded-xl bg-white/[0.04] p-2">
-            <div class="mb-1 px-2 text-[10px] uppercase tracking-[0.18em] text-theme-tertiary">{{ group.label }}</div>
+            <div class="mb-1 px-2 text-[11px] uppercase tracking-[0.18em] text-theme-tertiary">{{ group.label }}</div>
             <router-link v-for="item in group.items" :key="item.name" :to="{ name: item.route }"
-              class="relative flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs transition-colors hover:bg-white/10"
+               class="relative flex min-h-11 w-full items-center gap-2 rounded-lg px-2 py-2 text-xs transition-colors hover:bg-white/10"
               :class="isItemActive(item) ? 'bg-white/10 text-accent' : 'text-theme-secondary'"
               :aria-current="isItemActive(item) ? 'page' : undefined" @click="closeMore">
               <span class="flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.06] text-sm">{{ item.icon }}</span>

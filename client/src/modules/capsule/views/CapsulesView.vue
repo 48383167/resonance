@@ -73,7 +73,7 @@ const unlockText = (c) => {
         </p>
         <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-white/40">
           <span class="break-words">由 {{ c.author?.nickname }} 密封 · 解锁于 {{ c.unlock_date }}</span>
-          <button class="hover:text-rose-300" @click.stop="remove(c)">销毁</button>
+           <button class="tap-y hover:text-rose-300" @click.stop="remove(c)">销毁</button>
         </div>
       </div>
     </div>

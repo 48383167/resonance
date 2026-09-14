@@ -71,9 +71,9 @@ const dateText = (iso) => (iso ? new Date(iso).toLocaleString('zh-CN', { month: 
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
       <button class="btn-ghost text-sm" @click="goBack">← 返回</button>
       <div v-if="wish" class="flex flex-wrap items-center justify-end gap-4">
-        <button class="text-xs text-white/50 transition-colors hover:text-white"
+         <button class="tap-y text-xs text-white/50 transition-colors hover:text-white"
           @click="router.push(`/wishes/${wish.id}/edit`)">✎ 编辑</button>
-        <button class="text-xs text-rose-300/70 hover:text-rose-300" @click="remove">删除</button>
+         <button class="tap-y text-xs text-rose-300/70 hover:text-rose-300" @click="remove">删除</button>
       </div>
     </div>
 

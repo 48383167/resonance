@@ -75,7 +75,7 @@ const countText = (a) => {
         :class="a.isToday ? 'ring-1 ring-amber-300/50' : ''">
         <div class="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-accent-soft">
           <span class="text-lg font-bold text-accent">{{ a.date.slice(8, 10) }}</span>
-          <span class="text-[10px] text-white/50">{{ a.date.slice(5, 7) }}月</span>
+          <span class="text-[11px] text-white/50">{{ a.date.slice(5, 7) }}月</span>
         </div>
         <div class="min-w-0 flex-1">
           <div class="flex flex-wrap items-center gap-2">
@@ -92,7 +92,7 @@ const countText = (a) => {
         </div>
         <div class="flex flex-wrap justify-end gap-2 border-t border-white/10 pt-3 text-xs sm:justify-start sm:border-0 sm:pt-0">
           <button type="button"
-             class="min-h-8 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60"
+             class="min-h-11 rounded-full border px-3 py-1.5 text-[11px] font-medium transition-colors hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60"
             :class="isShownInShare(a)
               ? 'border-accent bg-accent-soft text-accent'
               : 'border-theme surface-soft text-theme-secondary hover-text-accent'"
@@ -101,8 +101,8 @@ const countText = (a) => {
             @click="toggleShareVisibility(a)">
             {{ sharing.has(a.id) ? '更新中…' : (isShownInShare(a) ? '✓ 分享页展示' : '分享页不展示') }}
           </button>
-          <button class="text-white/50 hover:text-white" @click="router.push(`/anniversaries/${a.id}/edit`)">编辑</button>
-          <button class="text-rose-300/70 hover:text-rose-300" @click="remove(a)">删除</button>
+           <button class="tap-y text-white/50 hover:text-white" @click="router.push(`/anniversaries/${a.id}/edit`)">编辑</button>
+           <button class="tap-y text-rose-300/70 hover:text-rose-300" @click="remove(a)">删除</button>
         </div>
       </div>
     </div>

@@ -35,11 +35,11 @@ onUnmounted(unlockBody)
 
 <template>
   <Transition name="am">
-    <div v-if="open" class="am-backdrop fixed inset-0 z-40 overflow-y-auto bg-black/60 backdrop-blur-sm"
+    <div v-if="open" class="am-backdrop fixed inset-0 z-40 overflow-y-auto overscroll-contain bg-black/60 backdrop-blur-sm"
          @click.self="maskClosable && emit('close')">
       <!-- m-auto 居中：内容短时居中，内容长时从顶部自然展开，避免「固定窗体内滚动」 -->
       <div class="flex min-h-[100svh] items-start justify-center sm:items-center">
-        <div class="glass am-panel m-auto w-full overflow-y-auto p-0" :class="width">
+        <div class="glass am-panel m-auto w-full overflow-y-auto overscroll-contain p-0" :class="width">
           <!-- 页头 -->
           <div v-if="title"
             class="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-4 sm:px-6"
@@ -48,7 +48,7 @@ onUnmounted(unlockBody)
               <span class="h-4 w-1 rounded-full" style="background: linear-gradient(180deg,var(--accent),var(--accent-2))" />
               <span class="break-words">{{ title }}</span>
             </h3>
-            <button class="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-lg transition-colors hover:bg-white/20"
+             <button class="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-lg transition-colors hover:bg-white/20"
               @click="emit('close')">×</button>
           </div>
           <!-- 内容 -->

@@ -178,6 +178,14 @@ a,
 
 .break-anywhere { overflow-wrap: anywhere; }
 
+/* 小文字按钮的隐形纵向热区：视觉不变，触控命中区接近 44px */
+.tap-y {
+  padding-top: 0.625rem;
+  padding-bottom: 0.625rem;
+  margin-top: -0.625rem;
+  margin-bottom: -0.625rem;
+}
+
 @media (max-width: 640px) {
   .btn-primary,
   .btn-ghost { min-height: 2.75rem; }

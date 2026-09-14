@@ -61,9 +61,9 @@ const dateText = (l) => new Date(l.created_at).toLocaleString('zh-CN', { month: 
           <div class="flex items-center gap-2.5">
             <span v-if="l.is_read === 0" class="h-2 w-2 rounded-full bg-rose-500" title="未读" />
             <button v-if="l.sender_id === session.userId"
-              class="text-[11px] text-black/45 transition-colors hover:text-black/70"
+               class="tap-y text-[11px] text-black/45 transition-colors hover:text-black/70"
               @click.stop="router.push(`/letters/${l.id}/edit`)">编辑</button>
-            <button class="text-[11px] text-rose-400/70 hover:text-rose-400" @click.stop="remove(l)">删除</button>
+             <button class="tap-y text-[11px] text-rose-400/70 hover:text-rose-400" @click.stop="remove(l)">删除</button>
           </div>
         </div>
         <h3 class="serif mt-2 break-words text-lg font-semibold" :class="l.title ? '' : 'text-black/40'">{{ l.title || '无题情书' }}</h3>
