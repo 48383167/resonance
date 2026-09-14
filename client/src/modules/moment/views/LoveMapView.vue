@@ -5,6 +5,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { mapMoments } from '../moment.api.js'
 import { currentTheme } from '../../../stores/theme'
+import { toast } from '../../../stores/toast'
 
 // 恋爱地图：足迹标记 + 轨迹连线 + 统计（Leaflet + OpenStreetMap，免 Key）
 const router = useRouter()
@@ -13,6 +14,7 @@ const points = ref([])
 let map = null
 let polyline = null
 let overlayLayers = []
+let resizeObserver = null
 
 const stats = computed(() => {
   const places = new Set(points.value.map((p) => p.location).filter(Boolean))
@@ -22,11 +24,32 @@ const stats = computed(() => {
 // 有来路时才显示返回按钮（从首页直达时不显示「返回恋爱瞬间」）
 const canGoBack = Boolean(history.state?.back)
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (ch) => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  ))
+}
+
+function dateText(point) {
+  return String(point.moment_date || point.created_at || '').slice(0, 10) || '某个温柔的日子'
+}
+
+function contentText(point) {
+  const text = String(point.content || '')
+  return text.length > 60 ? `${text.slice(0, 60)}…` : text
+}
+
 onMounted(async () => {
-  points.value = await mapMoments()
+  try {
+    points.value = await mapMoments()
+  } catch (error) {
+    toast(error.message)
+  }
   map = L.map(mapEl.value).setView([34.5, 108.9], 4)
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map)
   renderMarkers()
+  resizeObserver = new ResizeObserver(() => map?.invalidateSize())
+  resizeObserver.observe(mapEl.value)
 })
 
 function renderMarkers() {
@@ -40,11 +63,11 @@ function renderMarkers() {
     latlngs.push(ll)
     const popup = `
       <div style="color:#1a1030;max-width:220px">
-        <b>${p.author?.nickname || 'Ta'} · ${p.moment_date || p.created_at.slice(0, 10)}</b>
-        <p style="margin:4px 0 0">${p.content.length > 60 ? p.content.slice(0, 60) + '…' : p.content}</p>
+        <b>${escapeHtml(p.author?.nickname || 'Ta')} · ${escapeHtml(dateText(p))}</b>
+        <p style="margin:4px 0 0">${escapeHtml(contentText(p))}</p>
       </div>`
     const marker = L.circleMarker(ll, {
-      radius: 8,
+      radius: 12,
       color: currentTheme.primaryColor,
       weight: 2,
       fillColor: currentTheme.secondaryColor,
@@ -60,6 +83,8 @@ function renderMarkers() {
 watch(() => [currentTheme.primaryColor, currentTheme.secondaryColor], renderMarkers)
 
 onUnmounted(() => {
+  resizeObserver?.disconnect()
+  resizeObserver = null
   overlayLayers = []
   if (map) { map.remove(); map = null }
 })

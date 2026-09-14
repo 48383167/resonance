@@ -18,7 +18,10 @@ const emit = defineEmits(['update:modelValue'])
 
 const fileInput = ref(null)
 const dragging = ref(false)
-const tasks = ref([]) // { file, name, progress, status }
+const tasks = ref([]) // { id, file, name, progress, status, xhr }
+let taskSeq = 0
+
+const uploadingTasks = computed(() => tasks.value.filter((t) => t.status === 'uploading'))
 
 const normalize = (v) => {
   if (!v) return null
@@ -61,16 +64,15 @@ function preview(u) {
   openLightbox(images.map((x) => x.url), Math.max(0, images.findIndex((x) => x === u)))
 }
 
-function uploadOne(file) {
+function uploadOne(task) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
+    task.xhr = xhr
     xhr.open('POST', '/api/upload')
+    xhr.timeout = 60000
     xhr.setRequestHeader('Authorization', `Bearer ${localStorage.getItem('resonance.token') || ''}`)
     xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) {
-        const task = tasks.value.find((t) => t.file === file)
-        if (task) task.progress = Math.round((e.loaded / e.total) * 100)
-      }
+      if (e.lengthComputable) task.progress = Math.round((e.loaded / e.total) * 100)
     }
     xhr.onload = () => {
       try {
@@ -82,29 +84,58 @@ function uploadOne(file) {
       }
     }
     xhr.onerror = () => reject(new Error('网络错误'))
+    xhr.ontimeout = () => reject(new Error('上传超时，请检查网络后重试'))
+    xhr.onabort = () => reject(new Error('已取消'))
     const fd = new FormData()
-    fd.append('file', file)
+    fd.append('file', task.file)
     xhr.send(fd)
   })
 }
 
+function cancelTask(task) {
+  task.xhr?.abort()
+}
+
+const IMAGE_EXT = /\.(png|jpe?g|gif|webp|avif|heic|heif|bmp|svg)$/i
+
 async function handleFiles(files) {
-  const picked = [...files].filter((f) => (props.accept === 'image' ? f.type.startsWith('image/') : true))
-  if (!picked.length) return
-  if (list.value.length + picked.length > props.max) {
+  const pickedRaw = [...files]
+  // 立即重置 input，否则连续选择同一个文件不会再触发 change
+  if (fileInput.value) fileInput.value.value = ''
+  const accepted = props.accept === 'image'
+    ? pickedRaw.filter((f) => f.type.startsWith('image/') || IMAGE_EXT.test(f.name))
+    : pickedRaw
+  const ignored = pickedRaw.length - accepted.length
+  if (ignored) toast(`已忽略 ${ignored} 个不支持的文件`)
+  if (!accepted.length) return
+
+  const inFlight = uploadingTasks.value.length
+  const available = Math.max(0, props.max - list.value.length - inFlight)
+  if (!available) {
     toast(`最多上传 ${props.max} 个附件`)
     return
   }
-  for (const f of picked) {
-    tasks.value.push({ file: f, name: f.name, progress: 0, status: 'uploading' })
-  }
-  const queue = [...tasks.value.filter((t) => t.status === 'uploading')]
+  const picked = accepted.slice(0, available)
+  if (picked.length < accepted.length) toast(`最多上传 ${props.max} 个附件，已选取前 ${picked.length} 个`)
+
+  // 只上传本批次任务，避免把上一批仍在途的文件重复入队
+  const batch = picked.map((file) => ({
+    id: `task-${++taskSeq}`,
+    file,
+    name: file.name,
+    progress: 0,
+    status: 'uploading',
+    xhr: null,
+  }))
+  tasks.value.push(...batch)
+
+  const queue = [...batch]
   const results = new Map()
   const workers = Array.from({ length: Math.min(3, queue.length) }, async () => {
     while (queue.length) {
       const task = queue.shift()
       try {
-        const data = await uploadOne(task.file)
+        const data = await uploadOne(task)
         task.status = 'done'
         results.set(task, {
           id: data.id || '',
@@ -114,18 +145,17 @@ async function handleFiles(files) {
         })
       } catch (e) {
         task.status = 'error'
-        toast(`${task.name} 上传失败：${e.message}`)
+        if (e.message !== '已取消') toast(`${task.name} 上传失败：${e.message}`)
       }
     }
   })
   await Promise.all(workers)
-  const items = results.size ? [...results.values()] : []
+  const items = batch.map((task) => results.get(task)).filter(Boolean)
   if (items.length) {
     if (props.multiple) emit('update:modelValue', [...list.value, ...items])
     else emit('update:modelValue', items[0] || '')
   }
   tasks.value = tasks.value.filter((t) => t.status === 'uploading')
-  if (fileInput.value) fileInput.value.value = ''
 }
 
 function onDrop(e) {
@@ -169,11 +199,14 @@ function remove(i) {
     </div>
 
     <!-- 上传中进度 -->
-    <div v-for="t in tasks.filter((x) => x.status === 'uploading')" :key="t.name"
+    <div v-for="t in uploadingTasks" :key="t.id"
       class="mb-1.5 rounded-lg bg-white/5 px-3 py-1.5 text-xs">
       <div class="flex justify-between text-white/60">
         <span class="min-w-0 break-anywhere">{{ t.name }}</span>
-        <span>{{ t.progress }}%</span>
+        <span class="ml-2 flex shrink-0 items-center gap-2">
+          <span>{{ t.progress }}%</span>
+          <button type="button" class="text-white/45 transition-colors hover:text-white" @click="cancelTask(t)">取消</button>
+        </span>
       </div>
       <div class="mt-1 h-1 overflow-hidden rounded-full bg-white/10">
         <div class="h-full rounded-full transition-all" style="background: linear-gradient(90deg,var(--accent),var(--accent-2))"

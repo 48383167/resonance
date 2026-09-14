@@ -1,8 +1,9 @@
 <script setup>
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { confirmState } from '../../stores/confirm'
 
 const inputEl = ref(null)
+const backdropEl = ref(null)
 let onKey = null
 let previousOverflow = ''
 const confirmed = computed(() =>
@@ -12,6 +13,17 @@ function unlockBody() {
   if (onKey) window.removeEventListener('keydown', onKey)
   onKey = null
   document.body.style.overflow = previousOverflow
+  window.visualViewport?.removeEventListener('resize', syncViewport)
+  window.visualViewport?.removeEventListener('scroll', syncViewport)
+}
+
+// 软键盘弹起时让遮罩跟随可视视口，保证输入框与确认按钮可见
+function syncViewport() {
+  const el = backdropEl.value
+  const viewport = window.visualViewport
+  if (!el || !viewport) return
+  el.style.height = `${Math.round(viewport.height)}px`
+  el.style.transform = `translateY(${Math.round(viewport.offsetTop)}px)`
 }
 
 function answer(v) {
@@ -29,7 +41,13 @@ watch(() => confirmState.open, (open) => {
       else if (e.key === 'Enter' && !confirmState.requireText) answer(true)
     }
     window.addEventListener('keydown', onKey)
-    setTimeout(() => inputEl.value?.focus(), 50)
+    window.visualViewport?.addEventListener('resize', syncViewport)
+    window.visualViewport?.addEventListener('scroll', syncViewport)
+    // 在用户手势的微任务内聚焦，iOS 才会弹出键盘（setTimeout 会丢失手势）
+    nextTick(() => {
+      syncViewport()
+      inputEl.value?.focus()
+    })
   } else {
     unlockBody()
   }
@@ -40,9 +58,9 @@ onUnmounted(unlockBody)
 
 <template>
   <Transition name="cd">
-    <div v-if="confirmState.open" class="cd-backdrop fixed inset-0 z-[70] flex items-center justify-center bg-black/60"
+    <div v-if="confirmState.open" ref="backdropEl" class="cd-backdrop fixed inset-0 z-[70] flex items-center justify-center bg-black/60"
       @click.self="answer(false)">
-      <div class="glass max-h-[calc(100svh-2rem)] w-full max-w-sm overflow-y-auto p-5 text-center fade-up sm:p-6">
+      <div class="glass max-h-[calc(100svh-2rem)] w-full max-w-sm overflow-y-auto overscroll-contain p-5 text-center fade-up sm:p-6">
         <div class="text-3xl">{{ confirmState.danger ? '🥀' : '✨' }}</div>
         <h3 class="serif mt-2 text-lg font-semibold">{{ confirmState.title }}</h3>
         <p class="mt-2 break-words whitespace-pre-wrap text-sm text-white/60">{{ confirmState.message }}</p>
@@ -53,13 +71,14 @@ onUnmounted(unlockBody)
             请输入 <b class="text-rose-300">{{ confirmState.requireText }}</b> 以确认删除
           </label>
           <input ref="inputEl" v-model="confirmState.inputValue" class="input-dark" autocomplete="off"
+            autocapitalize="off" autocorrect="off" spellcheck="false"
             :placeholder="confirmState.requireText" @keyup.enter="answer(true)" />
         </div>
 
         <div class="mt-5 flex flex-col-reverse justify-center gap-3 sm:flex-row">
           <button class="btn-ghost w-full flex-1" @click="answer(false)">再想想</button>
           <button class="btn-primary w-full flex-1"
-            :class="{ 'opacity-40': !confirmed }"
+            :disabled="!confirmed"
             :style="confirmState.danger ? 'background: linear-gradient(135deg,#fb7185,#f43f5e); box-shadow: 0 4px 24px rgba(244,63,94,.35)' : ''"
             @click="answer(true)">{{ confirmState.danger ? '确认删除' : '确认' }}</button>
         </div>

@@ -232,7 +232,7 @@ function openPhoto(photo) {
         <figcaption class="p-3">
           <!-- 内联编辑故事 -->
           <div v-if="storyPhotoId === p.id" class="space-y-2">
-            <textarea v-model="storyText" class="input-dark resize-none !px-3 !py-2 text-xs" rows="4"
+            <textarea v-model="storyText" class="input-dark resize-none !px-3 !py-2" rows="4"
               placeholder="这张照片背后的故事…" />
             <div class="flex justify-end gap-3 text-xs">
               <button class="text-white/45 hover:text-white" @click="cancelStory">取消</button>
