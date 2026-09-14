@@ -214,7 +214,8 @@ body {
   --ghost-border-alpha: 0.28;
 }
 
-html[data-theme-mode="light"] input.input-dark {
+html[data-theme-mode="light"] input.input-dark,
+html[data-theme-mode="light"] textarea.input-dark {
   background: rgb(var(--surface-1-rgb) / var(--control-alpha)) !important;
   background-color: rgb(var(--surface-1-rgb) / var(--control-alpha)) !important;
   border-color: rgb(var(--border-subtle-rgb) / var(--control-border-alpha)) !important;

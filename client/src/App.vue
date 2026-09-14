@@ -8,6 +8,7 @@ import ConfirmDialog from './shared/components/ConfirmDialog.vue'
 import AppDock from './shared/components/AppDock.vue'
 import MusicPlayer from './modules/music/components/MusicPlayer.vue'
 import { session, initSession, logout } from './stores/session'
+import { clearAllCommentDrafts } from './modules/comment/commentDraft.js'
 import { socket } from './socket'
 import { toasts, toast } from './stores/toast'
 import { loadCommentUnread, resetCommentUnread, bumpCommentUnread } from './stores/commentUnread'
@@ -40,6 +41,7 @@ function onCommentDeleted() {
 
 function doLogout() {
   logout()
+  clearAllCommentDrafts()
   router.push('/login')
 }
 

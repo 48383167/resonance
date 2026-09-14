@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { socket } from '../../../socket'
 import { session } from '../../../stores/session'
 import { toast } from '../../../stores/toast'
@@ -7,6 +7,8 @@ import { confirmDialog } from '../../../stores/confirm'
 import { generateIdempotencyKey } from '../../../utils/idempotency'
 import { applyCommentUnread } from '../../../stores/commentUnread'
 import { listComments, createComment, markCommentsRead, removeComment } from '../comment.api.js'
+import { loadCommentDraft, saveCommentDraft, clearCommentDraft } from '../commentDraft.js'
+import CommentComposerSheet from './CommentComposerSheet.vue'
 
 const props = defineProps({
   targetType: { type: String, required: true },
@@ -20,8 +22,15 @@ const loading = ref(true)
 const submitting = ref(false)
 const draft = ref('')
 const replyTarget = ref(null)
-const inputRef = ref(null)
+const composerRef = ref(null)
 const collapsed = ref(false)
+const expanded = ref(false)
+
+// 触摸设备（手机）回车换行、点发送；桌面 Enter 发送、Shift + Enter 换行
+const isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches ?? false
+const MAX_INLINE_HEIGHT = 144
+const inlineOverflow = ref(false)
+let pendingReplyParentId = ''
 
 const roots = computed(() => comments.value.filter((c) => !c.parent_id))
 const repliesOf = (parentId) => comments.value.filter((c) => c.parent_id === parentId)
@@ -183,6 +192,12 @@ async function load() {
   loading.value = true
   try {
     comments.value = await listComments(props.targetType, props.targetId)
+    // 恢复草稿时记录的回复对象：目标仍存在且未删除才恢复，否则降级为顶层评论
+    if (pendingReplyParentId) {
+      const target = comments.value.find((c) => c.id === pendingReplyParentId && !c.deleted_at)
+      if (target) replyTarget.value = target
+      pendingReplyParentId = ''
+    }
     markRead()
   } catch (error) {
     toast(error.message || '评论加载失败', 'error')
@@ -190,6 +205,38 @@ async function load() {
     loading.value = false
   }
 }
+
+// 内联输入框自动增高（约 1~6 行）；超出后显示「展开编辑」进入全屏
+function syncComposer() {
+  const el = composerRef.value
+  if (!el) return
+  el.style.height = 'auto'
+  el.style.height = `${Math.min(el.scrollHeight, MAX_INLINE_HEIGHT)}px`
+  inlineOverflow.value = el.scrollHeight > MAX_INLINE_HEIGHT + 1
+}
+
+function onComposerEnter(event) {
+  if (event.isComposing || event.keyCode === 229) return
+  if (event.shiftKey || isTouchDevice) return
+  event.preventDefault()
+  submit()
+}
+
+function persistDraft() {
+  saveCommentDraft(props.targetType, props.targetId, {
+    content: draft.value,
+    parentId: replyTarget.value?.id || '',
+    replyToUserId: replyTarget.value?.user_id || '',
+  })
+}
+
+watch(draft, () => {
+  persistDraft()
+  nextTick(syncComposer)
+})
+watch(replyTarget, persistDraft)
+watch(collapsed, (value) => { if (!value) nextTick(syncComposer) })
+watch(expanded, (value) => { if (!value) nextTick(syncComposer) })
 
 async function submit() {
   const content = draft.value.trim()
@@ -205,6 +252,8 @@ async function submit() {
     else revealReplies(comment.parent_id)
     draft.value = ''
     replyTarget.value = null
+    expanded.value = false
+    clearCommentDraft(props.targetType, props.targetId)
   } catch (error) {
     toast(error.message || '评论发送失败', 'error')
   } finally {
@@ -215,7 +264,7 @@ async function submit() {
 async function startReply(comment) {
   replyTarget.value = comment
   await nextTick()
-  inputRef.value?.focus()
+  composerRef.value?.focus()
 }
 
 function cancelReply() {
@@ -249,6 +298,12 @@ function timeText(iso) {
 }
 
 onMounted(() => {
+  const saved = loadCommentDraft(props.targetType, props.targetId)
+  if (saved?.content) {
+    draft.value = saved.content
+    pendingReplyParentId = saved.parentId || ''
+    nextTick(syncComposer)
+  }
   load()
   socket.on('comment:created', upsert)
   socket.on('comment:deleted', drop)
@@ -344,15 +399,36 @@ onUnmounted(() => {
       <button class="transition-colors hover-text-accent" @click="cancelReply">✕ 取消</button>
     </div>
 
-    <div class="mt-2 flex gap-2">
-      <input ref="inputRef" v-model="draft" class="input-dark min-w-0 flex-1" maxlength="500"
+    <div class="mt-2 flex items-end gap-2">
+      <textarea ref="composerRef" v-model="draft" rows="1" maxlength="500"
+        class="input-dark comment-textarea min-w-0 flex-1"
         :placeholder="replyTarget ? `回复 @${nicknameOf(replyTarget.user_id)}…` : '写下你的评论…'"
-        @keyup.enter="submit" />
+        :enterkeyhint="isTouchDevice ? 'enter' : 'send'"
+        @keydown.enter="onComposerEnter" />
       <button class="btn-primary shrink-0 px-4 py-2 text-sm"
         :disabled="!draft.trim() || submitting" @click="submit">
         {{ submitting ? '发送中…' : '发送' }}
       </button>
     </div>
+    <div class="mt-1 flex items-center justify-between gap-2 text-[11px] text-theme-tertiary">
+      <button v-if="inlineOverflow || isTouchDevice" type="button"
+        class="transition-colors hover-text-accent" @click="expanded = true">⤢ 展开编辑</button>
+      <span v-else></span>
+      <span>{{ draft.length }}/500</span>
+    </div>
     </template>
+
+    <CommentComposerSheet v-model="draft" :open="expanded"
+      :reply-to-name="replyTarget ? nicknameOf(replyTarget.user_id) : ''"
+      :submitting="submitting" @submit="submit" @close="expanded = false" />
   </div>
 </template>
+
+<style scoped>
+.comment-textarea {
+  resize: none;
+  max-height: 9rem;
+  overflow-y: auto;
+  line-height: 1.6;
+}
+</style>
