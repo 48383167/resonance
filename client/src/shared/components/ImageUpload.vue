@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { toast } from '../../stores/toast'
 import { openLightbox } from '../../stores/lightbox'
 import { mediaTypeOf } from '../../utils/media'
+import { compressImage } from '../../utils/imageCompression'
 
 // 主题化上传器：批量选择 + 拖拽 + 实时进度
 // v-model 值：文件对象 { id, url, type, name }（id 为文件表 ID，后端业务表存 id）
@@ -64,7 +65,16 @@ function preview(u) {
   openLightbox(images.map((x) => x.url), Math.max(0, images.findIndex((x) => x === u)))
 }
 
-function uploadOne(task) {
+async function uploadOne(task) {
+  task.phase = 'compressing'
+  let file = task.file
+  try {
+    file = await compressImage(task.file)
+  } catch {
+    file = task.file
+  }
+  if (task.cancelled) throw new Error('已取消')
+  task.phase = 'uploading'
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
     task.xhr = xhr
@@ -87,12 +97,13 @@ function uploadOne(task) {
     xhr.ontimeout = () => reject(new Error('上传超时，请检查网络后重试'))
     xhr.onabort = () => reject(new Error('已取消'))
     const fd = new FormData()
-    fd.append('file', task.file)
+    fd.append('file', file)
     xhr.send(fd)
   })
 }
 
 function cancelTask(task) {
+  task.cancelled = true
   task.xhr?.abort()
 }
 
@@ -124,6 +135,7 @@ async function handleFiles(files) {
     file,
     name: file.name,
     progress: 0,
+    phase: 'uploading',
     status: 'uploading',
     xhr: null,
   }))
@@ -204,7 +216,7 @@ function remove(i) {
       <div class="flex justify-between text-white/60">
         <span class="min-w-0 break-anywhere">{{ t.name }}</span>
         <span class="ml-2 flex shrink-0 items-center gap-2">
-          <span>{{ t.progress }}%</span>
+          <span>{{ t.phase === 'compressing' ? '压缩中…' : `${t.progress}%` }}</span>
           <button type="button" class="text-white/45 transition-colors hover:text-white" @click="cancelTask(t)">取消</button>
         </span>
       </div>
