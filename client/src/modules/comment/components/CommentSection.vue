@@ -222,6 +222,13 @@ function onComposerEnter(event) {
   submit()
 }
 
+// 软键盘弹起后把输入条滚入可视区，避免被键盘或底部导航遮挡
+function onComposerFocus() {
+  window.setTimeout(() => {
+    composerRef.value?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, 250)
+}
+
 function persistDraft() {
   saveCommentDraft(props.targetType, props.targetId, {
     content: draft.value,
@@ -401,10 +408,10 @@ onUnmounted(() => {
 
     <div class="mt-2 flex items-end gap-2">
       <textarea ref="composerRef" v-model="draft" rows="1" maxlength="500"
-        class="input-dark comment-textarea min-w-0 flex-1"
+        class="input-dark comment-textarea min-w-0 flex-1 scroll-mb-24"
         :placeholder="replyTarget ? `回复 @${nicknameOf(replyTarget.user_id)}…` : '写下你的评论…'"
         :enterkeyhint="isTouchDevice ? 'enter' : 'send'"
-        @keydown.enter="onComposerEnter" />
+        @focus="onComposerFocus" @keydown.enter="onComposerEnter" />
       <button class="btn-primary shrink-0 px-4 py-2 text-sm"
         :disabled="!draft.trim() || submitting" @click="submit">
         {{ submitting ? '发送中…' : '发送' }}

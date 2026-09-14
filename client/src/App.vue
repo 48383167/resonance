@@ -45,8 +45,18 @@ function doLogout() {
   router.push('/login')
 }
 
+// 软键盘弹起（可视视口明显缩小）时隐藏底部固定栏，避免遮挡输入
+function syncKeyboardState() {
+  const viewport = window.visualViewport
+  if (!viewport) return
+  const keyboardOpen = window.innerHeight - viewport.height > 120
+  document.documentElement.classList.toggle('keyboard-open', keyboardOpen)
+}
+
 onMounted(() => {
   initSession()
+  window.visualViewport?.addEventListener('resize', syncKeyboardState)
+  window.visualViewport?.addEventListener('scroll', syncKeyboardState)
   socket.on('user_presence', (p) => {
     if (p.online && p.userId !== session.userId) {
       session.partnerOnline = true
@@ -61,6 +71,9 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  window.visualViewport?.removeEventListener('resize', syncKeyboardState)
+  window.visualViewport?.removeEventListener('scroll', syncKeyboardState)
+  document.documentElement.classList.remove('keyboard-open')
   socket.off('user_presence')
   socket.off('comment:created', onCommentCreated)
   socket.off('comment:deleted', onCommentDeleted)
@@ -120,4 +133,8 @@ onUnmounted(() => {
   .app-main--companion { padding-bottom: 0; }
   .app-dock--companion { display: none; }
 }
+
+/* 软键盘弹出时隐藏底部固定控件，让输入区完整可见 */
+html.keyboard-open .app-dock,
+html.keyboard-open .music-player { display: none; }
 </style>

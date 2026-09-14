@@ -1,18 +1,24 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { musicState, restoreMusic, toggleMusic, nextTrack, previousTrack } from '../../../stores/music'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { musicState, restoreMusic, toggleMusic, nextTrack, previousTrack, loadRandomTrack } from '../../../stores/music'
+import { toast } from '../../../stores/toast'
 
 // 全局甜蜜背景音乐：右下角悬浮迷你播放器（网易云随机音乐）
+const route = useRoute()
 const expanded = ref(false)
+const rootEl = ref(null)
 
 const current = computed(() => musicState.tracks[musicState.index] || null)
 const playing = computed(() => musicState.playing)
 const loading = computed(() => musicState.loading)
+const isCompanion = computed(() => route.name === 'companion')
 
 async function toggle() {
   const wasPlaying = musicState.playing
   const started = await toggleMusic()
   if (!wasPlaying && started) expanded.value = true
+  else if (!wasPlaying && !started && !musicState.loading) toast('播放失败，请再点一次播放')
 }
 
 async function next() {
@@ -27,11 +33,24 @@ function close() {
   expanded.value = false
 }
 
-onMounted(restoreMusic)
+// 展开面板时点外部关闭
+function onDocPointerDown(event) {
+  if (expanded.value && rootEl.value && !rootEl.value.contains(event.target)) expanded.value = false
+}
+
+onMounted(() => {
+  restoreMusic()
+  // 提前取好曲库，保证手机上首次点播放仍在用户手势内触发 play()
+  if (!current.value) loadRandomTrack()
+  document.addEventListener('pointerdown', onDocPointerDown)
+})
+
+onUnmounted(() => document.removeEventListener('pointerdown', onDocPointerDown))
 </script>
 
 <template>
-  <div class="music-player fixed bottom-6 right-4 z-40 flex flex-col items-end">
+  <div ref="rootEl" class="music-player fixed bottom-6 right-4 z-40 flex select-none flex-col items-end"
+    :class="{ 'music-player--companion': isCompanion }">
     <!-- 迷你播放卡片 -->
     <Transition name="mp">
       <div v-if="expanded && current" class="glass mb-3 w-64 p-4">
@@ -71,7 +90,12 @@ onMounted(restoreMusic)
 @media (max-width: 640px) {
   .music-player {
     bottom: calc(4.75rem + env(safe-area-inset-bottom));
-    right: 0.75rem;
+    right: max(0.75rem, env(safe-area-inset-right));
   }
+}
+
+/* 心语陪伴全屏聊天时隐藏悬浮播放器，避免遮挡输入条 */
+@media (max-width: 767px) {
+  .music-player--companion { display: none; }
 }
 </style>

@@ -38,7 +38,7 @@ onMounted(async () => {
     <Observatory :initial-data="observatory" />
     <router-link
       to="/login"
-      class="fixed bottom-6 right-5 z-40 rounded-full border border-white/25 bg-[rgb(var(--accent-rgb)/0.85)] px-5 py-3 text-sm font-semibold text-[var(--accent-contrast)] shadow-xl shadow-black/20 backdrop-blur transition hover:-translate-y-0.5 hover:bg-[rgb(var(--accent-rgb)/0.95)] focus:outline-none focus:ring-2 focus:ring-white/70 sm:bottom-8 sm:right-8"
+      class="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-[max(1.25rem,env(safe-area-inset-right))] z-40 rounded-full border border-white/25 bg-[rgb(var(--accent-rgb)/0.85)] px-5 py-3 text-sm font-semibold text-[var(--accent-contrast)] shadow-xl shadow-black/20 backdrop-blur transition hover:-translate-y-0.5 hover:bg-[rgb(var(--accent-rgb)/0.95)] focus:outline-none focus:ring-2 focus:ring-white/70 sm:bottom-8 sm:right-8"
     >
       进入共鸣
     </router-link>
