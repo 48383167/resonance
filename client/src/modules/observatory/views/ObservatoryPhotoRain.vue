@@ -3,19 +3,22 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { openLightbox } from '../../../stores/lightbox'
 
 const props = defineProps({ photos: { type: Array, required: true } })
-const DROP_COUNT = 16
+// 低端设备减少同屏动画数量，降低发热与掉帧
+const DROP_COUNT = (navigator.hardwareConcurrency || 8) <= 4 ? 10 : 16
 const drops = ref([])
 let stopped = false
 let staticMode = false
+let motionQuery = null
 
 function between(min, max) {
   return min + Math.random() * (max - min)
 }
 
 function makeDrop(id) {
+  const count = Math.max(1, props.photos.length)
   return {
     id,
-    photoIndex: Math.floor(Math.random() * props.photos.length),
+    photoIndex: Math.floor(Math.random() * count),
     left: `${between(2, 94).toFixed(2)}%`,
     fall: `${between(10, 16).toFixed(2)}s`,
     sway: `${between(-90, 90).toFixed(2)}px`,
@@ -27,6 +30,7 @@ function makeDrop(id) {
     scale: between(0.84, 1.06).toFixed(2),
     staticTop: `${between(8, 78).toFixed(2)}%`,
     running: false,
+    paused: false,
     timer: null,
   }
 }
@@ -42,24 +46,40 @@ function schedule(drop, wait) {
 function restart(drop) {
   if (stopped) return
   drop.running = false
+  drop.paused = false
   Object.assign(drop, makeDrop(drop.id))
   schedule(drop, between(250, 1200))
 }
 
+// 父级数据刷新后数组可能变短，取图时做越界保护
+function photoOf(drop) {
+  return props.photos[drop.photoIndex] || props.photos[0] || null
+}
+
 function openPhoto(drop) {
-  const urls = props.photos.map((photo) => photo.url)
-  const index = props.photos.findIndex((photo) => photo.id === props.photos[drop.photoIndex]?.id)
-  if (index >= 0) openLightbox(urls, index)
+  const photo = photoOf(drop)
+  if (!photo) return
+  const index = props.photos.findIndex((item) => item.id === photo.id)
+  if (index >= 0) openLightbox(props.photos.map((item) => item.url), index)
+}
+
+function onMotionChange(event) {
+  staticMode = event.matches
+  if (staticMode) drops.value.forEach((drop) => window.clearTimeout(drop.timer))
+  else drops.value.forEach((drop) => schedule(drop, between(250, 1200)))
 }
 
 onMounted(() => {
-  staticMode = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+  staticMode = motionQuery.matches
   drops.value = Array.from({ length: DROP_COUNT }, (_, id) => makeDrop(id))
   if (!staticMode) drops.value.forEach((drop) => schedule(drop, between(0, 5000)))
+  motionQuery.addEventListener?.('change', onMotionChange)
 })
 
 onUnmounted(() => {
   stopped = true
+  motionQuery?.removeEventListener?.('change', onMotionChange)
   drops.value.forEach((drop) => window.clearTimeout(drop.timer))
 })
 </script>
@@ -80,11 +100,14 @@ onUnmounted(() => {
         '--scale': drop.scale,
         '--static-top': drop.staticTop,
       }"
-      :class="{ 'is-running': drop.running }"
-      :aria-label="`查看第 ${drop.photoIndex + 1} 张相册照片`"
+      :class="{ 'is-running': drop.running && !drop.paused, 'is-paused': drop.running && drop.paused }"
+      aria-label="查看这张照片"
+      @pointerdown="drop.paused = true"
+      @pointerup="drop.paused = false"
+      @pointercancel="drop.paused = false"
       @animationend="restart(drop)"
       @click="openPhoto(drop)">
-      <img :src="photos[drop.photoIndex].url" alt="" loading="lazy" decoding="async" />
+      <img v-if="photoOf(drop)" :src="photoOf(drop).url" alt="" loading="lazy" decoding="async" />
     </button>
   </section>
 </template>
@@ -144,6 +167,13 @@ onUnmounted(() => {
   animation: photoRainFall var(--fall) linear both;
 }
 
+/* 手指按下时暂停下落，便于点中移动中的照片 */
+.photo-rain-drop.is-paused {
+  visibility: visible;
+  pointer-events: auto;
+  animation-play-state: paused;
+}
+
 .photo-rain-drop img {
   display: block;
   width: 100%;
@@ -152,7 +182,6 @@ onUnmounted(() => {
   object-fit: cover;
 }
 
-.photo-rain-drop:hover,
 .photo-rain-drop:focus-visible {
   z-index: 3;
   filter: brightness(1.13);
@@ -161,12 +190,22 @@ onUnmounted(() => {
   transform: scale(1.1) rotate(0);
 }
 
+@media (hover: hover) {
+  .photo-rain-drop:hover {
+    z-index: 3;
+    filter: brightness(1.13);
+    outline: none;
+    animation-play-state: paused;
+    transform: scale(1.1) rotate(0);
+  }
+}
+
 @keyframes photoRainFall {
   0% { opacity: 0; transform: translate3d(0, 0, 0) rotate(var(--rotate-start)) scale(var(--scale)); }
   8% { opacity: 0.35; transform: translate3d(var(--sway), 80px, 0) rotate(var(--rotate-mid)) scale(var(--scale)); }
   17% { opacity: 1; transform: translate3d(var(--sway-mid), 180px, 0) rotate(var(--rotate-mid)) scale(var(--scale)); }
   55% { transform: translate3d(var(--sway), 52vh, 0) rotate(var(--rotate-end)) scale(var(--scale)); }
-  100% { opacity: 0.08; transform: translate3d(var(--sway-end), calc(100svh + 360px), 0) rotate(var(--rotate-end)) scale(var(--scale)); }
+  100% { opacity: 0.08; transform: translate3d(var(--sway-end), calc(100dvh + 360px), 0) rotate(var(--rotate-end)) scale(var(--scale)); }
 }
 
 @media (max-width: 640px) {
@@ -181,7 +220,7 @@ onUnmounted(() => {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
-    animation: none;
+    animation: none !important;
     transform: rotate(-2deg);
   }
 }

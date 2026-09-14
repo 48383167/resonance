@@ -113,6 +113,11 @@ a,
   box-shadow: 0 8px 28px rgb(var(--shadow-rgb) / var(--shadow-alpha));
 }
 
+/* 触屏设备降低模糊开销，滚动更稳且更省电 */
+@media (pointer: coarse) {
+  .glass { backdrop-filter: blur(10px); }
+}
+
 .btn-primary {
   @apply px-5 py-2.5 rounded-full font-medium transition-all duration-300;
   min-height: 2.75rem;
