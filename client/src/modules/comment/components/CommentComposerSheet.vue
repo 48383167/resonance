@@ -136,7 +136,9 @@ onUnmounted(() => {
   font-size: 1rem;
   line-height: 1.7;
   overflow-y: auto;
+  scrollbar-width: none;
 }
+.ccs-textarea::-webkit-scrollbar { display: none; }
 .ccs-textarea::placeholder { color: rgb(var(--text-secondary-rgb) / 0.58); }
 
 .ccs-enter-active,

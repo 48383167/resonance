@@ -430,5 +430,7 @@ onUnmounted(() => {
   max-height: 9rem;
   overflow-y: auto;
   line-height: 1.6;
+  scrollbar-width: none;
 }
+.comment-textarea::-webkit-scrollbar { display: none; }
 </style>
