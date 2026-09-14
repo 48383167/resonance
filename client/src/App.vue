@@ -17,6 +17,7 @@ import { currentTheme, loadTheme, resetTheme } from './stores/theme'
 const router = useRouter()
 const route = useRoute()
 const shellColors = computed(() => currentTheme.pageColors)
+const showPrivateShell = computed(() => Boolean(session.me && route.meta.auth))
 
 watch(() => [session.me?.id, route.meta.auth], ([userId, isPrivateRoute]) => {
   if (userId && isPrivateRoute) loadTheme(userId)
@@ -49,14 +50,24 @@ function doLogout() {
 function syncKeyboardState() {
   const viewport = window.visualViewport
   if (!viewport) return
-  const keyboardOpen = window.innerHeight - viewport.height > 120
+  const active = document.activeElement
+  const editing = active?.matches('input:not([type="button"]):not([type="checkbox"]):not([type="radio"]), textarea') || active?.isContentEditable
+  const keyboardOpen = Boolean(editing && viewport.scale === 1 && window.innerHeight - viewport.height > 120)
   document.documentElement.classList.toggle('keyboard-open', keyboardOpen)
+}
+let keyboardFrame = 0
+function scheduleKeyboardSync() {
+  cancelAnimationFrame(keyboardFrame)
+  keyboardFrame = requestAnimationFrame(syncKeyboardState)
 }
 
 onMounted(() => {
   initSession()
   window.visualViewport?.addEventListener('resize', syncKeyboardState)
   window.visualViewport?.addEventListener('scroll', syncKeyboardState)
+  document.addEventListener('focusin', scheduleKeyboardSync)
+  document.addEventListener('focusout', scheduleKeyboardSync)
+  syncKeyboardState()
   socket.on('user_presence', (p) => {
     if (p.online && p.userId !== session.userId) {
       session.partnerOnline = true
@@ -73,6 +84,9 @@ onMounted(() => {
 onUnmounted(() => {
   window.visualViewport?.removeEventListener('resize', syncKeyboardState)
   window.visualViewport?.removeEventListener('scroll', syncKeyboardState)
+  document.removeEventListener('focusin', scheduleKeyboardSync)
+  document.removeEventListener('focusout', scheduleKeyboardSync)
+  cancelAnimationFrame(keyboardFrame)
   document.documentElement.classList.remove('keyboard-open')
   socket.off('user_presence')
   socket.off('comment:created', onCommentCreated)
@@ -85,9 +99,9 @@ onUnmounted(() => {
   <AmbientBackground :colors="shellColors" :opacity="0.5" />
   <ImageLightbox />
   <ConfirmDialog />
-  <MusicPlayer v-if="session.me" />
+  <MusicPlayer v-if="showPrivateShell" />
   <div class="relative min-h-full">
-    <header v-if="session.me" class="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:pb-4 sm:pt-[calc(1rem+env(safe-area-inset-top))]">
+    <header v-if="showPrivateShell" class="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:pb-4 sm:pt-[calc(1rem+env(safe-area-inset-top))]">
       <router-link to="/home" class="flex min-w-0 items-center gap-2">
         <span class="text-xl">♫</span>
         <span class="serif text-lg">共鸣</span>
@@ -114,7 +128,7 @@ onUnmounted(() => {
         </div>
       </TransitionGroup>
     </div>
-    <AppDock v-if="session.me" :class="{ 'app-dock--companion': route.name === 'companion' }" />
+    <AppDock v-if="showPrivateShell" :class="{ 'app-dock--companion': route.name === 'companion' }" />
   </div>
 </template>
 

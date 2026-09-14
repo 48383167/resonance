@@ -45,7 +45,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
             <div class="text-sm font-semibold text-theme-primary">全部功能</div>
             <div class="mt-0.5 text-xs text-theme-tertiary">不必回到首页，随时去想去的地方</div>
           </div>
-          <button class="text-xs text-theme-tertiary transition-colors hover:text-theme-primary" aria-label="收起全部功能" @click="closeMore">收起</button>
+          <button class="min-h-11 min-w-11 rounded-lg text-xs text-theme-secondary transition-colors hover:text-theme-primary" aria-label="收起全部功能" @click="closeMore">收起</button>
         </div>
         <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
           <div v-for="group in navigationGroups" :key="group.label" class="rounded-xl bg-white/[0.04] p-2">
@@ -176,8 +176,12 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
 }
 
 .app-dock__panel {
+  background: rgb(var(--surface-2-rgb) / 0.98);
   box-shadow: 0 18px 50px rgb(var(--shadow-rgb) / 0.42);
 }
+
+.app-dock__item:active { transform: scale(0.94); transition-duration: 90ms; }
+.app-dock__item:focus-visible .app-dock__tooltip { opacity: 1; transform: translate(-50%, 0); }
 
 .dock-panel-enter-active,
 .dock-panel-leave-active {
@@ -229,7 +233,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
 }
 
 @media (hover: hover) {
-  .app-dock__item:hover {
+  .app-dock__item:hover:not(:active) {
     transform: translateY(-5px) scale(1.08);
     color: var(--text-primary);
     background: rgb(var(--text-primary-rgb) / 0.1);

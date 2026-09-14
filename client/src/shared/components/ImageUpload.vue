@@ -1,9 +1,8 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, reactive, ref } from 'vue'
 import { toast } from '../../stores/toast'
 import { openLightbox } from '../../stores/lightbox'
 import { mediaTypeOf } from '../../utils/media'
-import { compressImage } from '../../utils/imageCompression'
 
 // 主题化上传器：批量选择 + 拖拽 + 实时进度
 // v-model 值：文件对象 { id, url, type, name }（id 为文件表 ID，后端业务表存 id）
@@ -21,8 +20,16 @@ const fileInput = ref(null)
 const dragging = ref(false)
 const tasks = ref([]) // { id, file, name, progress, status, xhr }
 let taskSeq = 0
+let batchChain = Promise.resolve()
+let disposed = false
 
-const uploadingTasks = computed(() => tasks.value.filter((t) => t.status === 'uploading'))
+// 已完成但尚未发布的附件也占名额，避免慢文件在途时再次选取突破上限。
+const uploadingTasks = computed(() => tasks.value.filter((t) => !t.cancelled && t.status !== 'error'))
+
+onBeforeUnmount(() => {
+  disposed = true
+  tasks.value.forEach(cancelTask)
+})
 
 const normalize = (v) => {
   if (!v) return null
@@ -66,14 +73,7 @@ function preview(u) {
 }
 
 async function uploadOne(task) {
-  task.phase = 'compressing'
-  let file = task.file
-  try {
-    file = await compressImage(task.file)
-  } catch {
-    file = task.file
-  }
-  if (task.cancelled) throw new Error('已取消')
+  if (task.cancelled || disposed) throw new Error('已取消')
   task.phase = 'uploading'
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
@@ -97,7 +97,7 @@ async function uploadOne(task) {
     xhr.ontimeout = () => reject(new Error('上传超时，请检查网络后重试'))
     xhr.onabort = () => reject(new Error('已取消'))
     const fd = new FormData()
-    fd.append('file', file)
+    fd.append('file', task.file)
     xhr.send(fd)
   })
 }
@@ -121,7 +121,9 @@ async function handleFiles(files) {
   if (!accepted.length) return
 
   const inFlight = uploadingTasks.value.length
-  const available = Math.max(0, props.max - list.value.length - inFlight)
+  const available = props.multiple
+    ? Math.max(0, props.max - list.value.length - inFlight)
+    : (inFlight ? 0 : 1)
   if (!available) {
     toast(`最多上传 ${props.max} 个附件`)
     return
@@ -130,17 +132,23 @@ async function handleFiles(files) {
   if (picked.length < accepted.length) toast(`最多上传 ${props.max} 个附件，已选取前 ${picked.length} 个`)
 
   // 只上传本批次任务，避免把上一批仍在途的文件重复入队
-  const batch = picked.map((file) => ({
+  const batch = picked.map((file) => reactive({
     id: `task-${++taskSeq}`,
     file,
     name: file.name,
     progress: 0,
-    phase: 'uploading',
+    phase: 'queued',
     status: 'uploading',
     xhr: null,
   }))
   tasks.value.push(...batch)
 
+  // 批次按选择顺序执行，每批最多三路；多次选择不会无限增加压缩/XHR 并发。
+  batchChain = batchChain.then(() => runBatch(batch))
+  await batchChain
+}
+
+async function runBatch(batch) {
   const queue = [...batch]
   const results = new Map()
   const workers = Array.from({ length: Math.min(3, queue.length) }, async () => {
@@ -148,7 +156,9 @@ async function handleFiles(files) {
       const task = queue.shift()
       try {
         const data = await uploadOne(task)
+        if (task.cancelled || disposed) continue
         task.status = 'done'
+        task.phase = 'done'
         results.set(task, {
           id: data.id || '',
           url: data.url,
@@ -162,12 +172,16 @@ async function handleFiles(files) {
     }
   })
   await Promise.all(workers)
-  const items = batch.map((task) => results.get(task)).filter(Boolean)
-  if (items.length) {
+  const items = batch.filter((task) => !task.cancelled).map((task) => results.get(task)).filter(Boolean)
+  // 等父组件接收上一批 v-model，避免覆盖刚发布的结果。
+  await nextTick()
+  if (items.length && !disposed) {
     if (props.multiple) emit('update:modelValue', [...list.value, ...items])
     else emit('update:modelValue', items[0] || '')
   }
-  tasks.value = tasks.value.filter((t) => t.status === 'uploading')
+  const ids = new Set(batch.map((task) => task.id))
+  tasks.value = tasks.value.filter((task) => !ids.has(task.id))
+  await nextTick()
 }
 
 function onDrop(e) {
@@ -216,8 +230,8 @@ function remove(i) {
       <div class="flex justify-between text-white/60">
         <span class="min-w-0 break-anywhere">{{ t.name }}</span>
         <span class="ml-2 flex shrink-0 items-center gap-2">
-          <span>{{ t.phase === 'compressing' ? '压缩中…' : `${t.progress}%` }}</span>
-          <button type="button" class="text-white/45 transition-colors hover:text-white" @click="cancelTask(t)">取消</button>
+          <span>{{ t.phase === 'queued' ? '等待上传…' : t.phase === 'done' ? '已上传' : `${t.progress}%` }}</span>
+          <button type="button" class="min-h-11 px-2 text-theme-secondary transition-colors hover-text-accent" @click="cancelTask(t)">取消</button>
         </span>
       </div>
       <div class="mt-1 h-1 overflow-hidden rounded-full bg-white/10">

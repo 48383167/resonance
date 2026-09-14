@@ -31,6 +31,11 @@ export function paletteFor(hour, weatherCode) {
   return [c1, blend(c2, tint.color, tint.amount), blend(c3, tint.color, tint.amount)]
 }
 
+// 浅色主题把深色时间底片淡彩化：卡片透出渐变的同时正文保持可读。
+export function softenPalette(colors, mode) {
+  return mode === 'light' ? colors.map((color) => blend(color, '#ffffff', 0.62)) : colors
+}
+
 function weatherTint(code) {
   if (code == null) return null
   if (code === 0) return null // 晴：保持原色

@@ -48,8 +48,10 @@ app.use('/api', (req, res, next) => {
   next()
 })
 
-// 上传的图片（瞬间/相册/胶囊配图）：文件名唯一，可长期强缓存
-app.use('/media', express.static(MEDIA_DIR, { maxAge: '365d', immutable: true }))
+// 私密媒体可被撤回，禁止强缓存绕过删除后的 404。
+app.use('/media', express.static(MEDIA_DIR, {
+  setHeaders: (res) => res.setHeader('Cache-Control', 'private, no-store'),
+}))
 
 app.use('/api/auth', authRoutes)
 app.use('/api/couple', coupleRoutes)

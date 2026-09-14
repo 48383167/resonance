@@ -96,9 +96,9 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="rootEl" class="relative">
+  <div ref="rootEl" class="relative" @keydown.esc.stop.prevent="open = false">
     <div class="input-dark flex cursor-pointer items-center justify-between gap-2 text-left" role="button" tabindex="0"
-      @click="toggle" @keydown.enter.prevent="toggle" @keydown.space.prevent="toggle">
+      :aria-expanded="open" aria-haspopup="dialog" @click="toggle" @keydown.enter.self.prevent="toggle" @keydown.space.self.prevent="toggle">
       <span :class="modelValue ? 'text-white/40' : ''">📅</span>
       <span class="flex-1 truncate" :class="modelValue ? '' : 'text-white/40'">{{ label || placeholder }}</span>
       <button v-if="modelValue" type="button" class="flex h-11 w-11 -my-2 shrink-0 items-center justify-center text-sm text-white/40 transition-colors hover:text-white"
@@ -106,7 +106,7 @@ onUnmounted(() => {
       <span class="text-xs text-white/40 transition-transform" :class="open ? 'rotate-180' : ''">▾</span>
     </div>
     <Transition name="dp">
-      <div v-if="open"
+      <div v-if="open" role="dialog" aria-label="选择日期"
          class="date-picker-popup theme-popup absolute z-[1100] max-h-[min(24rem,calc(100dvh-4rem))] overflow-y-auto overscroll-contain rounded-xl border border-white/15 p-3 shadow-2xl backdrop-blur-xl"
          :class="[
            direction === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5',
@@ -124,7 +124,8 @@ onUnmounted(() => {
           <button v-for="(day, i) in cells" :key="i" type="button" :disabled="!day"
              class="min-h-11 rounded-lg text-[13px] transition-colors"
             :class="[
-              day ? 'text-white/80 hover:bg-accent-soft' : '',
+              day ? 'hover:bg-accent-soft' : '',
+              day && day !== modelValue ? 'text-theme-primary' : '',
               day === modelValue ? 'bg-accent-soft font-semibold text-accent ring-1 ring-accent' : '',
               day === todayStr && day !== modelValue ? 'ring-1 ring-accent-2' : '',
             ]"

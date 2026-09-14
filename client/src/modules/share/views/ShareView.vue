@@ -15,14 +15,6 @@ const needPassword = ref(false)
 const password = ref('')
 const scrapbookRef = ref(null)
 const exporting = ref(false)
-const exportStage = ref('')
-
-// 画布尺寸上限（Safari 约 16384px 会自动缩放变糊），留出安全余量
-const PIXEL_RATIO = 2
-const SINGLE_MAX_CSS_HEIGHT = 12000
-const SEGMENT_MAX_CSS_HEIGHT = 4000
-
-const isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches ?? false
 
 async function fetchData() {
   error.value = ''
@@ -86,171 +78,45 @@ function waitForImage(image) {
   })
 }
 
-function nextFrames() {
-  return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
-}
-
-// 预加载导出范围内的图片；跨域补 crossOrigin。加载失败的标记 data-export-ignore，导出时跳过而不整体失败。
-async function prepareImages(root) {
-  const images = [...root.querySelectorAll('img')]
-  images.forEach((image) => {
-    image.loading = 'eager'
-    const source = image.currentSrc || image.src
-    if (source && new URL(source, window.location.href).origin !== window.location.origin) {
-      image.crossOrigin = 'anonymous'
-      image.src = source
-    }
-  })
-  const results = await Promise.allSettled(images.map(waitForImage))
-  const failed = images.filter((_, index) => results[index].status === 'rejected')
-  failed.forEach((image) => image.setAttribute('data-export-ignore', ''))
-  return failed
-}
-
-function exportFilter(element) {
-  return !(element instanceof HTMLElement && element.hasAttribute('data-export-ignore'))
-}
-
-function renderBlob(node, width, height, pixelRatio) {
-  return toBlob(node, {
-    backgroundColor: '#f4e8dc',
-    cacheBust: true,
-    pixelRatio,
-    width,
-    height,
-    filter: exportFilter,
-  })
-}
-
-// 同级节点按高度分组，保证每组都小于画布上限；单个节点过高时继续下钻其子节点
-function collectGroups(root, maxHeight) {
-  const groups = []
-  const visit = (parent) => {
-    let nodes = []
-    let heightSum = 0
-    for (const child of [...parent.children]) {
-      const height = Math.ceil(child.getBoundingClientRect().height)
-      if (height > maxHeight) {
-        if (nodes.length) { groups.push({ parent, nodes }); nodes = []; heightSum = 0 }
-        if (child.children.length) visit(child)
-        else groups.push({ parent, nodes: [child] })
-        continue
-      }
-      if (nodes.length && heightSum + height > maxHeight) {
-        groups.push({ parent, nodes })
-        nodes = []
-        heightSum = 0
-      }
-      nodes.push(child)
-      heightSum += height
-    }
-    if (nodes.length) groups.push({ parent, nodes })
-  }
-  visit(root)
-  return groups
-}
-
-function createMount(source, width) {
-  const mount = document.createElement('div')
-  mount.className = source.className.replace(/\bmin-h-\[[^\]]+\]/g, '')
-  mount.style.cssText = `position:fixed;top:0;left:-200000px;z-index:-1;pointer-events:none;width:${width}px;`
-  document.body.appendChild(mount)
-  return mount
-}
-
-// 超长内容分段导出：每段克隆到离屏容器单独出图，按顺序保存为多张
-async function exportSegments(scrapbook, width) {
-  const source = scrapbook.querySelector('.mx-auto') || scrapbook
-  const groups = collectGroups(source, SEGMENT_MAX_CSS_HEIGHT)
-  const blobs = []
-  for (let index = 0; index < groups.length; index++) {
-    exportStage.value = `正在导出第 ${index + 1}/${groups.length} 段…`
-    const { parent, nodes } = groups[index]
-    const mount = createMount(scrapbook, width)
-    try {
-      const shell = document.createElement('div')
-      shell.className = parent.className
-      nodes.forEach((node) => shell.appendChild(node.cloneNode(true)))
-      mount.appendChild(shell)
-      await prepareImages(shell)
-      await nextFrames()
-      const height = Math.ceil(mount.scrollHeight)
-      const blob = await renderBlob(mount, width, height, PIXEL_RATIO)
-      if (blob?.size) blobs.push(blob)
-    } finally {
-      mount.remove()
-    }
-  }
-  return blobs
-}
-
-function isIOS() {
-  return /iP(hone|ad|od)/.test(navigator.userAgent)
-}
-
-async function deliver(blobs, failedCount) {
-  const date = new Date().toISOString().slice(0, 10)
-  const files = blobs.map((blob, index) => new File(
-    [blob],
-    `resonance-scrapbook-${date}${blobs.length > 1 ? `-${index + 1}` : ''}.png`,
-    { type: 'image/png' },
-  ))
-  const suffix = failedCount ? `（已跳过 ${failedCount} 张未加载的图片）` : ''
-
-  // 手机优先调起系统分享面板（iOS 可存图 / 分享），桌面直接下载
-  const canShareFiles = isTouchDevice
-    && typeof navigator.canShare === 'function'
-    && (() => { try { return navigator.canShare({ files }) } catch { return false } })()
-  if (canShareFiles) {
-    try {
-      await navigator.share({ files, title: '我们的恋爱剪贴簿' })
-      toast(`已生成 ${files.length} 张图片${suffix}`)
-      return
-    } catch (e) {
-      if (e?.name === 'AbortError') return
-    }
-  }
-
-  for (const file of files) {
-    const url = URL.createObjectURL(file)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = file.name
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
-    await new Promise((resolve) => setTimeout(resolve, 350))
-  }
-  toast(isIOS()
-    ? `已保存 ${files.length} 张图片到「文件」App${suffix}`
-    : `已保存 ${files.length} 张图片${suffix}`)
-}
-
 async function saveScrapbook() {
   if (exporting.value || !scrapbookRef.value) return
 
   exporting.value = true
-  exportStage.value = '正在准备图片…'
-  const scrapbook = scrapbookRef.value
   try {
-    const failed = await prepareImages(scrapbook)
-    await nextFrames()
+    const images = [...scrapbookRef.value.querySelectorAll('img')]
+    images.forEach((image) => {
+      image.loading = 'eager'
+      const source = image.currentSrc || image.src
+      if (source && new URL(source, window.location.href).origin !== window.location.origin) {
+        image.crossOrigin = 'anonymous'
+        image.src = source
+      }
+    })
+    await Promise.all(images.map(waitForImage))
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
 
-    const width = Math.ceil(scrapbook.getBoundingClientRect().width)
-    const height = Math.ceil(scrapbook.scrollHeight)
-    let blobs = []
-    if (height <= SINGLE_MAX_CSS_HEIGHT) {
-      exportStage.value = '正在生成长图…'
-      const pixelRatio = Math.min(PIXEL_RATIO, Math.max(1, SINGLE_MAX_CSS_HEIGHT / height))
-      const blob = await renderBlob(scrapbook, width, height, pixelRatio)
-      if (blob?.size) blobs = [blob]
-    } else {
-      blobs = await exportSegments(scrapbook, width)
-    }
+    const scrapbook = scrapbookRef.value
+    const bounds = scrapbook.getBoundingClientRect()
+    const blob = await toBlob(scrapbook, {
+      backgroundColor: '#f4e8dc',
+      cacheBust: true,
+      pixelRatio: 2,
+      width: Math.ceil(bounds.width),
+      height: Math.ceil(scrapbook.scrollHeight),
+      filter: (element) => !(element instanceof HTMLElement && element.hasAttribute('data-export-ignore')),
+    })
 
-    if (!blobs.length) throw new Error('empty-canvas')
-    await deliver(blobs, failed.length)
+    if (!blob || !blob.size) throw new Error('empty-canvas')
+
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `resonance-scrapbook-${new Date().toISOString().slice(0, 10)}.png`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+    toast('剪贴簿长图已保存')
   } catch (e) {
     if (e.message === 'image-load-failed') {
       toast('图片加载失败（可能是跨域图片），无法生成长图，请检查图片后重试', 'error')
@@ -258,25 +124,23 @@ async function saveScrapbook() {
       toast('内容过长或图片未加载完成，请稍后重试', 'error')
     }
   } finally {
-    scrapbook.querySelectorAll('[data-export-ignore]').forEach((el) => el.removeAttribute('data-export-ignore'))
-    exportStage.value = ''
     exporting.value = false
   }
 }
 </script>
 
 <template>
-  <div class="mt-3 pb-24">
-    <div v-if="data" class="fixed inset-x-0 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-30 flex justify-center px-4">
+  <div class="mt-3">
+    <div v-if="data" class="flex justify-end px-3 pb-2 sm:px-2">
       <button data-export-ignore type="button"
-        class="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/15 bg-black/45 px-5 py-2.5 text-sm text-white/75 shadow-lg backdrop-blur transition hover:border-white/25 hover:bg-black/60 hover:text-white disabled:cursor-wait disabled:opacity-60"
+        class="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/65 shadow-sm backdrop-blur transition hover:border-white/25 hover:bg-black/30 hover:text-white disabled:cursor-wait disabled:opacity-60"
         :disabled="exporting" @click="saveScrapbook">
         <span aria-hidden="true">↓</span>
-        {{ exporting ? (exportStage || '正在生成长图…') : '保存剪贴簿长图' }}
+        {{ exporting ? '正在生成长图…' : '保存剪贴簿长图' }}
       </button>
     </div>
 
-    <div ref="scrapbookRef" class="share-scrapbook min-h-[100svh] bg-[#f4e8dc] px-3 pb-6 pt-[calc(1.25rem+env(safe-area-inset-top))] text-[#5d4843] sm:px-6 sm:py-10">
+    <div ref="scrapbookRef" class="share-scrapbook min-h-screen bg-[#f4e8dc] px-3 pb-6 pt-[calc(1.25rem+env(safe-area-inset-top))] text-[#5d4843] sm:px-6 sm:py-10">
     <div class="mx-auto max-w-5xl">
       <header class="relative overflow-hidden rounded-[0.9rem] border border-[#d9b9a3]/80 bg-[#fffaf1] px-4 pb-6 pt-16 text-center shadow-[0_10px_24px_rgba(132,91,70,.16)] sm:rounded-[1.25rem] sm:px-12 sm:py-10">
         <span class="absolute left-5 top-4 rotate-[-8deg] rounded-sm bg-[#e8b8ae] px-2.5 py-1 text-[11px] tracking-[.2em] text-[#815b58] shadow-sm sm:left-8 sm:top-5 sm:px-3 sm:text-[11px] sm:tracking-[.24em]">OUR STORY</span>

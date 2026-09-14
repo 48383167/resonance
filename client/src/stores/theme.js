@@ -41,13 +41,14 @@ function mixHex(a, b, amount) {
   return `#${[16, 8, 0].map((shift) => mix(shift).toString(16).padStart(2, '0')).join('')}`
 }
 
-function readableTextColor(color, background) {
-  if (contrastRatio(color, background) >= 4.5) return color
-  const target = luminance(background) > 0.5 ? '#101321' : '#ffffff'
+function readableTextColor(color, ...backgrounds) {
+  const readable = (candidate) => backgrounds.every((background) => contrastRatio(candidate, background) >= 4.5)
+  if (readable(color)) return color
+  const target = contrastColor(...backgrounds)
   let adjusted = color
   for (let i = 0; i < 12; i++) {
     adjusted = mixHex(adjusted, target, 0.16)
-    if (contrastRatio(adjusted, background) >= 4.5) return adjusted
+    if (readable(adjusted)) return adjusted
   }
   return target
 }
@@ -67,7 +68,8 @@ export function applyTheme(value) {
     ? { text: '#302b43', muted: '#6e667b', border: '#302b43' }
     : { text: '#f4ecff', muted: '#a99bc4', border: '#ffffff' }
   const surfaceColor = config.surfaceColor || '#ffffff'
-  const surfaceStrongColor = config.surfaceStrongColor || surfaceColor
+  const surfaceStrongColor = config.surfaceStrongColor || config.surfaceColor
+    || (mode === 'light' ? '#ffffff' : mixHex(config.ambientColor, '#ffffff', 0.1))
   const textColor = config.textColor || defaults.text
   const mutedTextColor = config.mutedTextColor || defaults.muted
   const borderColor = config.borderColor || defaults.border
@@ -80,8 +82,11 @@ export function applyTheme(value) {
   ]
   const glassAlpha = hasSurfaceColor ? (mode === 'light' ? '0.86' : '0.84') : (mode === 'light' ? '0.68' : '0.06')
   const controlAlpha = hasSurfaceColor ? (mode === 'light' ? '0.78' : '0.76') : (mode === 'light' ? '0.76' : '0.07')
-  const accentText = readableTextColor(config.primaryColor, surfaceColor)
-  const accent2Text = readableTextColor(config.secondaryColor, surfaceColor)
+  // 玻璃容器有透明度，应对实际叠加背景计算可读性，而不是对原始白色计算。
+  const visibleSurface = mixHex(config.ambientColor, surfaceColor, Number(glassAlpha))
+  const backgrounds = [config.ambientColor, visibleSurface, surfaceStrongColor]
+  const accentText = readableTextColor(config.primaryColor, ...backgrounds)
+  const accent2Text = readableTextColor(config.secondaryColor, ...backgrounds)
   Object.assign(currentTheme, config, { mode, pageColors,
     accentContrast: contrastColor(config.primaryColor, config.secondaryColor),
     accentText,
@@ -92,6 +97,7 @@ export function applyTheme(value) {
   const root = document.documentElement
   root.dataset.theme = config.themeKey
   root.dataset.themeMode = mode
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', config.ambientColor)
   root.style.setProperty('--page-bg', config.ambientColor)
   root.style.setProperty('--page-bg-rgb', rgbParts(config.ambientColor))
   root.style.setProperty('--surface-1', surfaceColor)

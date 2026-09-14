@@ -100,11 +100,12 @@ onUnmounted(() => {
         '--scale': drop.scale,
         '--static-top': drop.staticTop,
       }"
-      :class="{ 'is-running': drop.running && !drop.paused, 'is-paused': drop.running && drop.paused }"
+      :class="{ 'is-running': drop.running, 'is-paused': drop.running && drop.paused }"
       aria-label="查看这张照片"
       @pointerdown="drop.paused = true"
       @pointerup="drop.paused = false"
       @pointercancel="drop.paused = false"
+      @pointerleave="drop.paused = false"
       @animationend="restart(drop)"
       @click="openPhoto(drop)">
       <img v-if="photoOf(drop)" :src="photoOf(drop).url" alt="" loading="lazy" decoding="async" />

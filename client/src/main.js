@@ -5,7 +5,7 @@ import './style.css'
 
 createApp(App).use(router).mount('#app')
 
-// 生产环境注册离线壳：哈希资源缓存优先，页面导航走网络
+// 生产环境注册离线提示页：哈希资源缓存优先，私密内容只走网络
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js').catch(() => {

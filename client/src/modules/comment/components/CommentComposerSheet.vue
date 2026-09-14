@@ -1,5 +1,6 @@
 <script setup>
 import { nextTick, onUnmounted, ref, watch } from 'vue'
+import { lockBodyScroll } from '../../../utils/scrollLock'
 
 // 全屏评论编辑器：手机端全屏、桌面端居中弹窗，打开期间跟随 visualViewport 适配软键盘
 const props = defineProps({
@@ -14,7 +15,7 @@ const emit = defineEmits(['update:modelValue', 'submit', 'close'])
 const panelRef = ref(null)
 const textareaRef = ref(null)
 const isTouchDevice = window.matchMedia?.('(pointer: coarse)').matches ?? false
-let previousOverflow = ''
+let releaseScroll = () => {}
 let onKey = null
 let focusTimer = null
 
@@ -33,8 +34,7 @@ function syncViewport() {
 }
 
 function lockBody() {
-  previousOverflow = document.body.style.overflow
-  document.body.style.overflow = 'hidden'
+  releaseScroll = lockBodyScroll()
   onKey = (e) => { if (e.key === 'Escape') emit('close') }
   window.addEventListener('keydown', onKey)
   window.visualViewport?.addEventListener('resize', syncViewport)
@@ -44,7 +44,7 @@ function lockBody() {
 function unlockBody() {
   if (onKey) window.removeEventListener('keydown', onKey)
   onKey = null
-  document.body.style.overflow = previousOverflow
+  releaseScroll()
   window.visualViewport?.removeEventListener('resize', syncViewport)
   window.visualViewport?.removeEventListener('scroll', syncViewport)
 }

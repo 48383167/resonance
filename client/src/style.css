@@ -141,6 +141,21 @@ a,
   color: var(--text-primary);
 }
 .input-dark:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgb(var(--accent-rgb) / 0.15); }
+.input-dark::placeholder { color: var(--text-secondary); opacity: 0.8; }
+
+/* 同一套主题令牌覆盖鼠标、触屏和键盘反馈。 */
+:where(button, a, input, textarea, select, [role="button"]):focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 3px;
+}
+.btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-primary:enabled:active,
+.btn-ghost:enabled:active,
+a.btn-ghost:active {
+  transform: scale(0.97);
+  transition-duration: 90ms;
+}
+.btn-ghost:enabled:active { background: rgb(var(--text-primary-rgb) / 0.1); }
 
 ::selection { background: rgb(var(--accent-rgb) / 0.35); }
 
@@ -259,15 +274,22 @@ html[data-theme-mode="light"] textarea.input-dark {
 [class*="border-white/"] { border-color: rgb(var(--border-subtle-rgb) / 0.18) !important; }
 [class*="ring-white/"] { --tw-ring-color: rgb(var(--border-subtle-rgb) / 0.18) !important; }
 [class*="divide-white/"] { border-color: rgb(var(--border-subtle-rgb) / 0.12) !important; }
-[class*="bg-black/"] [class*="text-white/"] { color: #ffffff !important; }
-[class*="bg-black/"] [class~="text-white"] { color: #ffffff !important; }
+/* 深色图片遮罩只作用于自身，不能把浅色弹窗内的文字也改成白色。 */
+[class*="bg-black/"][class*="text-white"] { color: #ffffff !important; }
+.theme-inverse {
+  --text-primary: #ffffff;
+  --text-primary-rgb: 255 255 255;
+  --text-secondary: #d4d4d8;
+  --text-secondary-rgb: 212 212 216;
+  color: var(--text-primary);
+}
 .theme-inverse [class*="text-white/"] { color: #ffffff !important; }
 .theme-inverse [class~="text-white"] { color: #ffffff !important; }
 
 /* hover 只在支持悬停的设备生效，避免触屏点击后样式粘滞。 */
 @media (hover: hover) {
-  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 32px rgb(var(--accent-rgb) / 0.5); }
-  .btn-ghost:hover { background: rgb(var(--text-primary-rgb) / 0.08); }
+  .btn-primary:enabled:hover:not(:active) { transform: translateY(-1px); box-shadow: 0 6px 32px rgb(var(--accent-rgb) / 0.5); }
+  .btn-ghost:enabled:hover:not(:active) { background: rgb(var(--text-primary-rgb) / 0.08); }
   .surface-hover:hover { background: rgb(var(--text-primary-rgb) / 0.08); }
   .hover-text-accent:hover { color: var(--accent-text); }
   .hover-text-accent-2:hover { color: var(--accent-2-text); }
@@ -286,6 +308,12 @@ html[data-theme-mode="light"] textarea.input-dark {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
   .breath,
   .ripple-ring,
   .shimmer { animation: none; }

@@ -5,7 +5,7 @@ import { getDiary, removeDiary, setVisibility } from '../diary.api.js'
 import { session } from '../../../stores/session'
 import { currentTheme } from '../../../stores/theme'
 import { toast } from '../../../stores/toast'
-import { paletteFor, weatherLabel } from '../../../composables/useAmbient'
+import { paletteFor, softenPalette, weatherLabel } from '../../../composables/useAmbient'
 import { confirmDialog } from '../../../stores/confirm'
 import { openLightbox } from '../../../stores/lightbox'
 import { mediaTypeOf } from '../../../utils/media'
@@ -61,8 +61,9 @@ async function togglePublic() {
 const hour = computed(() => (entry.value ? new Date(entry.value.created_at).getHours() : 12))
 const palette = computed(() => (entry.value ? paletteFor(hour.value, entry.value.weather_code) : ['#0b1d3a']))
 // 环境底片保留日记当时的时间/天气氛围，文字和边线则使用当前主题强调色保证可读性。
+const ambientPalette = computed(() => softenPalette(palette.value, currentTheme.mode))
 const fgColor = computed(() => currentTheme.accentText || 'var(--accent-text)')
-const ambientOpacity = computed(() => currentTheme.mode === 'light' ? 0.16 : 0.35)
+const ambientOpacity = computed(() => currentTheme.mode === 'light' ? 0.5 : 0.55)
 
 const imageMedia = computed(() => (entry.value?.media || []).filter((u) => (u.type || mediaTypeOf(u.url || '')) === 'image'))
 
@@ -84,8 +85,8 @@ const named = computed(() => (entry.value?.contents || []).map((c) => ({
     </div>
 
     <div v-if="!entry" class="py-20 text-center text-theme-secondary">加载中…</div>
-    <div v-else class="glass relative overflow-hidden p-6 sm:p-10">
-      <AmbientBackground :colors="palette" :weather-code="entry.weather_code" :opacity="ambientOpacity" />
+    <div v-else class="glass diary-panel relative overflow-hidden p-6 sm:p-10">
+      <AmbientBackground :colors="ambientPalette" :weather-code="entry.weather_code" :opacity="ambientOpacity" />
       
       <div class="relative z-10 text-center">
         <div class="text-[11px] text-theme-tertiary">{{ dateText }}</div>
@@ -134,3 +135,9 @@ const named = computed(() => (entry.value?.contents || []).map((c) => ({
     </div>
   </div>
 </template>
+
+<style scoped>
+/* 只降低日记卡的卡面不透明度，让时间/天气环境底片透出来，不影响其他 glass 卡片。 */
+.diary-panel { --glass-alpha: 0.55; }
+html[data-theme-mode="light"] .diary-panel { --glass-alpha: 0.62; }
+</style>
