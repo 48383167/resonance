@@ -81,12 +81,12 @@ onUnmounted(() => {
       <div v-if="open" class="ccs-backdrop" @click.self="emit('close')">
         <div ref="panelRef" class="ccs-panel">
           <header class="flex items-center gap-3 border-b border-theme px-4 py-3">
-            <button type="button" class="shrink-0 text-sm text-theme-tertiary transition-colors hover-text-accent"
+            <button type="button" class="tap-y shrink-0 text-sm text-theme-tertiary transition-colors hover-text-accent"
               @click="emit('close')">取消</button>
             <p class="min-w-0 flex-1 truncate text-center text-sm font-medium">
               {{ replyToName ? `回复 @${replyToName}` : '发表评论' }}
             </p>
-            <button type="button" class="btn-primary !min-h-9 shrink-0 !px-4 !py-1.5 text-sm"
+            <button type="button" class="btn-primary !min-h-11 shrink-0 !px-4 !py-1.5 text-sm"
               :disabled="!modelValue.trim() || submitting" @click="emit('submit')">
               {{ submitting ? '发送中…' : '发送' }}
             </button>
