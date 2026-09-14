@@ -74,14 +74,14 @@ onUnmounted(() => {
   <ConfirmDialog />
   <MusicPlayer v-if="session.me" />
   <div class="relative min-h-full">
-    <header v-if="session.me" class="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-3 sm:py-4">
+    <header v-if="session.me" class="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] sm:pb-4 sm:pt-[calc(1rem+env(safe-area-inset-top))]">
       <router-link to="/home" class="flex min-w-0 items-center gap-2">
         <span class="text-xl">♫</span>
         <span class="serif text-lg">共鸣</span>
       </router-link>
       <div class="flex min-w-0 items-center gap-2 text-sm sm:gap-3">
         <span class="max-w-32 truncate text-white/70">{{ session.me.nickname }}</span>
-        <button class="min-h-10 shrink-0 rounded-full border border-white/20 px-3 py-1 text-xs hover:bg-white/10" @click="doLogout">
+        <button class="min-h-11 shrink-0 rounded-full border border-white/20 px-3 py-1 text-xs hover:bg-white/10" @click="doLogout">
           退出
         </button>
       </div>
@@ -109,7 +109,7 @@ onUnmounted(() => {
 .toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
 .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(10px); }
 
-.app-toast { bottom: 1.5rem; }
+.app-toast { bottom: max(1.5rem, env(safe-area-inset-bottom)); }
 .app-main { padding-bottom: calc(8rem + env(safe-area-inset-bottom)); }
 @media (max-width: 640px) {
   .app-toast { bottom: calc(5.75rem + env(safe-area-inset-bottom)); }

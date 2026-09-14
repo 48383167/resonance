@@ -50,7 +50,7 @@ async function doRegister() {
 </script>
 
 <template>
-  <div class="flex min-h-[80svh] items-start justify-center px-1 pt-8 sm:items-center sm:pt-0">
+  <div class="flex min-h-[80svh] items-start justify-center px-1 pt-[calc(2rem+env(safe-area-inset-top))] sm:items-center sm:pt-0">
     <div class="glass w-full max-w-sm p-6 fade-up sm:p-8">
       <div class="text-center">
         <div class="text-4xl">♫</div>

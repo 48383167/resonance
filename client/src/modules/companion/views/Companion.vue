@@ -585,7 +585,11 @@ onUnmounted(() => {
   font-size: 0.7rem;
   transition: color 0.2s ease, background 0.2s ease;
 }
-.companion-header-btn:hover { background: rgb(var(--text-primary-rgb) / 0.08); color: var(--text-primary); }
+.companion-header-btn:active { background: rgb(var(--text-primary-rgb) / 0.08); }
+
+@media (hover: hover) {
+  .companion-header-btn:hover { background: rgb(var(--text-primary-rgb) / 0.08); color: var(--text-primary); }
+}
 
 .companion-new-messages {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));

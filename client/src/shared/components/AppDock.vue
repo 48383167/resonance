@@ -106,12 +106,6 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
   transition: transform 0.2s ease, color 0.2s ease, background 0.2s ease;
 }
 
-.app-dock__item:hover {
-  transform: translateY(-5px) scale(1.08);
-  color: var(--text-primary);
-  background: rgb(var(--text-primary-rgb) / 0.1);
-}
-
 .app-dock__item--active {
   color: var(--accent-text);
   background: rgb(var(--accent-rgb) / 0.14);
@@ -138,11 +132,6 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   color: var(--accent-contrast);
   box-shadow: 0 7px 22px rgb(var(--accent-rgb) / 0.35);
-}
-
-.app-dock__item--create:hover {
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: var(--accent-contrast);
 }
 
 .app-dock__icon {
@@ -184,11 +173,6 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
   opacity: 0;
   transform: translate(-50%, 4px);
   transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.app-dock__item:hover .app-dock__tooltip {
-  opacity: 1;
-  transform: translate(-50%, 0);
 }
 
 .app-dock__panel {
@@ -233,14 +217,32 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
   }
 
   .app-dock__item {
-    height: 42px;
-    width: 40px;
+    height: 44px;
+    width: 42px;
   }
 
   .app-dock__item--create {
-    height: 46px;
-    width: 46px;
+    height: 48px;
+    width: 48px;
     margin: 0 1px;
+  }
+}
+
+@media (hover: hover) {
+  .app-dock__item:hover {
+    transform: translateY(-5px) scale(1.08);
+    color: var(--text-primary);
+    background: rgb(var(--text-primary-rgb) / 0.1);
+  }
+
+  .app-dock__item--create:hover {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: var(--accent-contrast);
+  }
+
+  .app-dock__item:hover .app-dock__tooltip {
+    opacity: 1;
+    transform: translate(-50%, 0);
   }
 }
 </style>

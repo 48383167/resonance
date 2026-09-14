@@ -55,6 +55,14 @@ body {
   color: var(--text-primary);
   font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
   overflow-x: hidden;
+  overflow-x: clip;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a,
+[role="button"] {
+  touch-action: manipulation;
 }
 
 .serif {
@@ -112,7 +120,6 @@ body {
   color: var(--accent-contrast);
   box-shadow: 0 4px 24px rgb(var(--accent-rgb) / 0.35);
 }
-.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 32px rgb(var(--accent-rgb) / 0.5); }
 .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
 .btn-ghost {
@@ -121,8 +128,6 @@ body {
   border: 1px solid rgb(var(--border-subtle-rgb) / var(--ghost-border-alpha));
   color: var(--text-primary);
 }
-.btn-ghost:hover { background: rgb(var(--text-primary-rgb) / 0.08); }
-
 .input-dark {
   @apply w-full rounded-xl px-4 py-3 outline-none transition-all;
   min-height: 2.75rem;
@@ -141,22 +146,17 @@ body {
 }
 .surface-soft { background: rgb(var(--surface-1-rgb) / var(--control-alpha)); }
 .surface-strong { background: rgb(var(--surface-2-rgb) / 0.96); }
-.surface-hover:hover { background: rgb(var(--text-primary-rgb) / 0.08); }
 .text-theme-primary { color: var(--text-primary); }
 .text-theme-secondary { color: var(--text-secondary); }
 .text-theme-tertiary { color: rgb(var(--text-secondary-rgb) / 0.72); }
 .border-theme { border-color: rgb(var(--border-subtle-rgb) / var(--glass-border-alpha)); }
 .text-accent { color: var(--accent-text); }
 .text-accent-2 { color: var(--accent-2-text); }
-.hover-text-accent:hover { color: var(--accent-text); }
-.hover-text-accent-2:hover { color: var(--accent-2-text); }
 .danger-action {
   border: 1px solid rgb(var(--danger-rgb) / 0.3);
   color: var(--danger-text);
 }
-.danger-action:hover { background: rgb(var(--danger-rgb) / 0.1); }
 .danger-link { color: var(--danger-text); }
-.danger-link:hover { color: rgb(var(--danger-rgb) / 0.78); }
 .bg-accent { background: var(--accent); }
 .bg-accent-2 { background: var(--accent-2); }
 .bg-accent-soft { background: rgb(var(--accent-rgb) / 0.18); }
@@ -240,14 +240,9 @@ html[data-theme-mode="light"] textarea.input-dark {
 [class~="text-white/85"] { color: rgb(var(--text-primary-rgb) / 0.98) !important; }
 [class~="text-white/90"] { color: var(--text-primary) !important; }
 [class~="text-white"] { color: var(--text-primary) !important; }
-[class~="hover:text-white"]:hover { color: var(--text-primary) !important; }
 [class~="bg-white/5"] { background-color: rgb(var(--surface-soft-rgb) / var(--surface-soft-alpha)) !important; }
 [class~="bg-white/10"],
 [class~="bg-white/[0.06]"] { background-color: rgb(var(--text-primary-rgb) / 0.06) !important; }
-[class~="hover:bg-white/5"]:hover,
-[class~="hover:bg-white/8"]:hover,
-[class~="hover:bg-white/10"]:hover,
-[class~="hover:bg-white/20"]:hover { background-color: rgb(var(--text-primary-rgb) / 0.11) !important; }
 [class*="border-white/"] { border-color: rgb(var(--border-subtle-rgb) / 0.18) !important; }
 [class*="ring-white/"] { --tw-ring-color: rgb(var(--border-subtle-rgb) / 0.18) !important; }
 [class*="divide-white/"] { border-color: rgb(var(--border-subtle-rgb) / 0.12) !important; }
@@ -255,3 +250,32 @@ html[data-theme-mode="light"] textarea.input-dark {
 [class*="bg-black/"] [class~="text-white"] { color: #ffffff !important; }
 .theme-inverse [class*="text-white/"] { color: #ffffff !important; }
 .theme-inverse [class~="text-white"] { color: #ffffff !important; }
+
+/* hover 只在支持悬停的设备生效，避免触屏点击后样式粘滞。 */
+@media (hover: hover) {
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 32px rgb(var(--accent-rgb) / 0.5); }
+  .btn-ghost:hover { background: rgb(var(--text-primary-rgb) / 0.08); }
+  .surface-hover:hover { background: rgb(var(--text-primary-rgb) / 0.08); }
+  .hover-text-accent:hover { color: var(--accent-text); }
+  .hover-text-accent-2:hover { color: var(--accent-2-text); }
+  .danger-action:hover { background: rgb(var(--danger-rgb) / 0.1); }
+  .danger-link:hover { color: rgb(var(--danger-rgb) / 0.78); }
+  [class~="hover:text-white"]:hover { color: var(--text-primary) !important; }
+  [class~="hover:bg-white/5"]:hover,
+  [class~="hover:bg-white/8"]:hover,
+  [class~="hover:bg-white/10"]:hover,
+  [class~="hover:bg-white/20"]:hover { background-color: rgb(var(--text-primary-rgb) / 0.11) !important; }
+}
+
+/* 触屏输入控件保持 16px，避免 iOS 聚焦时自动放大页面；iPad 等粗指针设备同样生效。 */
+@media (pointer: coarse) {
+  .input-dark { font-size: 1rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .breath,
+  .ripple-ring,
+  .shimmer { animation: none; }
+  .fade-up { animation-duration: 0.01ms; }
+  html { scroll-behavior: auto; }
+}
