@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { updateProfile } from '../../../modules/misc/misc.api.js'
 import { changePassword as changePasswordApi } from '../../../modules/auth/auth.api.js'
 import { getCurrentShare, createShare as createShareApi, updateCurrentShare, disableShare as disableShareApi } from '../../../modules/share/share.api.js'
+import { getMailSettings, updateMailSettings, sendTestMail, previewNotifications } from '../../../modules/notification/notification.api.js'
 import { session, initSession } from '../../../stores/session'
 import { toast } from '../../../stores/toast'
 import { applyTheme, currentTheme, loadTheme, saveTheme } from '../../../stores/theme'
@@ -14,6 +15,13 @@ import { generateIdempotencyKey } from '../../../utils/idempotency.js'
 const nickname = ref('')
 const gender = ref('')
 const avatarUrl = ref('')
+const mailSettings = ref({ mailerConfigured: false, aiConfigured: false })
+const mailForm = ref({ email: '', periodRemind: false, anniversaryRemind: false, aiContent: true })
+const mailSaving = ref(false)
+const mailTesting = ref(false)
+const previewLoading = ref(false)
+const mailPreviewType = ref('period')
+const previews = ref([])
 const pw = ref({ old: '', next: '' })
 const share = ref(null)
 const shareForm = ref({ password: '', expireDays: 30, includeMoments: true, includeEntries: true, includeAnniversaries: true })
@@ -63,6 +71,7 @@ onMounted(async () => {
     : ''
   themeDraft.value = normalizeTheme(currentTheme)
   await loadShare()
+  await loadMailSettings()
 })
 
 function previewTheme() {
@@ -118,6 +127,63 @@ async function saveProfile() {
   const me = await updateProfile({ nickname: nickname.value.trim(), gender: gender.value, avatarFileId: avatarUrl.value?.id || null })
   session.me = me
   toast('资料已保存')
+}
+
+// —— 邮件提醒 ——
+async function loadMailSettings() {
+  try {
+    const data = await getMailSettings()
+    mailSettings.value = data
+    mailForm.value = {
+      email: data.email || '',
+      periodRemind: data.periodRemind,
+      anniversaryRemind: data.anniversaryRemind,
+      aiContent: data.aiContent,
+    }
+  } catch (e) {
+    toast(e.message)
+  }
+}
+
+async function saveMail() {
+  if (mailSaving.value) return
+  mailSaving.value = true
+  try {
+    const data = await updateMailSettings({ ...mailForm.value })
+    mailSettings.value = data
+    toast('邮件设置已保存')
+  } catch (e) {
+    toast(e.message)
+  } finally {
+    mailSaving.value = false
+  }
+}
+
+async function testMail() {
+  if (mailTesting.value) return
+  mailTesting.value = true
+  try {
+    await sendTestMail(generateIdempotencyKey())
+    toast('测试邮件已发送，请查收')
+  } catch (e) {
+    toast(e.message)
+  } finally {
+    mailTesting.value = false
+  }
+}
+
+async function loadPreview(type) {
+  mailPreviewType.value = type
+  previewLoading.value = true
+  try {
+    const data = await previewNotifications(type)
+    previews.value = data.items || []
+    if (!previews.value.length) toast('暂时没有可预览的内容')
+  } catch (e) {
+    toast(e.message)
+  } finally {
+    previewLoading.value = false
+  }
 }
 
 async function changePassword() {
@@ -240,6 +306,76 @@ function copyShare() {
         <ImageUpload v-model="avatarUrl" :multiple="false" accept="image" />
       </div>
       <button class="btn-primary w-full sm:w-auto" @click="saveProfile">保存资料</button>
+    </div>
+
+    <!-- 邮件提醒：QQ 邮箱 SMTP，例假与纪念日通知 -->
+    <div class="glass space-y-4 p-5">
+      <div>
+        <h3 class="text-sm text-white/70">邮件提醒</h3>
+        <p class="mt-1 text-xs text-white/45">例假预计前 3 天、纪念日提前 3 天与当天，会向下面的邮箱发送提醒；正文可由 AI 生成，也可以使用内置文案。</p>
+      </div>
+
+      <div v-if="!mailSettings.mailerConfigured"
+        class="rounded-xl border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-200">
+        服务器还没配置 QQ 邮箱 SMTP：请在服务器 .env 中填写 SMTP_USER 与 SMTP_PASS（邮箱授权码）后重启，配置步骤见 docs/api/notification.md。
+      </div>
+
+      <div>
+        <label class="mb-1 block text-xs text-white/50">收件邮箱</label>
+        <input v-model="mailForm.email" class="input-dark" placeholder="xxx@qq.com" maxlength="120" />
+      </div>
+
+      <div class="space-y-2">
+        <button class="surface-soft flex min-h-11 w-full items-center justify-between rounded-xl px-4 text-sm"
+          @click="mailForm.periodRemind = !mailForm.periodRemind">
+          <span>例假临近提醒</span>
+          <span :class="mailForm.periodRemind ? 'text-accent' : 'text-white/40'">{{ mailForm.periodRemind ? '已开启' : '已关闭' }}</span>
+        </button>
+        <button class="surface-soft flex min-h-11 w-full items-center justify-between rounded-xl px-4 text-sm"
+          @click="mailForm.anniversaryRemind = !mailForm.anniversaryRemind">
+          <span>纪念日提醒</span>
+          <span :class="mailForm.anniversaryRemind ? 'text-accent' : 'text-white/40'">{{ mailForm.anniversaryRemind ? '已开启' : '已关闭' }}</span>
+        </button>
+        <button class="surface-soft flex min-h-11 w-full items-center justify-between rounded-xl px-4 text-sm"
+          @click="mailForm.aiContent = !mailForm.aiContent">
+          <span>AI 生成邮件文案</span>
+          <span :class="mailForm.aiContent ? 'text-accent' : 'text-white/40'">{{ mailForm.aiContent ? '已开启' : '已关闭' }}</span>
+        </button>
+      </div>
+      <p v-if="mailForm.aiContent" class="text-xs text-white/40">开启 AI 后，例假/纪念日信息会发送给 DeepSeek 生成文案；关闭则使用内置温暖文案。</p>
+      <p v-if="!mailSettings.aiConfigured" class="text-xs text-white/40">服务器未配置 DEEPSEEK_API_KEY，将直接使用内置文案。</p>
+
+      <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <button class="btn-primary w-full sm:w-auto" :disabled="mailSaving" @click="saveMail">
+          {{ mailSaving ? '保存中…' : '保存邮件设置' }}
+        </button>
+        <button class="btn-ghost w-full sm:w-auto" :disabled="mailTesting" @click="testMail">
+          {{ mailTesting ? '发送中…' : '发送测试邮件' }}
+        </button>
+        <button class="btn-ghost w-full sm:w-auto" :disabled="previewLoading" @click="loadPreview(mailPreviewType)">
+          {{ previewLoading ? '生成中…' : '预览提醒内容' }}
+        </button>
+      </div>
+
+      <div v-if="previews.length" class="space-y-3">
+        <div class="flex gap-2">
+          <button v-for="t in [{ value: 'period', label: '例假' }, { value: 'anniversary', label: '纪念日' }]" :key="t.value"
+            class="min-h-10 rounded-full px-3 text-xs transition-colors"
+            :class="mailPreviewType === t.value ? 'bg-accent-soft text-accent' : 'surface-soft text-white/60'"
+            @click="loadPreview(t.value)">
+            {{ t.label }}
+          </button>
+        </div>
+        <div v-for="(item, i) in previews" :key="i" class="surface-soft rounded-xl p-3 text-sm">
+          <div class="text-xs text-white/45">
+            收件人：{{ item.recipient.nickname }}
+            <template v-if="item.role">· {{ item.role === 'self' ? '例假本人' : '伴侣' }}</template>
+            · {{ item.source === 'ai' ? 'AI 生成' : '内置文案' }}
+          </div>
+          <div class="mt-1 font-medium">{{ item.subject }}</div>
+          <p class="mt-1 whitespace-pre-wrap text-white/70">{{ item.body }}</p>
+        </div>
+      </div>
     </div>
 
     <!-- 个人主题：只保存到当前登录用户，不会影响伴侣 -->

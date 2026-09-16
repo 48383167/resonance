@@ -9,6 +9,7 @@ import {
   isDeepSeekConfigured,
 } from '../../config/deepseek.js'
 import { EMOTIONAL_COMPANION_SYSTEM_PROMPT, CONVERSATION_TITLE_SYSTEM_PROMPT } from '../../modules/companion/companion.policy.js'
+import { PERIOD_REMINDER_SYSTEM_PROMPT, ANNIVERSARY_REMINDER_SYSTEM_PROMPT } from '../../modules/notification/notification.policy.js'
 
 function providerUserId(userId) {
   // DeepSeek 的 user_id 用于隔离；使用 HMAC 后的稳定伪标识，避免发送原始账户 ID 或个人资料。
@@ -115,6 +116,23 @@ export async function createConversationTitle({ userId, content }) {
     ],
     temperature: 0.3,
     maxTokens: 32,
+  })
+  return result.content
+}
+
+// 提醒邮件文案：系统提示词由 notification.policy.js 约束内容边界，失败由调用方回退模板。
+export async function createReminderContent({ userId, kind, facts }) {
+  assertDeepSeekConfigured()
+
+  const systemPrompt = kind === 'period' ? PERIOD_REMINDER_SYSTEM_PROMPT : ANNIVERSARY_REMINDER_SYSTEM_PROMPT
+  const result = await chatCompletion({
+    userId,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: facts },
+    ],
+    temperature: 0.8,
+    maxTokens: 240,
   })
   return result.content
 }

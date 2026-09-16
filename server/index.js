@@ -31,7 +31,9 @@ import companionRoutes from './src/modules/companion/companion.routes.js'
 import careRoutes from './src/modules/care/care.routes.js'
 import ruleRoutes from './src/modules/rule/rule.routes.js'
 import pinRoutes from './src/modules/pin/pin.routes.js'
+import notificationRoutes from './src/modules/notification/notification.routes.js'
 import { backfillConversationTitles } from './src/modules/companion/companion.service.js'
+import { startScheduler } from './src/infrastructure/scheduler/index.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const PORT = process.env.PORT || 4000
@@ -71,6 +73,7 @@ app.use('/api/share', shareRoutes)
 app.use('/api/care', careRoutes)
 app.use('/api/rules', ruleRoutes)
 app.use('/api/pins', pinRoutes)
+app.use('/api/notifications', notificationRoutes)
 app.use('/api/music', musicRoutes)
 app.use('/api/users/me/theme', themeRoutes)
 app.use('/api', fileRoutes)
@@ -87,6 +90,9 @@ if (fs.existsSync(distDir)) {
 app.use(errorHandler)
 
 setupSocket(io)
+
+// 邮件提醒调度：启动补检 + 每 6 小时轮询，未配置 SMTP 时内部自动跳过
+startScheduler()
 
 // 历史情感会话标题回填：幂等，失败不阻塞启动
 try {

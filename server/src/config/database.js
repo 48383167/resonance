@@ -233,6 +233,29 @@ CREATE TABLE IF NOT EXISTS pinned_items (
 );
 CREATE INDEX IF NOT EXISTS idx_pinned_scope ON pinned_items(pin_scope, target_type, updated_at);
 
+-- 邮件提醒设置：每人一行（收件邮箱 + 各触发开关 + 是否允许 AI 生成文案）
+CREATE TABLE IF NOT EXISTS user_mail_settings (
+    user_id TEXT PRIMARY KEY,
+    email TEXT DEFAULT '',
+    period_remind INTEGER NOT NULL DEFAULT 0,      -- 例假临近提醒
+    anniversary_remind INTEGER NOT NULL DEFAULT 0, -- 纪念日提醒
+    ai_content INTEGER NOT NULL DEFAULT 1,         -- 允许把提醒信息发给 AI 生成文案
+    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
+-- 邮件发送日志：dedupe_key 唯一（触发点 + 目标日期 + 收件人），sent 不重发，failed 下轮重试
+CREATE TABLE IF NOT EXISTS notification_logs (
+    id TEXT PRIMARY KEY,
+    dedupe_key TEXT NOT NULL UNIQUE,
+    user_id TEXT NOT NULL,
+    email TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',        -- sent / failed
+    error TEXT,
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    updated_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_notification_logs_status ON notification_logs(status, updated_at);
+
 -- 评论：挂在日记（entry）或恋爱瞬间（moment）上，支持一级回复
 -- parent_id 为空 = 顶层评论；回复统一挂到顶层评论（回复的回复会扁平化）
 -- 删除策略：有回复的评论墓碑化（content 清空 + deleted_at），无回复物理删除

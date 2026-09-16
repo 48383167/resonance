@@ -437,7 +437,40 @@ const nbDelCare = await http('DELETE', `/api/care/items/${nbAllergy.data.id}`, n
 const nbGlobals3 = await http('GET', '/api/pins/global', null, tokenA)
 assert('删除档案后 global 不含（置顶清理）', nbDelCare.ok === true && !nbGlobals3.data.items.some((it) => it.targetId === nbAllergy.data.id))
 
-console.log('== 15. 导出时光机 ==')
+console.log('== 15. 邮件提醒 ==')
+const mailInit = await http('GET', '/api/notifications/mail', null, tokenA)
+assert('邮件设置默认关闭且返回配置状态', mailInit.ok && mailInit.data.periodRemind === false
+  && mailInit.data.anniversaryRemind === false && typeof mailInit.data.mailerConfigured === 'boolean')
+const mailBadEmail = await http('PUT', '/api/notifications/mail', { email: 'not-an-email' }, tokenA)
+assert('非法邮箱被拒绝', mailBadEmail.ok === false && mailBadEmail.error?.code === 'INVALID_EMAIL')
+// 在写入邮箱前执行检查：即便环境配置了 SMTP 也不会有真实收件人
+const mailRun0 = await http('POST', '/api/notifications/run', null, tokenA)
+if (mailInit.data.mailerConfigured) {
+  assert('已配置 SMTP 时提醒检查可运行且无收件人', mailRun0.ok && mailRun0.data.sent === 0)
+} else {
+  assert('未配置 SMTP 时提醒检查跳过', mailRun0.ok && mailRun0.data.skipped === 'MAIL_NOT_CONFIGURED')
+}
+const mailSave = await http('PUT', '/api/notifications/mail', { email: 'alice@qq.com', periodRemind: true, anniversaryRemind: true, aiContent: false }, tokenA)
+assert('保存邮件设置', mailSave.ok && mailSave.data.email === 'alice@qq.com'
+  && mailSave.data.periodRemind === true && mailSave.data.anniversaryRemind === true && mailSave.data.aiContent === false)
+const mailGetB = await http('GET', '/api/notifications/mail', null, tokenB)
+assert('邮件设置按用户隔离', mailGetB.ok && mailGetB.data.email === '')
+if (!mailInit.data.mailerConfigured) {
+  const mailTest = await http('POST', '/api/notifications/mail/test', null, tokenA)
+  assert('未配置 SMTP 时测试邮件被拒绝', mailTest.ok === false && mailTest.error?.code === 'MAIL_NOT_CONFIGURED')
+}
+const periodPreview = await http('GET', '/api/notifications/preview?type=period', null, tokenA)
+assert('例假预览含本人与伴侣两封', periodPreview.ok && periodPreview.data.items.length === 2
+  && periodPreview.data.items.some((item) => item.role === 'self')
+  && periodPreview.data.items.some((item) => item.role === 'partner')
+  && periodPreview.data.items.every((item) => item.body.length > 10 && ['template', 'ai'].includes(item.source)))
+const annPreview = await http('GET', '/api/notifications/preview?type=anniversary', null, tokenA)
+assert('纪念日预览可用', annPreview.ok && annPreview.data.items.length === 2
+  && annPreview.data.items.every((item) => item.subject.includes('纪念日')))
+const previewBad = await http('GET', '/api/notifications/preview?type=nope', null, tokenA)
+assert('未知预览类型被拒绝', previewBad.ok === false && previewBad.error?.code === 'INVALID_PREVIEW_TYPE')
+
+console.log('== 16. 导出时光机 ==')
 const exp = await fetch(BASE + '/api/export')
 const buf = await exp.arrayBuffer()
 assert('导出 zip 非空', exp.status === 200 && buf.byteLength > 0, `bytes=${buf.byteLength}`)
