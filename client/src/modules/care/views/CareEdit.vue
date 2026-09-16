@@ -29,19 +29,15 @@ const SEVERITIES = [
   { value: 'severe', label: '重度' },
 ]
 
-// 缺省对象：例假优先女性一方，其余默认 Ta（与后端规则一致）
-function defaultSubjectFor(category) {
-  if (category === 'period') {
-    if (session.me?.gender === 'female' && session.partner?.gender !== 'female') return session.userId
-    if (session.partner?.gender === 'female' && session.me?.gender !== 'female') return session.partner.id
-  }
+// 缺省对象：默认 Ta（例假由后端固定到女性一方，不需要手动选）
+function defaultSubjectFor() {
   return session.partner?.id || session.userId
 }
 
 const initialCategory = route.query.category || 'diet'
 const form = ref({
   category: initialCategory,
-  subjectId: route.query.subject || defaultSubjectFor(initialCategory),
+  subjectId: route.query.subject || defaultSubjectFor(),
   title: initialCategory === 'period' ? '例假记录' : '',
   content: '',
   severity: 'mild',
@@ -56,8 +52,8 @@ function pickSubject(id) {
   subjectTouched = true
   form.value.subjectId = id
 }
-watch(() => form.value.category, (category) => {
-  if (!subjectTouched) form.value.subjectId = defaultSubjectFor(category)
+watch(() => form.value.category, () => {
+  if (!subjectTouched) form.value.subjectId = defaultSubjectFor()
 })
 
 const canGoBack = Boolean(history.state?.back)
@@ -102,6 +98,9 @@ async function save() {
       delete data.startDate
       delete data.endDate
       delete data.cycleDays
+    } else {
+      // 例假固定到女性一方，对象由后端决定
+      delete data.subjectId
     }
     if (editingId) {
       await updateCareItem(editingId, data)
@@ -142,7 +141,10 @@ async function remove() {
         <AppSelect v-model="form.category" :options="CATEGORIES" placeholder="选择分类" />
       </div>
 
-      <div>
+      <div v-if="form.category === 'period'" class="surface-soft rounded-xl px-4 py-3 text-xs text-theme-secondary">
+        🌸 例假固定记录到女生一方，不需要选择对象
+      </div>
+      <div v-else>
         <label class="mb-1 block text-xs text-theme-tertiary">关于谁</label>
         <div class="flex gap-2">
           <button v-for="s in [{ id: session.userId, label: '我' }, { id: session.partner?.id, label: 'Ta' }]"

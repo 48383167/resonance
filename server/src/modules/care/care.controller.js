@@ -21,5 +21,5 @@ export async function remove(req, res, next) {
 }
 
 export async function periodSummary(req, res, next) {
-  try { res.success(careService.periodSummary()) } catch (e) { next(e) }
+  try { res.success(careService.periodSummary(req.user.id)) } catch (e) { next(e) }
 }

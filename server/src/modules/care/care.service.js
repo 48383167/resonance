@@ -7,14 +7,15 @@ import * as careSchema from './care.schema.js'
 import * as pinRepository from '../pin/pin.repository.js'
 import { emitCareCreated, emitCareUpdated, emitCareDeleted } from '../../infrastructure/socket/care.socket.js'
 
-// subject 校验：缺省时例假优先女性成员，其余默认伴侣（未配对为自己）；不在成员内 → INVALID_CARE_SUBJECT
+// 例假固定到情侣中唯一的女性成员；其余分类缺省为伴侣（未配对为自己）；不在成员内 → INVALID_CARE_SUBJECT
 function resolveSubject(couple, subjectId, category) {
   const members = couple ? couple.members : []
-  let resolved = subjectId
-  if (!resolved && category === 'period') {
+  // 例假：性别确定后忽略手动选择，固定女性一方
+  if (category === 'period') {
     const females = members.filter((m) => m.gender === 'female')
-    if (females.length === 1) resolved = females[0].id
+    if (females.length === 1) return females[0].id
   }
+  let resolved = subjectId
   resolved ||= couple?.partner ? couple.partner.id : couple?.me?.id
   if (!members.some((m) => m.id === resolved)) {
     throw new AppError('档案对象不是情侣成员', 400, 'INVALID_CARE_SUBJECT')
@@ -177,8 +178,18 @@ function computeSubject(subjectId, records) {
   }
 }
 
-export function periodSummary() {
+export function periodSummary(userId) {
   const records = careRepository.listPeriodRecords()
+  const couple = userId ? getUserCouple(userId) : null
+  const females = couple ? couple.members.filter((m) => m.gender === 'female') : []
+
+  // 性别确定后：例假不再分对象，所有记录归并到唯一女性一方（旧记录同样归并）
+  if (females.length === 1) {
+    if (!records.length) return { subjects: [] }
+    return { subjects: [computeSubject(females[0].id, records)] }
+  }
+
+  // 未确定性别（或未配对）：按记录里的对象分组
   const bySubject = new Map()
   for (const r of records) {
     if (!bySubject.has(r.subject_id)) bySubject.set(r.subject_id, [])
@@ -191,8 +202,8 @@ export function periodSummary() {
   return { subjects }
 }
 
-export function dashboardSummary() {
-  const { subjects } = periodSummary()
+export function dashboardSummary(userId) {
+  const { subjects } = periodSummary(userId)
   const alerts = careRepository.listAllergyAlerts().slice(0, 3).map((a) => ({
     id: a.id,
     title: a.title,

@@ -12,7 +12,7 @@
 
 > 与性别的关系：`users.gender` 为 `''`（未设置）/ `male` / `female`，在「设置 → 个人资料」中可选填。
 > 情侣必为一男一女：**一方填写后，另一方自动同步为相反性别**（`PUT /api/users/me` 时联动，并广播 `profile:updated`）。
-> 例假是按「档案对象」组织的数据，不限制记录人性别；性别只影响新建例假时的默认对象。
+> 性别确定后，**例假固定归女性一方，不需要手动选择对象**；预测汇总时早期记录的旧对象也会自动归并。
 
 ### care_items（关怀档案）
 
@@ -20,7 +20,7 @@
 |---|---|---|
 | id | TEXT | `care_` + uuid 前 12 位 |
 | author_id | TEXT | 录入人 |
-| subject_id | TEXT | 档案对象（我 / Ta） |
+| subject_id | TEXT | 档案对象（我 / Ta）；例假固定为女性成员 |
 | category | TEXT | `diet` 忌口 / `allergy` 过敏 / `period` 例假 / `preference` 偏好 / `other` 其他 |
 | title | TEXT | 1~80 字 |
 | content | TEXT | ≤ 2000 字，可空 |
@@ -110,8 +110,8 @@
 
 - `category` 必须为枚举值，否则 400 `INVALID_CARE_CATEGORY`
 - `subjectId` 必须是我或伴侣，否则 400 `INVALID_CARE_SUBJECT`
-  - 缺省规则：`category = 'period'` 时优先选择情侣中唯一的 `female` 成员（见 `users.gender`）；否则默认伴侣，未配对默认自己
-  - 档案对象与性别无关，男方可为对方记录例假
+  - `category = 'period'`：性别确定（存在唯一 `female`）时**忽略传入值，固定为女性成员**；性别未确定时按传入值 → 默认伴侣 → 自己
+  - 其余分类：缺省为伴侣，未配对为自己；男方可为对方记录例假
 - `period` 必须提供 `startDate`；`endDate` 若存在必须 ≥ `startDate`，否则 400 `INVALID_PERIOD_RANGE`
 - `cycleDays` 若存在必须在 15~60，否则 400 `INVALID_CYCLE_DAYS`
 - `severity` 仅 `allergy` 允许，枚举 `mild/moderate/severe`，否则 400 `INVALID_CARE_SEVERITY`
@@ -148,6 +148,7 @@
 - `cycleSource`：周期来源。`history` 按历史间隔智能推算 / `setting` 按记录里填写的 `cycle_days` / `default` 无数据回退 28 天。
 - `variationDays`：历史周期的标准差（波动范围），可用于展示「预计日期 ±N 天」；不足 2 个区间时为 0。
 - `intervals`：参与推算的区间数。
+- 性别确定后 `subjects` 恒为一个条目：所有例假记录（含早期记录的旧对象）归并到该女性成员；性别未确定时按 `subject_id` 分组。
 
 算法（智能推算，纯统计不依赖外部 AI）：
 

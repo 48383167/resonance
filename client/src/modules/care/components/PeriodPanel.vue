@@ -76,7 +76,7 @@ defineExpose({ load })
   <div class="space-y-4">
     <div v-if="summary.length" class="grid gap-3 sm:grid-cols-2">
       <article v-for="s in summary" :key="s.subject.id" class="glass p-5">
-        <div class="text-sm text-theme-secondary">{{ s.subject.nickname }}</div>
+        <div class="text-sm text-theme-secondary">{{ s.subject.nickname }}的例假</div>
         <div class="serif mt-2 text-xl" :class="periodState(s).hot ? 'text-accent-2' : 'text-theme-primary'">
           {{ periodState(s).text }}
         </div>

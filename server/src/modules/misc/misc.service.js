@@ -23,7 +23,7 @@ export function getDashboard(user) {
     daysTogether: coupleRepository.daysTogether(),
     stats: s,
     upcomingAnniversary: upcoming,
-    careSummary: careService.dashboardSummary(),
+    careSummary: careService.dashboardSummary(user.id),
   }
 }
 

@@ -384,6 +384,12 @@ assert('另一方自动同步为男', nbMeA.ok && nbMeA.data.me.gender === 'male
 const nbAutoSubject = await http('POST', '/api/care/items', { category: 'period', title: '智能对象', startDate: '2026-11-01' }, tokenA)
 assert('例假未填对象时默认女性一方', nbAutoSubject.ok && nbAutoSubject.data.subject_id === regB.data.me.id,
   `got=${nbAutoSubject.data?.subject_id}`)
+const nbForceSubject = await http('POST', '/api/care/items', { category: 'period', title: '强制对象', subjectId: regA.data.me.id, startDate: '2026-11-15' }, tokenA)
+assert('例假传男性对象也被固定为女性', nbForceSubject.ok && nbForceSubject.data.subject_id === regB.data.me.id,
+  `got=${nbForceSubject.data?.subject_id}`)
+const nbSummaryMerged = await http('GET', '/api/care/period/summary', null, tokenA)
+assert('性别确定后例假汇总只保留女性一方', nbSummaryMerged.ok && nbSummaryMerged.data.subjects.length === 1
+  && nbSummaryMerged.data.subjects[0].subject.id === regB.data.me.id, JSON.stringify(nbSummaryMerged))
 
 // 5. 伴侣可见 A 创建的档案
 const nbCareListB = await http('GET', '/api/care/items', null, tokenB)
