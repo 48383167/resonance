@@ -29,6 +29,7 @@ const subjectOptions = computed(() => {
 })
 
 const groups = computed(() => CATEGORIES
+  .filter((c) => !category.value || c.value === category.value)
   .map((c) => ({
     ...c,
     items: items.value.filter((item) =>
@@ -36,6 +37,8 @@ const groups = computed(() => CATEGORIES
       && (!subjectId.value || item.subject_id === subjectId.value)),
   }))
   .filter((g) => g.items.length))
+
+const filtering = computed(() => Boolean(category.value || subjectId.value))
 
 function severityClass(severity) {
   if (severity === 'severe') return 'danger-link'
@@ -129,7 +132,7 @@ defineExpose({ load })
     </div>
 
     <div v-else class="glass p-8 text-center text-sm text-theme-tertiary">
-      还没有关怀档案，把那些重要的小事记下来吧。
+      {{ filtering ? '没有符合筛选的档案，换个条件试试。' : '还没有关怀档案，把那些重要的小事记下来吧。' }}
     </div>
 
     <button class="btn-primary w-full" @click="router.push('/notebook/care/new')">＋ 添加档案</button>
