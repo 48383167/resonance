@@ -256,6 +256,13 @@ CREATE TABLE IF NOT EXISTS notification_logs (
 );
 CREATE INDEX IF NOT EXISTS idx_notification_logs_status ON notification_logs(status, updated_at);
 
+-- 底部导航设置（singleton：id 固定为 1，按数组顺序展示；两人共用一套，不分用户）
+CREATE TABLE IF NOT EXISTS navigation_settings (
+    id INTEGER PRIMARY KEY,
+    items TEXT NOT NULL DEFAULT '["home","timeline","diary-list","companion"]',
+    updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
 -- 评论：挂在日记（entry）或恋爱瞬间（moment）上，支持一级回复
 -- parent_id 为空 = 顶层评论；回复统一挂到顶层评论（回复的回复会扁平化）
 -- 删除策略：有回复的评论墓碑化（content 清空 + deleted_at），无回复物理删除
@@ -391,6 +398,9 @@ CREATE TABLE IF NOT EXISTS companion_daily_usage (
 
 // 兼容旧库：观测台开关 singleton 行缺省初始化 enabled=1，保证已有行为不变（幂等）
 db.prepare('INSERT OR IGNORE INTO observatory_settings (id, enabled) VALUES (1, 1)').run()
+
+// 底部导航 singleton 行：缺省使用默认导航
+db.prepare('INSERT OR IGNORE INTO navigation_settings (id) VALUES (1)').run()
 
 // 老库补列：日记附件、心愿阶段时间节点、情书阅读时间、文件 ID 化新列
 ensureColumns('entries', { media: "TEXT DEFAULT '[]'" })

@@ -1,9 +1,12 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { updateProfile } from '../../../modules/misc/misc.api.js'
 import { changePassword as changePasswordApi } from '../../../modules/auth/auth.api.js'
 import { getCurrentShare, createShare as createShareApi, updateCurrentShare, disableShare as disableShareApi } from '../../../modules/share/share.api.js'
 import { getMailSettings, updateMailSettings, sendTestMail, previewNotifications, runNotifications } from '../../../modules/notification/notification.api.js'
+import { navigationItems } from '../../../shared/navigation.js'
+import { dock, DEFAULT_DOCK_ITEMS, loadDock, applyDock } from '../../../stores/dock'
+import { updateNavigation } from '../../../modules/navigation/navigation.api.js'
 import { session, initSession } from '../../../stores/session'
 import { toast } from '../../../stores/toast'
 import { applyTheme, currentTheme, loadTheme, saveTheme } from '../../../stores/theme'
@@ -23,6 +26,54 @@ const mailRunning = ref(false)
 const previewLoading = ref(false)
 const mailPreviewType = ref('period')
 const previews = ref([])
+const dockDraft = ref([...dock.items])
+const dockSaving = ref(false)
+const MAX_DOCK_ITEMS = 5
+
+const dockAvailable = computed(() =>
+  navigationItems.filter((item) => !dockDraft.value.includes(item.name)))
+
+function dockItemMeta(name) {
+  return navigationItems.find((item) => item.name === name) || { label: name, icon: '·' }
+}
+
+function moveDock(index, delta) {
+  const to = index + delta
+  if (to < 0 || to >= dockDraft.value.length) return
+  const next = [...dockDraft.value]
+  ;[next[index], next[to]] = [next[to], next[index]]
+  dockDraft.value = next
+}
+
+function removeDockItem(index) {
+  if (dockDraft.value.length <= 1) return toast('至少要保留一个入口')
+  dockDraft.value = dockDraft.value.filter((_, i) => i !== index)
+}
+
+function addDockItem(name) {
+  if (dockDraft.value.length >= MAX_DOCK_ITEMS) return toast('最多 5 个入口')
+  if (dockDraft.value.includes(name)) return
+  dockDraft.value = [...dockDraft.value, name]
+}
+
+function resetDockDraft() {
+  dockDraft.value = [...DEFAULT_DOCK_ITEMS]
+}
+
+async function saveDockSettings() {
+  if (dockSaving.value) return
+  dockSaving.value = true
+  try {
+    const data = await updateNavigation(dockDraft.value)
+    applyDock(data?.items)
+    dockDraft.value = [...dock.items]
+    toast('底部导航已保存')
+  } catch (e) {
+    toast(e.message)
+  } finally {
+    dockSaving.value = false
+  }
+}
 const pw = ref({ old: '', next: '' })
 const share = ref(null)
 const shareForm = ref({ password: '', expireDays: 30, includeMoments: true, includeEntries: true, includeAnniversaries: true })
@@ -73,6 +124,8 @@ onMounted(async () => {
   themeDraft.value = normalizeTheme(currentTheme)
   await loadShare()
   await loadMailSettings()
+  await loadDock()
+  dockDraft.value = [...dock.items]
 })
 
 function previewTheme() {
@@ -396,6 +449,45 @@ function copyShare() {
           <div class="mt-1 font-medium">{{ item.subject }}</div>
           <p class="mt-1 whitespace-pre-wrap text-white/70">{{ item.body }}</p>
         </div>
+      </div>
+    </div>
+
+    <!-- 底部导航：两人共用的统一设置 -->
+    <div class="glass space-y-4 p-5">
+      <div>
+        <h3 class="text-sm text-white/70">底部导航</h3>
+        <p class="mt-1 text-xs text-white/45">选择底栏显示的入口与顺序（最多 5 个）；这是两人共用的设置，保存后对方也会同步。</p>
+      </div>
+
+      <div class="space-y-2">
+        <div v-for="(name, index) in dockDraft" :key="name"
+          class="surface-soft flex min-h-11 items-center gap-2 rounded-xl px-3">
+          <span>{{ dockItemMeta(name).icon }}</span>
+          <span class="min-w-0 flex-1 truncate text-sm">{{ dockItemMeta(name).label }}</span>
+          <button class="min-h-11 min-w-9 rounded-lg text-white/60 transition-colors hover:text-white disabled:opacity-30"
+            :disabled="index === 0" aria-label="上移" @click="moveDock(index, -1)">↑</button>
+          <button class="min-h-11 min-w-9 rounded-lg text-white/60 transition-colors hover:text-white disabled:opacity-30"
+            :disabled="index === dockDraft.length - 1" aria-label="下移" @click="moveDock(index, 1)">↓</button>
+          <button class="min-h-11 min-w-9 rounded-lg text-xs danger-link" aria-label="移除" @click="removeDockItem(index)">✕</button>
+        </div>
+      </div>
+
+      <div v-if="dockAvailable.length">
+        <div class="mb-1 text-xs text-white/45">可添加（{{ dockDraft.length }}/5）</div>
+        <div class="flex flex-wrap gap-2">
+          <button v-for="item in dockAvailable" :key="item.name"
+            class="border-theme min-h-10 rounded-full border px-3 text-xs text-white/70 transition-colors hover:bg-white/10 disabled:opacity-30"
+            :disabled="dockDraft.length >= MAX_DOCK_ITEMS" @click="addDockItem(item.name)">
+            ＋ {{ item.icon }} {{ item.label }}
+          </button>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-2 sm:flex-row">
+        <button class="btn-primary w-full sm:w-auto" :disabled="dockSaving" @click="saveDockSettings">
+          {{ dockSaving ? '保存中…' : '保存导航设置' }}
+        </button>
+        <button class="btn-ghost w-full sm:w-auto" @click="resetDockDraft">恢复默认</button>
       </div>
     </div>
 

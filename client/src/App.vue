@@ -15,6 +15,7 @@ import { toasts, toast } from './stores/toast'
 import { loadCommentUnread, resetCommentUnread, bumpCommentUnread } from './stores/commentUnread'
 import { loadGlobalPins, resetPins } from './stores/pins'
 import { loadNotebookUnread, resetNotebookUnread, bumpNotebookUnread } from './stores/notebookUnread'
+import { loadDock, resetDock, applyDock } from './stores/dock'
 import { currentTheme, loadTheme, resetTheme } from './stores/theme'
 
 const router = useRouter()
@@ -28,8 +29,8 @@ watch(() => [session.me?.id, route.meta.auth], ([userId, isPrivateRoute]) => {
 
 // 登录后拉取评论未读角标，退出时清零
 watch(() => session.userId, (userId) => {
-  if (userId) { loadCommentUnread(); loadGlobalPins(); loadNotebookUnread() }
-  else { resetCommentUnread(); resetPins(); resetNotebookUnread() }
+  if (userId) { loadCommentUnread(); loadGlobalPins(); loadNotebookUnread(); loadDock() }
+  else { resetCommentUnread(); resetPins(); resetNotebookUnread(); resetDock() }
 }, { immediate: true })
 
 // 对方的新评论让角标 +1；删除后重新拉取（负载不含作者与已读状态）
@@ -47,6 +48,10 @@ function onRuleCreated(rule) {
 }
 function onRuleChanged() {
   loadNotebookUnread()
+}
+// 底部导航为两人共用设置：对方修改后实时套用
+function onNavigationUpdated(payload) {
+  applyDock(payload?.items)
 }
 function onProfileUpdated(payload) {
   if (!session.me) return
@@ -94,6 +99,7 @@ onMounted(() => {
   socket.on('rule:deleted', onRuleChanged)
   socket.on('rule:agreed', onRuleAgreed)
   socket.on('profile:updated', onProfileUpdated)
+  socket.on('navigation:updated', onNavigationUpdated)
 })
 
 onUnmounted(() => {
@@ -106,6 +112,7 @@ onUnmounted(() => {
   socket.off('rule:deleted', onRuleChanged)
   socket.off('rule:agreed', onRuleAgreed)
   socket.off('profile:updated', onProfileUpdated)
+  socket.off('navigation:updated', onNavigationUpdated)
 })
 </script>
 

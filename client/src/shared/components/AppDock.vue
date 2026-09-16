@@ -1,16 +1,24 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { navigationGroups, navigationItems, primaryNavigationNames } from '../navigation.js'
+import { navigationGroups, navigationItems } from '../navigation.js'
 import { commentUnread } from '../../stores/commentUnread'
 import { notebookUnread } from '../../stores/notebookUnread'
+import { dock, DEFAULT_DOCK_ITEMS } from '../../stores/dock'
 
 const route = useRoute()
-const dock = ref(null)
+const dockEl = ref(null)
 const moreOpen = ref(false)
 
-const primaryItems = computed(() => navigationItems.filter((item) => primaryNavigationNames.includes(item.name)))
-const moreActive = computed(() => navigationItems.some((item) => !primaryNavigationNames.includes(item.name) && isItemActive(item)))
+// 底部导航入口与顺序来自两人共用的导航设置，未知项自动忽略
+const primaryItems = computed(() => {
+  const mapped = dock.items
+    .map((name) => navigationItems.find((item) => item.name === name))
+    .filter(Boolean)
+  if (mapped.length) return mapped
+  return navigationItems.filter((item) => DEFAULT_DOCK_ITEMS.includes(item.name))
+})
+const moreActive = computed(() => navigationItems.some((item) => !primaryItems.value.includes(item) && isItemActive(item)))
 
 // 评论未读角标：日记在主导航，瞬间在「更多」里（••• 按钮上同步提示）
 function unreadOf(item) {
@@ -29,7 +37,7 @@ function closeMore() {
 }
 
 function onDocumentClick(event) {
-  if (dock.value && !dock.value.contains(event.target)) closeMore()
+  if (dockEl.value && !dockEl.value.contains(event.target)) closeMore()
 }
 
 watch(() => route.fullPath, closeMore)
@@ -39,7 +47,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
 </script>
 
 <template>
-  <div ref="dock" class="app-dock fixed bottom-5 left-1/2 z-[55] -translate-x-1/2" @click.stop>
+  <div ref="dockEl" class="app-dock fixed bottom-5 left-1/2 z-[55] -translate-x-1/2" @click.stop>
     <Transition name="dock-panel">
       <div v-if="moreOpen" class="app-dock__panel glass absolute bottom-[calc(100%+14px)] left-1/2 max-h-[min(70svh,36rem)] w-[min(620px,calc(100vw-2rem))] -translate-x-1/2 overflow-y-auto overscroll-contain p-4">
         <div class="mb-3 flex items-center justify-between">
