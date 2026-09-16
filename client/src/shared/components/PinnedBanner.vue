@@ -52,6 +52,12 @@ function dismiss() {
 }
 
 watch(() => route.fullPath, () => { expanded.value = false })
+
+// 重新登录后解除「本次登录不再提示」（页面刷新恢复会话不触发；关标签页本就重置）
+watch(() => session.authEpoch, () => {
+  dismissed.value = false
+  try { sessionStorage.removeItem(DISMISS_KEY) } catch { /* 隐私模式下存储不可用 */ }
+})
 </script>
 
 <template>
@@ -83,7 +89,7 @@ watch(() => route.fullPath, () => { expanded.value = false })
           </div>
           <div class="border-theme flex items-center justify-between border-t px-3 py-2">
             <button class="min-h-9 text-xs text-theme-tertiary transition-colors hover:text-theme-primary" @click="dismiss">
-              本次不再提示
+              本次登录不再提示
             </button>
             <button class="min-h-9 text-xs text-accent" @click="openNotebook">去小本本 →</button>
           </div>

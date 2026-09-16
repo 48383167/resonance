@@ -10,6 +10,7 @@ export const session = reactive({
   partner: null,
   partnerOnline: false,
   inviteCode: '', // 未配对时显示邀请码
+  authEpoch: 0,   // 每次重新登录 +1（页面刷新恢复会话不触发），供一次性提示按登录态重置
 })
 
 export function isLoggedIn() {
@@ -21,6 +22,7 @@ export function setLogin({ token, me, partner }) {
   session.userId = me.id
   session.me = me
   session.partner = partner
+  session.authEpoch += 1
   authSocket(token)
 }
 
@@ -47,5 +49,6 @@ export function logout() {
   session.partner = null
   session.partnerOnline = false
   session.inviteCode = ''
+  try { sessionStorage.removeItem('resonance.pins.dismissed') } catch { /* 忽略 */ }
   socketDisconnect()
 }
