@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { updateProfile } from '../../../modules/misc/misc.api.js'
 import { changePassword as changePasswordApi } from '../../../modules/auth/auth.api.js'
 import { getCurrentShare, createShare as createShareApi, updateCurrentShare, disableShare as disableShareApi } from '../../../modules/share/share.api.js'
@@ -29,6 +29,22 @@ const previews = ref([])
 const dockDraft = ref([...dock.items])
 const dockSaving = ref(false)
 const MAX_DOCK_ITEMS = 5
+
+// 设置分 Tab，避免长页面滚动；记住上次停留的位置
+const SETTINGS_TABS = [
+  { value: 'profile', label: '资料', icon: '👤' },
+  { value: 'notify', label: '提醒', icon: '✉️' },
+  { value: 'nav', label: '导航', icon: '🧭' },
+  { value: 'theme', label: '主题', icon: '🎨' },
+  { value: 'share', label: '分享', icon: '🔗' },
+]
+const SETTINGS_TAB_KEY = 'resonance.settings.tab'
+const savedTab = localStorage.getItem(SETTINGS_TAB_KEY)
+const settingsTab = ref(SETTINGS_TABS.some((t) => t.value === savedTab) ? savedTab : 'profile')
+watch(settingsTab, (value) => {
+  localStorage.setItem(SETTINGS_TAB_KEY, value)
+  window.scrollTo({ top: 0 })
+})
 
 const dockAvailable = computed(() =>
   navigationItems.filter((item) => !dockDraft.value.includes(item.name)))
@@ -345,8 +361,17 @@ function copyShare() {
   <div class="fade-up space-y-5">
     <h2 class="serif text-xl">设置</h2>
 
+    <div class="surface-soft flex gap-1 overflow-x-auto rounded-2xl p-1">
+      <button v-for="t in SETTINGS_TABS" :key="t.value"
+        class="min-h-11 shrink-0 flex-1 rounded-xl px-2 text-xs transition-colors sm:text-sm"
+        :class="settingsTab === t.value ? 'bg-accent-soft text-accent' : 'text-white/60'"
+        @click="settingsTab = t.value">
+        {{ t.icon }} {{ t.label }}
+      </button>
+    </div>
+
     <!-- 配对信息 -->
-    <div class="glass p-5 text-sm">
+    <div v-if="settingsTab === 'profile'" class="glass p-5 text-sm">
       <div class="flex min-w-0 items-center gap-3">
         <img v-if="session.me?.avatar_url" :src="session.me.avatar_url" class="h-12 w-12 rounded-full object-cover" />
         <div v-else class="flex h-12 w-12 items-center justify-center rounded-full bg-accent-soft text-lg">♫</div>
@@ -361,7 +386,7 @@ function copyShare() {
     </div>
 
     <!-- 资料 -->
-    <div class="glass space-y-3 p-5">
+    <div v-if="settingsTab === 'profile'" class="glass space-y-3 p-5">
       <h3 class="text-sm text-white/70">个人资料</h3>
       <div>
         <label class="mb-1 block text-xs text-white/50">昵称</label>
@@ -380,7 +405,7 @@ function copyShare() {
     </div>
 
     <!-- 邮件提醒：QQ 邮箱 SMTP，例假与纪念日通知 -->
-    <div class="glass space-y-4 p-5">
+    <div v-if="settingsTab === 'notify'" class="glass space-y-4 p-5">
       <div>
         <h3 class="text-sm text-white/70">邮件提醒</h3>
         <p class="mt-1 text-xs text-white/45">例假预计前 3 天、纪念日提前 3 天与当天，会向下面的邮箱发送提醒；正文可由 AI 生成，也可以使用内置文案。</p>
@@ -453,7 +478,7 @@ function copyShare() {
     </div>
 
     <!-- 底部导航：两人共用的统一设置 -->
-    <div class="glass space-y-4 p-5">
+    <div v-if="settingsTab === 'nav'" class="glass space-y-4 p-5">
       <div>
         <h3 class="text-sm text-white/70">底部导航</h3>
         <p class="mt-1 text-xs text-white/45">选择底栏显示的入口与顺序（最多 5 个）；这是两人共用的设置，保存后对方也会同步。</p>
@@ -492,7 +517,7 @@ function copyShare() {
     </div>
 
     <!-- 个人主题：只保存到当前登录用户，不会影响伴侣 -->
-    <div class="glass space-y-4 p-5">
+    <div v-if="settingsTab === 'theme'" class="glass space-y-4 p-5">
       <div>
         <h3 class="text-sm text-white/70">主题色</h3>
         <p class="mt-1 text-xs text-white/45">主题属于当前账号，选择后会实时预览，保存后可在其他设备恢复。</p>
@@ -581,7 +606,7 @@ function copyShare() {
     </div>
 
     <!-- 修改密码 -->
-    <div class="glass space-y-3 p-5">
+    <div v-if="settingsTab === 'profile'" class="glass space-y-3 p-5">
       <h3 class="text-sm text-white/70">修改密码</h3>
       <div class="grid gap-3 sm:grid-cols-2">
         <input v-model="pw.old" type="password" class="input-dark" placeholder="原密码" autocomplete="current-password" />
@@ -591,7 +616,7 @@ function copyShare() {
     </div>
 
     <!-- 分享 -->
-    <div class="glass relative z-20 space-y-3 p-5">
+    <div v-if="settingsTab === 'share'" class="glass relative z-20 space-y-3 p-5">
       <h3 class="text-sm text-white/70">对外分享（只读）</h3>
       <div v-if="share">
         <div class="rounded-xl bg-white/5 p-3 text-sm">
@@ -661,7 +686,7 @@ function copyShare() {
     </div>
 
     <!-- 数据 -->
-    <div class="glass space-y-3 p-5">
+    <div v-if="settingsTab === 'share'" class="glass space-y-3 p-5">
       <h3 class="text-sm text-white/70">数据</h3>
       <p class="text-xs text-white/50">导出时光机：database.sqlite + 媒体文件夹打包为 zip 下载保存。</p>
       <a href="/api/export" class="btn-ghost inline-block">⬇ 导出时光机</a>
