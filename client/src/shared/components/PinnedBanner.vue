@@ -12,8 +12,15 @@ const DISMISS_KEY = 'resonance.pins.dismissed'
 const dismissed = ref(sessionStorage.getItem(DISMISS_KEY) === '1')
 const expanded = ref(false)
 
+// 小本本相关页面本身就是置顶内容的家，不再显示胶囊
+const HIDDEN_ROUTES = ['notebook', 'care-new', 'care-edit', 'rule-new', 'rule-edit']
+
 const shown = computed(() =>
-  Boolean(session.me) && Boolean(route.meta.auth) && pins.global.length > 0 && !dismissed.value)
+  Boolean(session.me)
+  && Boolean(route.meta.auth)
+  && !HIDDEN_ROUTES.includes(route.name)
+  && pins.global.length > 0
+  && !dismissed.value)
 const first = computed(() => pins.global[0] || null)
 const restCount = computed(() => Math.max(0, pins.global.length - 1))
 

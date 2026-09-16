@@ -1,5 +1,5 @@
 <script setup>
-import { nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createCareItem, getCareItem, updateCareItem, removeCareItem } from '../care.api.js'
 import { generateIdempotencyKey } from '../../../utils/idempotency.js'
@@ -17,13 +17,14 @@ const editingId = route.params.id || null
 const busy = ref(false)
 let createKey = null
 
+// 例假是独立流程（例假 Tab / 后端固定女性），不出现在档案的分类选择里
 const CATEGORIES = [
   { value: 'diet', label: '🍽️ 忌口' },
   { value: 'allergy', label: '⚠️ 过敏' },
-  { value: 'period', label: '🌸 例假' },
   { value: 'preference', label: '💗 偏好' },
   { value: 'other', label: '📎 其他' },
 ]
+const PERIOD_LABEL = '🌸 例假（固定记录到女生一方）'
 const SEVERITIES = [
   { value: 'mild', label: '轻度' },
   { value: 'moderate', label: '中度' },
@@ -53,6 +54,7 @@ function initialForm() {
 
 const form = ref(initialForm())
 const draftRestored = ref(false)
+const isPeriod = computed(() => form.value.category === 'period')
 
 // 新建时缓存草稿（与日记一致）：进入恢复、保存成功后清除；编辑模式不缓存
 if (!editingId) {
@@ -175,7 +177,11 @@ async function remove() {
     </div>
 
     <div class="glass space-y-4 p-5">
-      <div>
+      <div v-if="isPeriod">
+        <label class="mb-1 block text-xs text-theme-tertiary">分类</label>
+        <div class="surface-soft flex min-h-11 items-center rounded-xl px-4 text-sm text-theme-secondary">{{ PERIOD_LABEL }}</div>
+      </div>
+      <div v-else>
         <label class="mb-1 block text-xs text-theme-tertiary">分类</label>
         <AppSelect v-model="form.category" :options="CATEGORIES" placeholder="选择分类" />
       </div>
