@@ -1,6 +1,7 @@
 import { NotFoundError } from '../../common/errors/NotFoundError.js'
 import { ForbiddenError } from '../../common/errors/ForbiddenError.js'
 import { transaction } from '../../config/database.js'
+import { parsePage } from '../../common/utils/paging.js'
 import * as coupleService from '../couple/couple.service.js'
 import { emitDiaryCreated, emitDiaryUpdated, emitDiaryDeleted } from '../../infrastructure/socket/diary.socket.js'
 import { softDeleteQuietly } from '../file/file.service.js'
@@ -12,13 +13,22 @@ function coupleIdOf(userId) {
   return coupleService.getUserCouple(userId)?.pairCode || null
 }
 
-export function getList(userId) {
-  return commentService.attachCounts('entry', diaryRepository.listAll(), userId)
+// 列表：带 limit/offset 时返回 { items, total }（新分页契约）；否则保持旧数组形态
+export function getList(userId, query = {}) {
+  const { offset, limit, paginated } = parsePage(query)
+  if (!paginated) {
+    const entries = diaryRepository.attachContentsBatch(diaryRepository.listAll())
+    return commentService.attachCounts('entry', entries, userId)
+  }
+  const { items, total } = diaryRepository.listPage(offset, limit)
+  diaryRepository.attachContentsBatch(items)
+  return { items: commentService.attachCounts('entry', items, userId), total }
 }
 
 export function getCalendar(query, userId) {
   const { year, month } = diarySchema.validateCalendar(query)
-  return commentService.attachCounts('entry', diaryRepository.listByMonth(year, month), userId)
+  const entries = diaryRepository.attachContentsBatch(diaryRepository.listByMonth(year, month))
+  return commentService.attachCounts('entry', entries, userId)
 }
 
 export function getDetail(id) {

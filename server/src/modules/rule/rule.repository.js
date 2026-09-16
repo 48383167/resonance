@@ -12,6 +12,34 @@ function attachAuthor(rule) {
   return rule
 }
 
+// 过滤条件构造：type / status / pending（待我认同），list 与 count 共用
+function buildWhere({ type, status = 'active', pending, userId } = {}) {
+  const conds = []
+  const args = []
+  if (type) { conds.push('r.type = ?'); args.push(type) }
+  if (status && status !== 'all') { conds.push('r.status = ?'); args.push(status) }
+  if (pending) {
+    if (!userId) return { where: 'WHERE 1 = 0', args: [] }
+    conds.push('r.author_id != ?')
+    args.push(userId)
+    conds.push('NOT EXISTS (SELECT 1 FROM json_each(r.agreed_ids) WHERE json_each.value = ?)')
+    args.push(userId)
+  }
+  return { where: conds.length ? `WHERE ${conds.join(' AND ')}` : '', args }
+}
+
+// 排序：global > list 置顶 > effective 降序 > 更新时间倒序；id 兜底保证翻页稳定
+const LIST_SELECT = `
+  SELECT r.*, p.pin_scope
+  FROM couple_rules r
+  LEFT JOIN pinned_items p ON p.target_type = 'rule' AND p.target_id = r.id`
+const LIST_ORDER = `
+  ORDER BY
+    CASE p.pin_scope WHEN 'global' THEN 0 WHEN 'list' THEN 1 ELSE 2 END,
+    CASE WHEN json_array_length(r.agreed_ids) >= 2 THEN 0 ELSE 1 END,
+    datetime(r.updated_at) DESC,
+    r.id DESC`
+
 export function findById(id) {
   const row = db.prepare(`
     SELECT r.*, p.pin_scope
@@ -22,23 +50,19 @@ export function findById(id) {
   return attachAuthor(row)
 }
 
-export function list({ type, status = 'active' } = {}) {
-  const conds = []
-  const args = []
-  if (type) { conds.push('r.type = ?'); args.push(type) }
-  if (status && status !== 'all') { conds.push('r.status = ?'); args.push(status) }
-  const where = conds.length ? `WHERE ${conds.join(' AND ')}` : ''
-  // 排序：global > list > effective 降序（json_array_length >= 2）> updated_at DESC
-  return db.prepare(`
-    SELECT r.*, p.pin_scope
-    FROM couple_rules r
-    LEFT JOIN pinned_items p ON p.target_type = 'rule' AND p.target_id = r.id
-    ${where}
-    ORDER BY
-      CASE p.pin_scope WHEN 'global' THEN 0 WHEN 'list' THEN 1 ELSE 2 END,
-      CASE WHEN json_array_length(r.agreed_ids) >= 2 THEN 0 ELSE 1 END,
-      datetime(r.updated_at) DESC
-  `).all(...args).map(attachAuthor)
+export function list(opts = {}) {
+  const { where, args } = buildWhere(opts)
+  return db.prepare(`${LIST_SELECT}\n${where}\n${LIST_ORDER}`).all(...args).map(attachAuthor)
+}
+
+// 分页列表：与 list 同筛选/排序，附总数
+export function listPage(opts = {}) {
+  const { where, args } = buildWhere(opts)
+  const total = db.prepare(`SELECT COUNT(*) AS c FROM couple_rules r ${where}`).get(...args).c
+  const items = db.prepare(`${LIST_SELECT}\n${where}\n${LIST_ORDER}\nLIMIT ? OFFSET ?`)
+    .all(...args, opts.limit, opts.offset)
+    .map(attachAuthor)
+  return { items, total }
 }
 
 export function create({ authorId, type, title, content, status, agreedIds }) {

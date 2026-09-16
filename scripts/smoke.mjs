@@ -487,7 +487,39 @@ assert('保存底部导航', navSave.ok && navSave.data.items[0] === 'diary-list
 const navB = await http('GET', '/api/navigation', null, tokenB)
 assert('伴侣看到同一配置（不分用户）', navB.ok && JSON.stringify(navB.data.items) === JSON.stringify(['diary-list', 'home', 'wishes']))
 
-console.log('== 17. 导出时光机 ==')
+console.log('== 17. 列表分页（日记 / 规矩 / 例假历史） ==')
+await http('POST', '/api/entries/solo', { title: '分页测试', content: '用于验证分页的日记' }, tokenA)
+const pgEntries = await http('GET', '/api/entries?offset=0&limit=1', null, tokenA)
+assert('日记分页返回 items/total', pgEntries.ok && Array.isArray(pgEntries.data.items)
+  && pgEntries.data.items.length === 1 && pgEntries.data.total >= 2, `total=${pgEntries.data?.total}`)
+const pgEntries2 = await http('GET', '/api/entries?offset=1&limit=1', null, tokenA)
+assert('日记翻页不重复', pgEntries2.ok && pgEntries2.data.items.length === 1
+  && pgEntries2.data.items[0].id !== pgEntries.data.items[0].id)
+const legacyEntries = await http('GET', '/api/entries', null, tokenA)
+assert('日记不传 limit 保持数组形态', legacyEntries.ok && Array.isArray(legacyEntries.data))
+
+const pgRules = await http('GET', '/api/rules?status=active&offset=0&limit=1', null, tokenA)
+assert('规矩分页返回 items/total', pgRules.ok && pgRules.data.items.length === 1 && pgRules.data.total >= 1)
+const pgPending = await http('GET', '/api/rules?pending=1&limit=10', null, tokenB)
+assert('待我认同为服务端过滤', pgPending.ok && pgPending.data.items.length >= 1
+  && pgPending.data.items.every((rule) => rule.author_id !== regB.data.me.id
+    && !rule.agreedIds.includes(regB.data.me.id)))
+const legacyRules = await http('GET', '/api/rules?status=active', null, tokenA)
+assert('规矩不传 limit 保持数组形态', legacyRules.ok && Array.isArray(legacyRules.data))
+
+const pgPeriod = await http('GET', '/api/care/items?category=period&offset=0&limit=2', null, tokenA)
+assert('例假历史分页且按日期倒序', pgPeriod.ok && pgPeriod.data.items.length === 2
+  && pgPeriod.data.items[0].start_date >= pgPeriod.data.items[1].start_date,
+  JSON.stringify(pgPeriod.data.items?.map((item) => item.start_date)))
+const legacyCare = await http('GET', '/api/care/items', null, tokenA)
+assert('档案不传 limit 保持数组形态', legacyCare.ok && Array.isArray(legacyCare.data))
+
+const gz = await fetch(`${BASE}/api/timeline`, {
+  headers: { Authorization: `Bearer ${tokenA}`, 'Accept-Encoding': 'gzip' },
+})
+assert('时间线响应启用 gzip', gz.headers.get('content-encoding') === 'gzip', gz.headers.get('content-encoding') || 'none')
+
+console.log('== 18. 导出时光机 ==')
 const exp = await fetch(BASE + '/api/export')
 const buf = await exp.arrayBuffer()
 assert('导出 zip 非空', exp.status === 200 && buf.byteLength > 0, `bytes=${buf.byteLength}`)

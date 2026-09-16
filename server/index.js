@@ -2,6 +2,7 @@ import express from 'express'
 import http from 'node:http'
 import fs from 'node:fs'
 import path from 'node:path'
+import compression from 'compression'
 import { fileURLToPath } from 'node:url'
 import { Server } from 'socket.io'
 import { MEDIA_DIR } from './src/config/database.js'
@@ -44,6 +45,8 @@ const server = http.createServer(app)
 const io = new Server(server, { cors: { origin: '*' } })
 app.set('io', io)
 app.disable('etag')
+// 响应 gzip/brotli 压缩：大 JSON（时间线/分享页）在移动网络下明显更小；图片等不可压缩类型自动跳过
+app.use(compression({ threshold: 512 }))
 
 setupResponse(app)
 app.use(express.json({ limit: '1mb' }))

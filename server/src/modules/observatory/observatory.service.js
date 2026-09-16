@@ -55,7 +55,7 @@ export function getShare(token, password) {
   const includeAnniversaries = st.include_anniversaries !== 0
 
   const moments = includeMoments ? momentRepository.listPublic() : []
-  const entries = includeEntries ? diaryRepository.listPublic() : []
+  const entries = includeEntries ? diaryRepository.attachContentsBatch(diaryRepository.listPublic()) : []
   const anniversaries = includeAnniversaries ? anniversaryRepository.listPublic() : []
 
   const stats = statsRepository.stats({ includeMoments, includeEntries, includeAnniversaries })

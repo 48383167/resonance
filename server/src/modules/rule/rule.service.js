@@ -1,5 +1,6 @@
 import { AppError } from '../../common/errors/AppError.js'
 import { transaction } from '../../config/database.js'
+import { parsePage } from '../../common/utils/paging.js'
 import { getUserCouple } from '../couple/couple.service.js'
 import * as ruleRepository from './rule.repository.js'
 import * as ruleSchema from './rule.schema.js'
@@ -27,8 +28,19 @@ function broadcast(couple, fn) {
   if (couple) fn(couple.pairCode)
 }
 
-export function list(query = {}) {
-  return ruleRepository.list(query).map(serialize)
+// 列表：带 limit/offset 时返回 { items, total }（新分页契约）；否则保持旧数组形态
+// pending=1 走服务端过滤（待我认同），保证翻页后筛选结果完整
+export function list(query = {}, userId) {
+  const { offset, limit, paginated } = parsePage(query)
+  const opts = {
+    type: query.type || undefined,
+    status: query.status || 'active',
+    pending: query.pending === '1' || query.pending === 'true' || query.pending === true,
+    userId,
+  }
+  if (!paginated) return ruleRepository.list(opts).map(serialize)
+  const { items, total } = ruleRepository.listPage({ ...opts, offset, limit })
+  return { items: items.map(serialize), total }
 }
 
 export function getDetail(id) {

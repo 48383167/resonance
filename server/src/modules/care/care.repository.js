@@ -14,22 +14,40 @@ function attach(row) {
   return row
 }
 
-// 列表 / 详情公共查询：LEFT JOIN 置顶表取 pin_scope，排序 global > list > updated_at DESC
-export function list({ category, subjectId } = {}) {
+// 列表 / 详情公共查询：LEFT JOIN 置顶表取 pin_scope，排序 global > list > 时间倒序
+// 例假历史按开始日期倒序；其余分类按最近更新倒序；id 兜底保证翻页不重不漏
+export function list({ category, subjectId, offset, limit } = {}) {
   const conds = []
   const args = []
   if (category) { conds.push('c.category = ?'); args.push(category) }
   if (subjectId) { conds.push('c.subject_id = ?'); args.push(subjectId) }
   const where = conds.length ? `WHERE ${conds.join(' AND ')}` : ''
-  return db.prepare(`
+  const orderTail = category === 'period'
+    ? 'datetime(c.start_date) DESC, c.id DESC'
+    : 'datetime(c.updated_at) DESC, c.id DESC'
+  const paging = limit !== undefined ? 'LIMIT ? OFFSET ?' : ''
+  const query = `
     SELECT c.*, p.pin_scope
     FROM care_items c
     LEFT JOIN pinned_items p ON p.target_type = 'care' AND p.target_id = c.id
     ${where}
     ORDER BY
       CASE p.pin_scope WHEN 'global' THEN 0 WHEN 'list' THEN 1 ELSE 2 END,
-      datetime(c.updated_at) DESC
-  `).all(...args).map(attach)
+      ${orderTail}
+    ${paging}
+  `
+  const queryArgs = limit !== undefined ? [...args, limit, offset || 0] : args
+  return db.prepare(query).all(...queryArgs).map(attach)
+}
+
+// 与 list 同筛选条件的总数（分页用）
+export function count({ category, subjectId } = {}) {
+  const conds = []
+  const args = []
+  if (category) { conds.push('c.category = ?'); args.push(category) }
+  if (subjectId) { conds.push('c.subject_id = ?'); args.push(subjectId) }
+  const where = conds.length ? `WHERE ${conds.join(' AND ')}` : ''
+  return db.prepare(`SELECT COUNT(*) AS c FROM care_items c ${where}`).get(...args).c
 }
 
 export function findById(id) {

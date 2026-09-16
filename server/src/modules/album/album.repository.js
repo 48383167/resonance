@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { db } from '../../config/database.js'
-import { resolveUrl, mediaUrlOf, typeOfMime } from '../file/file.service.js'
+import { mediaUrlOf, typeOfMime } from '../file/file.service.js'
 
 function newId(prefix) {
   return prefix + '_' + randomUUID().slice(0, 12)
@@ -17,15 +17,17 @@ function toPhoto(row) {
   return p
 }
 
-// 相册行 → 视图：封面 file_id 解析（保留 cover_url 兼容迁移前旧行）
+// 相册行 → 视图：封面 URL 复用 JOIN 出来的文件列，避免逐相册再查一次
 function toAlbum(row) {
-  const a = { ...row }
-  if (a.cover_file_id) {
-    a.cover_url = a.cover_status === 1 ? resolveUrl(a.cover_file_id) : ''
+  const album = { ...row }
+  delete album.cover_path
+  delete album.cover_status
+  if (album.cover_file_id) {
+    album.cover_url = row.cover_status === 1 && row.cover_path ? mediaUrlOf(row.cover_path) : ''
   } else {
-    a.cover_url = a.cover_url || ''
+    album.cover_url = album.cover_url || ''
   }
-  return a
+  return album
 }
 
 function albumRow(id) {
@@ -53,17 +55,23 @@ export function findById(id) {
   return result
 }
 
+// 相册列表：单条 SQL 聚合照片数与首图，避免逐相册拉全部照片
 export function list() {
   return db.prepare(
-    `SELECT a.*, f.path AS cover_path, f.status AS cover_status
+    `SELECT a.*, f.path AS cover_path, f.status AS cover_status,
+            (SELECT COUNT(*) FROM album_photos ap LEFT JOIN files pf ON pf.id = ap.file_id
+              WHERE ap.album_id = a.id AND COALESCE(pf.status, 1) = 1) AS photo_count,
+            (SELECT pf.path FROM album_photos ap LEFT JOIN files pf ON pf.id = ap.file_id
+              WHERE ap.album_id = a.id AND COALESCE(pf.status, 1) = 1
+              ORDER BY datetime(ap.created_at) DESC, ap.id DESC LIMIT 1) AS first_photo_path
      FROM albums a LEFT JOIN files f ON f.id = a.cover_file_id
      ORDER BY datetime(a.created_at) DESC`
-  ).all()
-    .map((a) => {
-      const album = toAlbum(a)
-      const photos = listPhotos(album.id)
-      return { ...album, photoCount: photos.length, firstPhotoUrl: photos[0]?.url || '' }
-    })
+  ).all().map((row) => {
+    const album = toAlbum(row)
+    album.photoCount = Number(row.photo_count || 0)
+    album.firstPhotoUrl = row.first_photo_path ? mediaUrlOf(row.first_photo_path) : ''
+    return album
+  })
 }
 
 export function create({ name, coverFileId, description }) {

@@ -2,13 +2,18 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getPeriodSummary, listCareItems, removeCareItem } from '../care.api.js'
+import { useInfiniteScroll } from '../../../composables/useInfiniteScroll'
 import { toast } from '../../../stores/toast'
 import { confirmDialog } from '../../../stores/confirm'
 
 // 例假面板：服务端只返回原始预测数据，倒计时用设备本地「今天」计算
+// 历史记录分页 + 触底自动加载（按开始日期倒序，服务端排序）
 const router = useRouter()
+const PAGE = 20
 const summary = ref([])
 const history = ref([])
+const historyTotal = ref(0)
+const loadingMore = ref(false)
 
 function toDate(s) {
   const [y, m, d] = s.split('-').map(Number)
@@ -44,25 +49,45 @@ function rangeText(item) {
   return end ? `${start} → ${end}` : start
 }
 
-async function load() {
+async function load(reset = true) {
+  if (reset) {
+    try {
+      const [s, page] = await Promise.all([
+        getPeriodSummary(),
+        listCareItems({ category: 'period', offset: 0, limit: PAGE }),
+      ])
+      summary.value = s?.subjects || []
+      history.value = page.items || []
+      historyTotal.value = page.total || 0
+    } catch (e) {
+      toast(e.message)
+    }
+    return
+  }
+  if (loadingMore.value || history.value.length >= historyTotal.value) return
+  loadingMore.value = true
   try {
-    const [s, items] = await Promise.all([
-      getPeriodSummary(),
-      listCareItems({ category: 'period' }),
-    ])
-    summary.value = s?.subjects || []
-    history.value = items || []
+    const page = await listCareItems({ category: 'period', offset: history.value.length, limit: PAGE })
+    history.value = [...history.value, ...(page.items || [])]
+    historyTotal.value = page.total || 0
   } catch (e) {
     toast(e.message)
+  } finally {
+    loadingMore.value = false
   }
 }
+
+const { sentinel } = useInfiniteScroll(
+  () => load(false),
+  () => history.value.length < historyTotal.value,
+)
 
 async function remove(item) {
   const ok = await confirmDialog({ title: '删除例假记录', message: `确定删除「${item.title}」吗？` })
   if (!ok) return
   try {
     await removeCareItem(item.id)
-    await load()
+    await load(true)
   } catch (e) {
     toast(e.message)
   }
@@ -105,5 +130,11 @@ defineExpose({ load })
         </div>
       </article>
     </div>
+
+    <div v-if="history.length && history.length < historyTotal" ref="sentinel"
+      class="py-4 text-center text-xs text-theme-tertiary">
+      {{ loadingMore ? '加载中…' : '上滑加载更多' }}
+    </div>
+    <div v-else-if="history.length" class="py-4 text-center text-xs text-theme-tertiary opacity-60">已经到底了</div>
   </div>
 </template>

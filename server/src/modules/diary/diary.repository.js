@@ -3,35 +3,74 @@ import { db } from '../../config/database.js'
 import { resolveItems } from '../file/file.service.js'
 
 function getContents(entryId) {
-  return db.prepare('SELECT * FROM entry_contents WHERE entry_id = ?').all(entryId)
+  return db.prepare('SELECT * FROM entry_contents WHERE entry_id = ? ORDER BY rowid ASC').all(entryId)
+}
+
+// 批量取正文分片：一次 IN 查询后按 entry_id 分组（列表接口避免逐篇查询）
+export function getContentsByEntryIds(ids) {
+  const uniq = [...new Set((ids || []).filter(Boolean))]
+  const byEntry = new Map(uniq.map((id) => [id, []]))
+  if (!uniq.length) return byEntry
+  const placeholders = uniq.map(() => '?').join(', ')
+  const rows = db.prepare(
+    `SELECT * FROM entry_contents WHERE entry_id IN (${placeholders}) ORDER BY rowid ASC`
+  ).all(...uniq)
+  for (const row of rows) byEntry.get(row.entry_id)?.push(row)
+  return byEntry
+}
+
+function parseMedia(media) {
+  try {
+    const raw = JSON.parse(media || '[]')
+    return Array.isArray(raw) ? raw : []
+  } catch {
+    return []
+  }
+}
+
+function mediaIdsOf(raw) {
+  return raw
+    .filter((it) => it && typeof it === 'object' && it.fileId)
+    .map((it) => it.fileId)
 }
 
 // 附件组装：旧值 {url,type} 兼容直出；新值 {fileId,type} → files 表解析出 {id,url,type,name}
-function assembleMedia(entry) {
-  let raw = []
-  try {
-    raw = JSON.parse(entry.media || '[]')
-  } catch {
-    raw = []
-  }
-  const fileIds = raw
-    .filter((it) => it && typeof it === 'object' && it.fileId)
-    .map((it) => it.fileId)
-  const byId = new Map(resolveItems(fileIds).map((i) => [i.id, i]))
-  entry.media = raw.map((it) => {
+function mapMedia(raw, byId) {
+  return raw.map((it) => {
     if (typeof it === 'string' && it) return { id: '', url: it, type: 'file', name: '' }
     if (!it || typeof it !== 'object') return null
     if (it.fileId) return byId.get(it.fileId) || null
     if (it.url) return { id: '', url: it.url, type: it.type || 'file', name: '' }
     return null
   }).filter(Boolean)
+}
+
+function assembleMedia(entry, byId) {
+  const raw = parseMedia(entry.media)
+  const fileMap = byId || new Map(resolveItems(mediaIdsOf(raw)).map((i) => [i.id, i]))
+  entry.media = mapMedia(raw, fileMap)
   return entry
 }
 
-// 组装日记：挂载内容分片 + 解析附件 JSON（就地修改并返回）
+// 组装单篇日记：挂载内容分片 + 解析附件 JSON（就地修改并返回）
 export function attachContents(entry) {
   entry.contents = getContents(entry.id)
   return assembleMedia(entry)
+}
+
+// 批量组装日记：正文分片一次 IN 查询、附件一次性解析，供列表接口使用
+export function attachContentsBatch(entries) {
+  if (!entries.length) return entries
+  const contentMap = getContentsByEntryIds(entries.map((entry) => entry.id))
+  const mediaRaw = new Map(entries.map((entry) => [entry.id, parseMedia(entry.media)]))
+  const allFileIds = []
+  for (const raw of mediaRaw.values()) allFileIds.push(...mediaIdsOf(raw))
+  const byId = new Map(resolveItems(allFileIds).map((i) => [i.id, i]))
+  for (const entry of entries) {
+    entry.contents = contentMap.get(entry.id) || []
+    entry.media = mapMedia(mediaRaw.get(entry.id), byId)
+  }
+  return entries
 }
 
 export function findById(id) {
@@ -39,19 +78,28 @@ export function findById(id) {
 }
 
 export function listAll() {
-  return db.prepare('SELECT * FROM entries ORDER BY created_at DESC').all().map(attachContents)
+  return db.prepare('SELECT * FROM entries ORDER BY datetime(created_at) DESC, id DESC').all()
+}
+
+// 分页列表：按创建时间倒序（id 兜底保证翻页不重不漏）
+export function listPage(offset, limit) {
+  const total = db.prepare('SELECT COUNT(*) AS c FROM entries').get().c
+  const items = db.prepare(
+    'SELECT * FROM entries ORDER BY datetime(created_at) DESC, id DESC LIMIT ? OFFSET ?'
+  ).all(limit, offset)
+  return { items, total }
 }
 
 export function listPublic() {
-  return db.prepare('SELECT * FROM entries WHERE is_public = 1 ORDER BY created_at DESC').all().map(attachContents)
+  return db.prepare('SELECT * FROM entries WHERE is_public = 1 ORDER BY datetime(created_at) DESC, id DESC').all()
 }
 
 export function listByMonth(year, month) {
   const start = `${year}-${String(month).padStart(2, '0')}-01`
   const end = `${year}-${String(month).padStart(2, '0')}-31`
   return db.prepare(
-    'SELECT * FROM entries WHERE date(created_at) BETWEEN ? AND ? ORDER BY datetime(created_at) DESC'
-  ).all(start, end).map(attachContents)
+    'SELECT * FROM entries WHERE date(created_at) BETWEEN ? AND ? ORDER BY datetime(created_at) DESC, id DESC'
+  ).all(start, end)
 }
 
 export function create({ title, weatherCode, timeColorHex, media }) {

@@ -2,19 +2,32 @@ import { db } from '../../config/database.js'
 import { resolveUrl } from '../file/file.service.js'
 
 // 跨模块聚合查询：Dashboard / 恋爱树 / 分享页 / 时间线共用
+// 单条标量子查询一次取回所有计数（原先 10 次独立 COUNT）
 export function stats({ includeMoments = true, includeEntries = true, includeAnniversaries = true } = {}) {
-  const one = (sql, ...args) => db.prepare(sql).get(...args).c
+  const row = db.prepare(
+    `SELECT
+       (SELECT COUNT(*) FROM moments) AS moments,
+       (SELECT COUNT(*) FROM moment_photos) + (SELECT COUNT(*) FROM album_photos) AS photos,
+       (SELECT COUNT(*) FROM love_letters) AS letters,
+       (SELECT COUNT(*) FROM love_letters WHERE is_read = 0) AS unreadLetters,
+       (SELECT COUNT(*) FROM entries) AS entries,
+       (SELECT COUNT(*) FROM wish_items WHERE status = 'todo') AS wishesTodo,
+       (SELECT COUNT(*) FROM wish_items WHERE status = 'doing') AS wishesDoing,
+       (SELECT COUNT(*) FROM wish_items WHERE status = 'done') AS wishesDone,
+       (SELECT COUNT(*) FROM time_capsules) AS capsules,
+       (SELECT COUNT(*) FROM anniversaries) AS anniversaries`
+  ).get()
   return {
-    moments: includeMoments ? one('SELECT COUNT(*) AS c FROM moments') : 0,
-    photos: one('SELECT COUNT(*) AS c FROM moment_photos') + one('SELECT COUNT(*) AS c FROM album_photos'),
-    letters: one('SELECT COUNT(*) AS c FROM love_letters'),
-    unreadLetters: one('SELECT COUNT(*) AS c FROM love_letters WHERE is_read = 0'),
-    entries: includeEntries ? one('SELECT COUNT(*) AS c FROM entries') : 0,
-    wishesTodo: one("SELECT COUNT(*) AS c FROM wish_items WHERE status = 'todo'"),
-    wishesDoing: one("SELECT COUNT(*) AS c FROM wish_items WHERE status = 'doing'"),
-    wishesDone: one("SELECT COUNT(*) AS c FROM wish_items WHERE status = 'done'"),
-    capsules: one('SELECT COUNT(*) AS c FROM time_capsules'),
-    anniversaries: includeAnniversaries ? one('SELECT COUNT(*) AS c FROM anniversaries') : 0,
+    moments: includeMoments ? row.moments : 0,
+    photos: row.photos,
+    letters: row.letters,
+    unreadLetters: row.unreadLetters,
+    entries: includeEntries ? row.entries : 0,
+    wishesTodo: row.wishesTodo,
+    wishesDoing: row.wishesDoing,
+    wishesDone: row.wishesDone,
+    capsules: row.capsules,
+    anniversaries: includeAnniversaries ? row.anniversaries : 0,
   }
 }
 

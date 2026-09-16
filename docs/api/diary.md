@@ -1,5 +1,20 @@
 # 日记 API
 
+## 列表分页
+
+`GET /api/entries?offset=&limit=`
+
+- 不传 `offset/limit`：保持旧契约，返回日记数组
+- 传任一参数：返回分页对象 `{ items, total }`
+
+```json
+{ "items": [日记], "total": 12 }
+```
+
+- `offset` 默认 0；`limit` 默认 20、最大 50（超出自动收敛）
+- 排序：`created_at DESC, id DESC`（id 兜底，保证翻页不重不漏）
+- 只对当页挂载正文分片、附件与评论数（正文/附件批量查询）
+
 ## 编辑日记
 
 `PUT /api/entries/:id`

@@ -60,9 +60,13 @@
 
 ### 列表
 
-`GET /api/care/items?category=&subjectId=`
+`GET /api/care/items?category=&subjectId=&offset=&limit=`
 
 返回数组，按 `global 置顶 > list 置顶 > updated_at DESC` 排序。
+
+- 传 `offset/limit` 时返回分页对象 `{ items, total }`（`limit` 默认 20、最大 50）；不传保持旧数组契约
+- `category = period`（例假历史）按 `global > list 置顶 > start_date DESC > id DESC` 排序
+- 其余分类按 `global > list 置顶 > updated_at DESC > id DESC` 排序（id 兜底，翻页不重不漏）
 
 ```json
 [
@@ -169,10 +173,12 @@
 
 ### 列表
 
-`GET /api/rules?type=&status=`
+`GET /api/rules?type=&status=&pending=&offset=&limit=`
 
-- `type` 可选：`redline/rule/suggestion`；`status` 可选：`active`（默认）/ `archived` / `all`。
-- 排序：`global 置顶 > list 置顶 > effective 降序 > updated_at DESC`。
+- `type` 可选：`redline/rule/suggestion`；`status` 可选：`active`（默认）/ `archived` / `all`
+- `pending=1`：只看「待我认同」（本人非作者且未认同，服务端过滤，翻页不丢数据）
+- 传 `offset/limit` 时返回分页对象 `{ items, total }`（`limit` 默认 20、最大 50）；不传保持旧数组契约
+- 排序：`global 置顶 > list 置顶 > effective 降序 > updated_at DESC > id DESC`
 
 ```json
 [

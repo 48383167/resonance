@@ -263,6 +263,17 @@ CREATE TABLE IF NOT EXISTS navigation_settings (
     updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
+-- 列表/详情查询索引：外键列与常用排序键（老库启动时自动补建）
+CREATE INDEX IF NOT EXISTS idx_entry_contents_entry ON entry_contents(entry_id);
+CREATE INDEX IF NOT EXISTS idx_entry_contents_user ON entry_contents(user_id);
+CREATE INDEX IF NOT EXISTS idx_moment_photos_moment ON moment_photos(moment_id);
+CREATE INDEX IF NOT EXISTS idx_album_photos_album ON album_photos(album_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_entries_created ON entries(created_at);
+CREATE INDEX IF NOT EXISTS idx_love_letters_created ON love_letters(created_at);
+CREATE INDEX IF NOT EXISTS idx_wish_items_status ON wish_items(status);
+CREATE INDEX IF NOT EXISTS idx_time_capsules_unlock ON time_capsules(unlock_date);
+CREATE INDEX IF NOT EXISTS idx_anniversaries_date ON anniversaries(date);
+
 -- 评论：挂在日记（entry）或恋爱瞬间（moment）上，支持一级回复
 -- parent_id 为空 = 顶层评论；回复统一挂到顶层评论（回复的回复会扁平化）
 -- 删除策略：有回复的评论墓碑化（content 清空 + deleted_at），无回复物理删除

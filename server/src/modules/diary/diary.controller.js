@@ -2,7 +2,7 @@ import * as diaryService from './diary.service.js'
 
 export async function list(req, res, next) {
   try {
-    res.success(diaryService.getList(req.user.id))
+    res.success(diaryService.getList(req.user.id, req.query))
   } catch (error) {
     next(error)
   }

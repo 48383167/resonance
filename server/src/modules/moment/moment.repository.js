@@ -7,22 +7,34 @@ function newId(prefix) {
   return prefix + '_' + randomUUID().slice(0, 12)
 }
 
-// 照片组装：file_id 联 files 表出 {id,url,type,name}；迁移前旧行（仅有 url）兼容直出
-function getPhotos(momentId) {
+// 照片行 → 附件项：file_id 联 files 表出 {id,url,type,name}；迁移前旧行（仅有 url）兼容直出
+function toPhotoItem(r) {
+  if (r.file_id && r.file_status === 1) {
+    return { id: r.file_id, url: `/media/${r.path}`, type: typeOfMime(r.mime), name: r.original_name || '' }
+  }
+  return { id: '', url: r.file_id ? '' : (r.legacy_url || ''), type: 'file', name: '' }
+}
+
+// 批量取照片：一次 IN 查询后按 moment_id 分组，避免列表逐条查询
+export function getPhotosByMomentIds(ids) {
+  const uniq = [...new Set((ids || []).filter(Boolean))]
+  const byMoment = new Map(uniq.map((id) => [id, []]))
+  if (!uniq.length) return byMoment
+  const placeholders = uniq.map(() => '?').join(', ')
   const rows = db.prepare(
-    `SELECT mp.id AS photo_id, mp.file_id, mp.url AS legacy_url,
+    `SELECT mp.moment_id, mp.id AS photo_id, mp.file_id, mp.url AS legacy_url,
             f.path, f.mime, f.original_name, f.status AS file_status
      FROM moment_photos mp
      LEFT JOIN files f ON f.id = mp.file_id
-     WHERE mp.moment_id = ? AND COALESCE(f.status, 1) = 1
+     WHERE mp.moment_id IN (${placeholders}) AND COALESCE(f.status, 1) = 1
      ORDER BY datetime(mp.created_at) ASC, mp.id ASC`
-  ).all(momentId)
-  return rows.map((r) => {
-    if (r.file_id && r.file_status === 1) {
-      return { id: r.file_id, url: `/media/${r.path}`, type: typeOfMime(r.mime), name: r.original_name || '' }
-    }
-    return { id: '', url: r.file_id ? '' : (r.legacy_url || ''), type: 'file', name: '' }
-  })
+  ).all(...uniq)
+  for (const row of rows) byMoment.get(row.moment_id)?.push(toPhotoItem(row))
+  return byMoment
+}
+
+function getPhotos(momentId) {
+  return getPhotosByMomentIds([momentId]).get(momentId) || []
 }
 
 function attachAuthor(moment) {
@@ -57,8 +69,9 @@ export function list({ mood, keyword, startDate, endDate } = {}) {
   const rows = db.prepare(
     `SELECT * FROM moments ${where} ORDER BY COALESCE(moment_date, date(created_at)) DESC, datetime(created_at) DESC`
   ).all(...args)
+  const photos = getPhotosByMomentIds(rows.map((m) => m.id))
   return rows.map((m) => {
-    m.photos = getPhotos(m.id)
+    m.photos = photos.get(m.id) || []
     return attachAuthor(m)
   })
 }
@@ -68,8 +81,9 @@ export function listPublic() {
   const rows = db.prepare(
     'SELECT * FROM moments WHERE show_in_share = 1 ORDER BY COALESCE(moment_date, date(created_at)) DESC, datetime(created_at) DESC'
   ).all()
+  const photos = getPhotosByMomentIds(rows.map((m) => m.id))
   return rows.map((m) => {
-    m.photos = getPhotos(m.id)
+    m.photos = photos.get(m.id) || []
     return attachAuthor(m)
   })
 }

@@ -1,5 +1,5 @@
 import { localDateStr } from '../../common/utils/date.js'
-import { listAll as listEntries } from '../diary/diary.repository.js'
+import { listAll as listEntries, attachContentsBatch } from '../diary/diary.repository.js'
 import { list as listMoments } from '../moment/moment.repository.js'
 import { list as listAlbums, listPhotos } from '../album/album.repository.js'
 import { list as listLetters } from '../letter/letter.repository.js'
@@ -12,7 +12,7 @@ import { pairStartedAt } from '../couple/couple.repository.js'
 export function getTimeline() {
   const events = []
 
-  for (const e of listEntries()) {
+  for (const e of attachContentsBatch(listEntries())) {
     events.push({
       kind: 'entry', ts: e.created_at, entryId: e.id,
       title: e.title || '无题日记', text: e.contents[0]?.content || '',
