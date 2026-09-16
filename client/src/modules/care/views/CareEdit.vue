@@ -1,8 +1,9 @@
 <script setup>
-import { onMounted, ref, watch } from 'vue'
+import { nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createCareItem, getCareItem, updateCareItem, removeCareItem } from '../care.api.js'
 import { generateIdempotencyKey } from '../../../utils/idempotency.js'
+import { loadFormDraft, saveFormDraft, clearFormDraft } from '../../../utils/draft.js'
 import { session } from '../../../stores/session'
 import { toast } from '../../../stores/toast'
 import { confirmDialog } from '../../../stores/confirm'
@@ -35,16 +36,43 @@ function defaultSubjectFor() {
 }
 
 const initialCategory = route.query.category || 'diet'
-const form = ref({
-  category: initialCategory,
-  subjectId: route.query.subject || defaultSubjectFor(),
-  title: initialCategory === 'period' ? '例假记录' : '',
-  content: '',
-  severity: 'mild',
-  startDate: '',
-  endDate: '',
-  cycleDays: '',
-})
+const DRAFT_KEY = `care-new-${initialCategory}`
+
+function initialForm() {
+  return {
+    category: initialCategory,
+    subjectId: route.query.subject || defaultSubjectFor(),
+    title: initialCategory === 'period' ? '例假记录' : '',
+    content: '',
+    severity: 'mild',
+    startDate: '',
+    endDate: '',
+    cycleDays: '',
+  }
+}
+
+const form = ref(initialForm())
+const draftRestored = ref(false)
+
+// 新建时缓存草稿（与日记一致）：进入恢复、保存成功后清除；编辑模式不缓存
+if (!editingId) {
+  const draft = loadFormDraft(DRAFT_KEY)
+  if (draft) {
+    form.value = { ...initialForm(), ...draft }
+    draftRestored.value = true
+  }
+}
+watch(form, (value) => {
+  if (editingId) return
+  saveFormDraft(DRAFT_KEY, value)
+}, { deep: true })
+
+function discardDraft() {
+  form.value = initialForm()
+  nextTick(() => clearFormDraft(DRAFT_KEY))
+  draftRestored.value = false
+  toast('草稿已清空')
+}
 
 // 用户手动选过对象后，切分类不再覆盖
 let subjectTouched = false
@@ -63,7 +91,10 @@ function goBack() {
 }
 
 onMounted(async () => {
-  if (!editingId) return
+  if (!editingId) {
+    if (draftRestored.value) toast('已恢复上次未保存的草稿 ✏️')
+    return
+  }
   try {
     const item = await getCareItem(editingId)
     form.value = {
@@ -108,6 +139,8 @@ async function save() {
       createKey ||= generateIdempotencyKey()
       await createCareItem(data, createKey)
       createKey = null
+      clearFormDraft(DRAFT_KEY)
+      draftRestored.value = false
     }
     toast(editingId ? '档案已更新' : '档案已记下')
     router.push('/notebook')
@@ -134,6 +167,12 @@ async function remove() {
   <div class="fade-up">
     <button class="btn-ghost mb-4 text-sm" @click="goBack">← 返回</button>
     <h1 class="serif mb-4 text-xl">{{ editingId ? '编辑档案' : '添加档案' }}</h1>
+
+    <div v-if="draftRestored"
+      class="surface-soft mb-4 flex items-center justify-between gap-3 rounded-xl px-4 py-2 text-xs text-theme-secondary">
+      <span>✏️ 已恢复上次未保存的草稿</span>
+      <button class="shrink-0 text-xs hover:text-theme-primary" @click="discardDraft">清空草稿</button>
+    </div>
 
     <div class="glass space-y-4 p-5">
       <div>

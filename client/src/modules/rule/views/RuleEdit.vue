@@ -1,8 +1,9 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createRule, getRule, updateRule, removeRule } from '../rule.api.js'
 import { generateIdempotencyKey } from '../../../utils/idempotency.js'
+import { loadFormDraft, saveFormDraft, clearFormDraft } from '../../../utils/draft.js'
 import { toast } from '../../../stores/toast'
 import { confirmDialog } from '../../../stores/confirm'
 
@@ -19,12 +20,39 @@ const TYPES = [
   { value: 'suggestion', label: '建议', help: '可以试试的小事' },
 ]
 
-const form = ref({
-  type: route.query.type || 'rule',
-  title: '',
-  content: '',
-  status: 'active',
-})
+const DRAFT_KEY = 'rule-new'
+
+function initialForm() {
+  return {
+    type: route.query.type || 'rule',
+    title: '',
+    content: '',
+    status: 'active',
+  }
+}
+
+const form = ref(initialForm())
+const draftRestored = ref(false)
+
+// 新建时缓存草稿（与日记一致）：进入恢复、保存成功后清除；编辑模式不缓存
+if (!editingId) {
+  const draft = loadFormDraft(DRAFT_KEY)
+  if (draft) {
+    form.value = { ...initialForm(), ...draft }
+    draftRestored.value = true
+  }
+}
+watch(form, (value) => {
+  if (editingId) return
+  saveFormDraft(DRAFT_KEY, value)
+}, { deep: true })
+
+function discardDraft() {
+  form.value = initialForm()
+  nextTick(() => clearFormDraft(DRAFT_KEY))
+  draftRestored.value = false
+  toast('草稿已清空')
+}
 
 const canGoBack = Boolean(history.state?.back)
 function goBack() {
@@ -33,7 +61,10 @@ function goBack() {
 }
 
 onMounted(async () => {
-  if (!editingId) return
+  if (!editingId) {
+    if (draftRestored.value) toast('已恢复上次未保存的草稿 ✏️')
+    return
+  }
   try {
     const rule = await getRule(editingId)
     form.value = { type: rule.type, title: rule.title, content: rule.content || '', status: rule.status }
@@ -56,6 +87,8 @@ async function save() {
       createKey ||= generateIdempotencyKey()
       await createRule(data, createKey)
       createKey = null
+      clearFormDraft(DRAFT_KEY)
+      draftRestored.value = false
     }
     toast(editingId ? '规矩已更新' : '规矩已记下')
     router.push({ path: '/notebook', query: { tab: 'rule' } })
@@ -82,6 +115,12 @@ async function remove() {
   <div class="fade-up">
     <button class="btn-ghost mb-4 text-sm" @click="goBack">← 返回</button>
     <h1 class="serif mb-4 text-xl">{{ editingId ? '编辑规矩' : '添加规矩' }}</h1>
+
+    <div v-if="draftRestored"
+      class="surface-soft mb-4 flex items-center justify-between gap-3 rounded-xl px-4 py-2 text-xs text-theme-secondary">
+      <span>✏️ 已恢复上次未保存的草稿</span>
+      <button class="shrink-0 text-xs hover:text-theme-primary" @click="discardDraft">清空草稿</button>
+    </div>
 
     <div class="glass space-y-4 p-5">
       <div>

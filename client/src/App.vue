@@ -10,6 +10,7 @@ import MusicPlayer from './modules/music/components/MusicPlayer.vue'
 import PinnedBanner from './shared/components/PinnedBanner.vue'
 import { session, initSession, logout } from './stores/session'
 import { clearAllCommentDrafts } from './modules/comment/commentDraft.js'
+import { clearAllFormDrafts } from './utils/draft.js'
 import { socket } from './socket'
 import { toasts, toast } from './stores/toast'
 import { loadCommentUnread, resetCommentUnread, bumpCommentUnread } from './stores/commentUnread'
@@ -77,6 +78,7 @@ function onRuleAgreed(payload) {
 function doLogout() {
   logout()
   clearAllCommentDrafts()
+  clearAllFormDrafts()
   router.push('/login')
 }
 
