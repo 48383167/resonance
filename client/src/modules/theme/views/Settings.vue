@@ -3,7 +3,7 @@ import { onMounted, ref } from 'vue'
 import { updateProfile } from '../../../modules/misc/misc.api.js'
 import { changePassword as changePasswordApi } from '../../../modules/auth/auth.api.js'
 import { getCurrentShare, createShare as createShareApi, updateCurrentShare, disableShare as disableShareApi } from '../../../modules/share/share.api.js'
-import { getMailSettings, updateMailSettings, sendTestMail, previewNotifications } from '../../../modules/notification/notification.api.js'
+import { getMailSettings, updateMailSettings, sendTestMail, previewNotifications, runNotifications } from '../../../modules/notification/notification.api.js'
 import { session, initSession } from '../../../stores/session'
 import { toast } from '../../../stores/toast'
 import { applyTheme, currentTheme, loadTheme, saveTheme } from '../../../stores/theme'
@@ -19,6 +19,7 @@ const mailSettings = ref({ mailerConfigured: false, aiConfigured: false })
 const mailForm = ref({ email: '', periodRemind: false, anniversaryRemind: false, aiContent: true })
 const mailSaving = ref(false)
 const mailTesting = ref(false)
+const mailRunning = ref(false)
 const previewLoading = ref(false)
 const mailPreviewType = ref('period')
 const previews = ref([])
@@ -169,6 +170,23 @@ async function testMail() {
     toast(e.message)
   } finally {
     mailTesting.value = false
+  }
+}
+
+// 手动触发一次提醒检查（与定时调度同一套去重规则）
+async function runMailCheck() {
+  if (mailRunning.value) return
+  mailRunning.value = true
+  try {
+    const data = await runNotifications(generateIdempotencyKey())
+    if (data.skipped === 'MAIL_NOT_CONFIGURED') toast('服务器未配置 SMTP，无法发送')
+    else if (data.failed) toast(`发送完成：成功 ${data.sent} 封，失败 ${data.failed} 封`)
+    else if (data.sent) toast(`已发送 ${data.sent} 封提醒邮件`)
+    else toast('暂时没有到期的提醒')
+  } catch (e) {
+    toast(e.message)
+  } finally {
+    mailRunning.value = false
   }
 }
 
@@ -351,6 +369,9 @@ function copyShare() {
         </button>
         <button class="btn-ghost w-full sm:w-auto" :disabled="mailTesting" @click="testMail">
           {{ mailTesting ? '发送中…' : '发送测试邮件' }}
+        </button>
+        <button class="btn-ghost w-full sm:w-auto" :disabled="mailRunning" @click="runMailCheck">
+          {{ mailRunning ? '检查中…' : '立即检查并发送' }}
         </button>
         <button class="btn-ghost w-full sm:w-auto" :disabled="previewLoading" @click="loadPreview(mailPreviewType)">
           {{ previewLoading ? '生成中…' : '预览提醒内容' }}
