@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createCareItem, getCareItem, updateCareItem, removeCareItem } from '../care.api.js'
 import { generateIdempotencyKey } from '../../../utils/idempotency.js'
@@ -29,15 +29,35 @@ const SEVERITIES = [
   { value: 'severe', label: '重度' },
 ]
 
+// 缺省对象：例假优先女性一方，其余默认 Ta（与后端规则一致）
+function defaultSubjectFor(category) {
+  if (category === 'period') {
+    if (session.me?.gender === 'female' && session.partner?.gender !== 'female') return session.userId
+    if (session.partner?.gender === 'female' && session.me?.gender !== 'female') return session.partner.id
+  }
+  return session.partner?.id || session.userId
+}
+
+const initialCategory = route.query.category || 'diet'
 const form = ref({
-  category: route.query.category || 'diet',
-  subjectId: route.query.subject || session.partner?.id || session.userId,
-  title: route.query.category === 'period' ? '例假记录' : '',
+  category: initialCategory,
+  subjectId: route.query.subject || defaultSubjectFor(initialCategory),
+  title: initialCategory === 'period' ? '例假记录' : '',
   content: '',
   severity: 'mild',
   startDate: '',
   endDate: '',
   cycleDays: '',
+})
+
+// 用户手动选过对象后，切分类不再覆盖
+let subjectTouched = false
+function pickSubject(id) {
+  subjectTouched = true
+  form.value.subjectId = id
+}
+watch(() => form.value.category, (category) => {
+  if (!subjectTouched) form.value.subjectId = defaultSubjectFor(category)
 })
 
 const canGoBack = Boolean(history.state?.back)
@@ -129,7 +149,7 @@ async function remove() {
             :key="s.label" :disabled="!s.id"
             class="min-h-11 flex-1 rounded-xl transition-colors disabled:opacity-40"
             :class="form.subjectId === s.id ? 'bg-accent-soft text-accent' : 'surface-soft text-theme-secondary'"
-            @click="form.subjectId = s.id">
+            @click="pickSubject(s.id)">
             {{ s.label }}
           </button>
         </div>

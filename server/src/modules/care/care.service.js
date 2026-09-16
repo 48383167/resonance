@@ -7,10 +7,15 @@ import * as careSchema from './care.schema.js'
 import * as pinRepository from '../pin/pin.repository.js'
 import { emitCareCreated, emitCareUpdated, emitCareDeleted } from '../../infrastructure/socket/care.socket.js'
 
-// subject 校验：缺省为伴侣（未配对为自己）；不在成员内 → INVALID_CARE_SUBJECT
-function resolveSubject(couple, subjectId) {
+// subject 校验：缺省时例假优先女性成员，其余默认伴侣（未配对为自己）；不在成员内 → INVALID_CARE_SUBJECT
+function resolveSubject(couple, subjectId, category) {
   const members = couple ? couple.members : []
-  const resolved = subjectId || (couple?.partner ? couple.partner.id : couple?.me?.id)
+  let resolved = subjectId
+  if (!resolved && category === 'period') {
+    const females = members.filter((m) => m.gender === 'female')
+    if (females.length === 1) resolved = females[0].id
+  }
+  resolved ||= couple?.partner ? couple.partner.id : couple?.me?.id
   if (!members.some((m) => m.id === resolved)) {
     throw new AppError('档案对象不是情侣成员', 400, 'INVALID_CARE_SUBJECT')
   }
@@ -34,7 +39,7 @@ export function getDetail(id) {
 export function create(userId, raw) {
   const couple = getUserCouple(userId)
   const data = careSchema.validateCreate(raw)
-  const subjectId = resolveSubject(couple, raw.subjectId)
+  const subjectId = resolveSubject(couple, raw.subjectId, data.category)
   const item = careRepository.create({ authorId: userId, subjectId, ...data })
   broadcast(couple, (pairCode) => emitCareCreated(pairCode, item))
   return item
@@ -45,7 +50,7 @@ export function update(id, userId, raw) {
   const existing = careRepository.findById(id)
   if (!existing) throw new AppError('档案不存在', 404, 'CARE_ITEM_NOT_FOUND')
   const data = careSchema.validateUpdate(raw, existing)
-  const subjectId = resolveSubject(couple, raw.subjectId !== undefined ? raw.subjectId : existing.subject_id)
+  const subjectId = resolveSubject(couple, raw.subjectId !== undefined ? raw.subjectId : existing.subject_id, data.category)
   const item = careRepository.update(id, { ...data, subjectId })
   broadcast(couple, (pairCode) => emitCareUpdated(pairCode, item))
   return item

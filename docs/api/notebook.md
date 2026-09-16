@@ -10,6 +10,9 @@
 
 ## 数据模型
 
+> 与性别的关系：`users.gender` 为 `''`（未设置）/ `male` / `female`，在「设置 → 个人资料」中可选填。
+> 例假是按「档案对象」组织的数据，不限制记录人性别；性别只影响新建例假时的默认对象。
+
 ### care_items（关怀档案）
 
 | 字段 | 类型 | 说明 |
@@ -105,7 +108,9 @@
 校验：
 
 - `category` 必须为枚举值，否则 400 `INVALID_CARE_CATEGORY`
-- `subjectId` 必须是我或伴侣，否则 400 `INVALID_CARE_SUBJECT`（不传默认伴侣，未配对默认自己）
+- `subjectId` 必须是我或伴侣，否则 400 `INVALID_CARE_SUBJECT`
+  - 缺省规则：`category = 'period'` 时优先选择情侣中唯一的 `female` 成员（见 `users.gender`）；否则默认伴侣，未配对默认自己
+  - 档案对象与性别无关，男方可为对方记录例假
 - `period` 必须提供 `startDate`；`endDate` 若存在必须 ≥ `startDate`，否则 400 `INVALID_PERIOD_RANGE`
 - `cycleDays` 若存在必须在 15~60，否则 400 `INVALID_CYCLE_DAYS`
 - `severity` 仅 `allergy` 允许，枚举 `mild/moderate/severe`，否则 400 `INVALID_CARE_SEVERITY`

@@ -12,6 +12,7 @@ import AppSelect from '../../../shared/components/AppSelect.vue'
 import { generateIdempotencyKey } from '../../../utils/idempotency.js'
 
 const nickname = ref('')
+const gender = ref('')
 const avatarUrl = ref('')
 const pw = ref({ old: '', next: '' })
 const share = ref(null)
@@ -46,11 +47,17 @@ const shareOptions = [
   { key: 'includeEntries', label: '公开日记', icon: '📝', description: '标记为公开的文字日记' },
   { key: 'includeAnniversaries', label: '纪念日', icon: '🌷', description: '一起珍藏的重要日期' },
 ]
+const GENDERS = [
+  { value: '', label: '不填' },
+  { value: 'male', label: '男' },
+  { value: 'female', label: '女' },
+]
 
 onMounted(async () => {
   if (!session.me) await initSession()
   if (session.me) await loadTheme(session.me.id)
   nickname.value = session.me?.nickname || ''
+  gender.value = session.me?.gender || ''
   avatarUrl.value = session.me?.avatar_url
     ? { id: session.me.avatar_file_id || '', url: session.me.avatar_url, type: 'image', name: '头像' }
     : ''
@@ -108,7 +115,7 @@ async function saveThemeSettings() {
 
 async function saveProfile() {
   if (!nickname.value.trim()) return toast('昵称不能为空')
-  const me = await updateProfile({ nickname: nickname.value.trim(), avatarFileId: avatarUrl.value?.id || null })
+  const me = await updateProfile({ nickname: nickname.value.trim(), gender: gender.value, avatarFileId: avatarUrl.value?.id || null })
   session.me = me
   toast('资料已保存')
 }
@@ -222,6 +229,11 @@ function copyShare() {
       <div>
         <label class="mb-1 block text-xs text-white/50">昵称</label>
         <input v-model="nickname" class="input-dark" maxlength="12" />
+      </div>
+      <div>
+        <label class="mb-1 block text-xs text-white/50">性别</label>
+        <AppSelect v-model="gender" :options="GENDERS" placeholder="选择性别" />
+        <p class="mt-1 text-xs text-white/40">用于例假记录默认到女性一方，可留空不填</p>
       </div>
       <div>
         <label class="mb-1 block text-xs text-white/50">头像</label>

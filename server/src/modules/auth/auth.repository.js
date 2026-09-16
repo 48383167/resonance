@@ -3,7 +3,7 @@ import { db } from '../../config/database.js'
 import { resolveUrl } from '../file/file.service.js'
 
 // 不含 password_hash 的公开用户字段（登录态用户对象）
-const PUBLIC_USER = 'id, username, nickname, avatar_url, avatar_file_id, pair_code, paired_at'
+const PUBLIC_USER = 'id, username, nickname, gender, avatar_url, avatar_file_id, pair_code, paired_at'
 
 // 头像 URL 解析：优先 avatar_file_id → files 表；迁移前旧行兜底 avatar_url
 function resolveAvatar(u) {
@@ -22,7 +22,7 @@ export function findById(id) {
 
 export function findByUsername(username) {
   return resolveAvatar(db.prepare(
-    'SELECT id, username, password_hash, nickname, avatar_url, avatar_file_id, pair_code, paired_at FROM users WHERE username = ?'
+    'SELECT id, username, password_hash, nickname, gender, avatar_url, avatar_file_id, pair_code, paired_at FROM users WHERE username = ?'
   ).get(username))
 }
 
@@ -51,8 +51,8 @@ export function setPassword(id, passwordHash) {
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, id)
 }
 
-export function updateUser(id, { nickname, avatarFileId }) {
-  db.prepare('UPDATE users SET nickname = COALESCE(?, nickname), avatar_file_id = COALESCE(?, avatar_file_id) WHERE id = ?')
-    .run(nickname || null, avatarFileId || null, id)
+export function updateUser(id, { nickname, avatarFileId, gender }) {
+  db.prepare('UPDATE users SET nickname = COALESCE(?, nickname), avatar_file_id = COALESCE(?, avatar_file_id), gender = COALESCE(?, gender) WHERE id = ?')
+    .run(nickname || null, avatarFileId || null, gender ?? null, id)
   return findById(id)
 }

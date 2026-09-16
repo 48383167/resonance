@@ -2,7 +2,7 @@ import { db } from '../../config/database.js'
 
 // 双人配对模型：两个 users 行共享同一 pair_code，即一个「情侣空间」。
 // 不含 password_hash 的公开字段。
-const PUBLIC_USER = 'id, username, nickname, avatar_url, pair_code, paired_at'
+const PUBLIC_USER = 'id, username, nickname, gender, avatar_url, pair_code, paired_at'
 
 export function findById(id) {
   return db.prepare(`SELECT ${PUBLIC_USER} FROM users WHERE id = ?`).get(id)

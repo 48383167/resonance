@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT UNIQUE,
     password_hash TEXT,
     nickname TEXT NOT NULL,
+    gender TEXT DEFAULT '',              -- '' 未设置 / male 男 / female 女
     avatar_url TEXT DEFAULT '',          -- 已作废：改用 avatar_file_id
     avatar_file_id TEXT,                 -- 文件表 ID（files.id）
     pair_code TEXT,
@@ -370,7 +371,11 @@ db.prepare('INSERT OR IGNORE INTO observatory_settings (id, enabled) VALUES (1, 
 
 // 老库补列：日记附件、心愿阶段时间节点、情书阅读时间、文件 ID 化新列
 ensureColumns('entries', { media: "TEXT DEFAULT '[]'" })
-ensureColumns('users', { avatar_file_id: 'TEXT', first_meet_at: 'TEXT' })
+ensureColumns('users', {
+  avatar_file_id: 'TEXT',
+  first_meet_at: 'TEXT',
+  gender: "TEXT DEFAULT ''",
+})
 ensureColumns('moment_photos', { file_id: 'TEXT' })
 ensureColumns('albums', { cover_file_id: 'TEXT' })
 ensureColumns('album_photos', {
