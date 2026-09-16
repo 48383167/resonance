@@ -7,11 +7,14 @@ import ImageLightbox from './shared/components/ImageLightbox.vue'
 import ConfirmDialog from './shared/components/ConfirmDialog.vue'
 import AppDock from './shared/components/AppDock.vue'
 import MusicPlayer from './modules/music/components/MusicPlayer.vue'
+import PinnedBanner from './shared/components/PinnedBanner.vue'
 import { session, initSession, logout } from './stores/session'
 import { clearAllCommentDrafts } from './modules/comment/commentDraft.js'
 import { socket } from './socket'
 import { toasts, toast } from './stores/toast'
 import { loadCommentUnread, resetCommentUnread, bumpCommentUnread } from './stores/commentUnread'
+import { loadGlobalPins, resetPins } from './stores/pins'
+import { loadNotebookUnread, resetNotebookUnread, bumpNotebookUnread } from './stores/notebookUnread'
 import { currentTheme, loadTheme, resetTheme } from './stores/theme'
 
 const router = useRouter()
@@ -25,8 +28,8 @@ watch(() => [session.me?.id, route.meta.auth], ([userId, isPrivateRoute]) => {
 
 // 登录后拉取评论未读角标，退出时清零
 watch(() => session.userId, (userId) => {
-  if (userId) loadCommentUnread()
-  else resetCommentUnread()
+  if (userId) { loadCommentUnread(); loadGlobalPins(); loadNotebookUnread() }
+  else { resetCommentUnread(); resetPins(); resetNotebookUnread() }
 }, { immediate: true })
 
 // 对方的新评论让角标 +1；删除后重新拉取（负载不含作者与已读状态）
@@ -37,6 +40,21 @@ function onCommentCreated(comment) {
 
 function onCommentDeleted() {
   loadCommentUnread()
+}
+function onPinUpdated() { loadGlobalPins() }
+function onRuleCreated(rule) {
+  if (rule?.author_id !== session.userId) { bumpNotebookUnread(); toast('Ta 提出了新规矩，去小本本看看') }
+}
+function onRuleChanged() {
+  loadNotebookUnread()
+}
+function onRuleAgreed(payload) {
+  loadNotebookUnread()
+  const rule = payload?.rule
+  // 仅对方操作时提示，避免自己撤回认同也收到「Ta 认同了」
+  if (rule?.author_id === session.userId && payload?.actorId !== session.userId) {
+    toast(`Ta 认同了你的约定：${rule.title}`)
+  }
 }
 
 function doLogout() {
@@ -58,12 +76,22 @@ onMounted(() => {
   })
   socket.on('comment:created', onCommentCreated)
   socket.on('comment:deleted', onCommentDeleted)
+  socket.on('pin:updated', onPinUpdated)
+  socket.on('rule:created', onRuleCreated)
+  socket.on('rule:updated', onRuleChanged)
+  socket.on('rule:deleted', onRuleChanged)
+  socket.on('rule:agreed', onRuleAgreed)
 })
 
 onUnmounted(() => {
   socket.off('user_presence')
   socket.off('comment:created', onCommentCreated)
   socket.off('comment:deleted', onCommentDeleted)
+  socket.off('pin:updated', onPinUpdated)
+  socket.off('rule:created', onRuleCreated)
+  socket.off('rule:updated', onRuleChanged)
+  socket.off('rule:deleted', onRuleChanged)
+  socket.off('rule:agreed', onRuleAgreed)
 })
 </script>
 
@@ -80,12 +108,13 @@ onUnmounted(() => {
         <span class="serif text-lg">共鸣</span>
       </router-link>
       <div class="flex min-w-0 items-center gap-2 text-sm sm:gap-3">
-        <span class="max-w-32 truncate text-white/70">{{ session.me.nickname }}</span>
+        <span class="max-w-32 truncate text-theme-secondary">{{ session.me.nickname }}</span>
         <button class="min-h-10 shrink-0 rounded-full border border-white/20 px-3 py-1 text-xs hover:bg-white/10" @click="doLogout">
           退出
         </button>
       </div>
     </header>
+    <PinnedBanner />
     <main class="app-main mx-auto max-w-3xl px-4 pb-32" :class="{ 'app-main--companion': route.name === 'companion' }">
       <router-view />
     </main>

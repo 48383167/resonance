@@ -325,7 +325,79 @@ const cascadeDel = await http('DELETE', `/api/moments/${tempMoment.data.id}`, nu
 const cascadeList = await http('GET', `/api/comments?targetType=moment&targetId=${tempMoment.data.id}`, null, tokenA)
 assert('瞬间删除后评论目标不可达', cascadeDel.ok === true && cascadeList.ok === false)
 
-console.log('== 14. 导出时光机 ==')
+console.log('== 14. 小本本（关怀档案 / 规矩 / 置顶） ==')
+// 1. 新建过敏档案（severe），字段正确，subject 默认伴侣
+const nbAllergy = await http('POST', '/api/care/items', { category: 'allergy', title: '芒果过敏', content: '吃完嘴唇发痒', severity: 'severe' }, tokenA)
+assert('新建过敏档案成功', nbAllergy.ok && nbAllergy.data.category === 'allergy' && nbAllergy.data.severity === 'severe')
+assert('档案字段正确', nbAllergy.ok && nbAllergy.data.title === '芒果过敏' && nbAllergy.data.content === '吃完嘴唇发痒'
+  && nbAllergy.data.author_id === regA.data.me.id && nbAllergy.data.subject_id === regB.data.me.id && nbAllergy.data.pin_scope === null)
+assert('subject 默认伴侣', nbAllergy.data.subject_id === regB.data.me.id)
+
+// 2. 非法 category
+const nbBadCat = await http('POST', '/api/care/items', { category: 'nope', title: 'x' }, tokenA)
+assert('非法 category 被拒绝', nbBadCat.ok === false && nbBadCat.error?.code === 'INVALID_CARE_CATEGORY')
+
+// 3. 例假 end < start
+const nbBadPeriod = await http('POST', '/api/care/items', { category: 'period', title: '例假', startDate: '2026-09-05', endDate: '2026-09-01' }, tokenA)
+assert('例假 end < start 被拒绝', nbBadPeriod.ok === false && nbBadPeriod.error?.code === 'INVALID_PERIOD_RANGE')
+
+// 4. 两条相隔 28 天的例假记录 → 预测
+const nbP1 = await http('POST', '/api/care/items', { category: 'period', title: '例假一', startDate: '2026-09-01', endDate: '2026-09-05', cycleDays: 28 }, tokenA)
+const nbP2 = await http('POST', '/api/care/items', { category: 'period', title: '例假二', startDate: '2026-09-29', endDate: '2026-10-03', cycleDays: 28 }, tokenA)
+assert('创建两条例假记录', nbP1.ok && nbP2.ok)
+const nbSummary = await http('GET', '/api/care/period/summary', null, tokenA)
+const nbPs = nbSummary.ok ? nbSummary.data.subjects.find((s) => s.subject.id === regB.data.me.id) : null
+assert('例假预测 avgCycle=28', nbPs && nbPs.avgCycle === 28, JSON.stringify(nbSummary))
+assert('例假预测 nextStart=后者+28', nbPs && nbPs.nextStart === '2026-10-27', `got=${nbPs?.nextStart}`)
+assert('例假预测 durationDays=5', nbPs && nbPs.durationDays === 5, `got=${nbPs?.durationDays}`)
+
+// 5. 伴侣可见 A 创建的档案
+const nbCareListB = await http('GET', '/api/care/items', null, tokenB)
+assert('伴侣可见 A 创建的档案', nbCareListB.ok && nbCareListB.data.some((i) => i.id === nbAllergy.data.id))
+
+// 6. A 建规矩
+const nbRule1 = await http('POST', '/api/rules', { type: 'rule', title: '每天说晚安', content: '睡前互道晚安' }, tokenA)
+assert('A 建规矩 agreedIds=[A]', nbRule1.ok && Array.isArray(nbRule1.data.agreedIds)
+  && nbRule1.data.agreedIds.length === 1 && nbRule1.data.agreedIds[0] === regA.data.me.id)
+assert('A 建规矩 effective=false', nbRule1.data.effective === false)
+const nbPendingB = await http('GET', '/api/rules/pending/count', null, tokenB)
+assert('B 待认同数=1', nbPendingB.ok && nbPendingB.data.count === 1)
+
+// 7. B 认同
+const nbAgree = await http('PUT', `/api/rules/${nbRule1.data.id}/agree`, null, tokenB)
+assert('B 认同后 effective=true', nbAgree.ok && nbAgree.data.effective === true && nbAgree.data.agreedIds.length === 2)
+const nbPendingB2 = await http('GET', '/api/rules/pending/count', null, tokenB)
+assert('B 认同后待认同数=0', nbPendingB2.ok && nbPendingB2.data.count === 0)
+
+// 8. A 编辑标题 → 重置认同
+const nbEditRule = await http('PUT', `/api/rules/${nbRule1.data.id}`, { type: 'rule', title: '每天说晚安（改）', content: '睡前互道晚安' }, tokenA)
+assert('A 编辑标题重置认同', nbEditRule.ok && nbEditRule.data.effective === false
+  && nbEditRule.data.agreedIds.length === 1 && nbEditRule.data.agreedIds[0] === regA.data.me.id)
+
+// 9. 置顶 care 为 global
+const nbPinCare = await http('PUT', '/api/pins', { targetType: 'care', targetId: nbAllergy.data.id, scope: 'global' }, tokenA)
+assert('置顶 care 为 global', nbPinCare.ok && nbPinCare.data.scope === 'global')
+const nbGlobals = await http('GET', '/api/pins/global', null, tokenA)
+assert('global 列表含该 care', nbGlobals.ok && nbGlobals.data.items.some((it) => it.targetId === nbAllergy.data.id && it.targetType === 'care'))
+const nbCareListA = await http('GET', '/api/care/items', null, tokenA)
+assert('care 列表置顶项排第一', nbCareListA.data[0].id === nbAllergy.data.id && nbCareListA.data[0].pin_scope === 'global')
+
+// 10. 取消置顶
+const nbUnpin = await http('PUT', '/api/pins', { targetType: 'care', targetId: nbAllergy.data.id, scope: 'none' }, tokenA)
+const nbGlobals2 = await http('GET', '/api/pins/global', null, tokenA)
+assert('取消置顶后 global 不含', nbUnpin.ok && !nbGlobals2.data.items.some((it) => it.targetId === nbAllergy.data.id))
+
+// 11. 置顶不存在的目标
+const nbPinMissing = await http('PUT', '/api/pins', { targetType: 'care', targetId: 'care_not_exist', scope: 'global' }, tokenA)
+assert('置顶不存在目标被拒绝', nbPinMissing.ok === false && nbPinMissing.error?.code === 'PIN_TARGET_NOT_FOUND')
+
+// 12. 重新置顶后删除 → 置顶清理
+await http('PUT', '/api/pins', { targetType: 'care', targetId: nbAllergy.data.id, scope: 'global' }, tokenA)
+const nbDelCare = await http('DELETE', `/api/care/items/${nbAllergy.data.id}`, null, tokenA)
+const nbGlobals3 = await http('GET', '/api/pins/global', null, tokenA)
+assert('删除档案后 global 不含（置顶清理）', nbDelCare.ok === true && !nbGlobals3.data.items.some((it) => it.targetId === nbAllergy.data.id))
+
+console.log('== 15. 导出时光机 ==')
 const exp = await fetch(BASE + '/api/export')
 const buf = await exp.arrayBuffer()
 assert('导出 zip 非空', exp.status === 200 && buf.byteLength > 0, `bytes=${buf.byteLength}`)

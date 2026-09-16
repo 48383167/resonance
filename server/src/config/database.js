@@ -189,6 +189,49 @@ CREATE TABLE IF NOT EXISTS anniversaries (
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
+-- 小本本：关怀档案（忌口 / 过敏 / 例假 / 偏好 / 其他）
+CREATE TABLE IF NOT EXISTS care_items (
+    id TEXT PRIMARY KEY,
+    author_id TEXT NOT NULL,              -- 录入人
+    subject_id TEXT NOT NULL,             -- 档案对象（我 / Ta）
+    category TEXT NOT NULL,               -- diet/allergy/period/preference/other
+    title TEXT NOT NULL,
+    content TEXT DEFAULT '',
+    severity TEXT,                        -- 仅 allergy：mild/moderate/severe
+    start_date TEXT, end_date TEXT,       -- 仅 period：YYYY-MM-DD
+    cycle_days INTEGER,                   -- 仅 period：15~60（预测回退值）
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    updated_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_care_category ON care_items(category, updated_at);
+
+-- 小本本：相处规矩（底线 / 约定 / 建议），agreed_ids 为认同者 JSON 数组
+CREATE TABLE IF NOT EXISTS couple_rules (
+    id TEXT PRIMARY KEY,
+    author_id TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'rule',    -- redline 底线 / rule 约定 / suggestion 建议
+    title TEXT NOT NULL,
+    content TEXT DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'active',-- active 生效中 / archived 已停用
+    agreed_ids TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    updated_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_couple_rules_status ON couple_rules(status, updated_at);
+
+-- 通用置顶：一个内容只有一个置顶级别（list 列表置顶 / global 全站置顶）
+CREATE TABLE IF NOT EXISTS pinned_items (
+    id TEXT PRIMARY KEY,
+    target_type TEXT NOT NULL,            -- care/rule（预留扩展其他模块）
+    target_id TEXT NOT NULL,
+    pin_scope TEXT NOT NULL,              -- list/global
+    pinned_by TEXT NOT NULL,
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    updated_at TEXT,
+    UNIQUE(target_type, target_id)
+);
+CREATE INDEX IF NOT EXISTS idx_pinned_scope ON pinned_items(pin_scope, target_type, updated_at);
+
 -- 评论：挂在日记（entry）或恋爱瞬间（moment）上，支持一级回复
 -- parent_id 为空 = 顶层评论；回复统一挂到顶层评论（回复的回复会扁平化）
 -- 删除策略：有回复的评论墓碑化（content 清空 + deleted_at），无回复物理删除

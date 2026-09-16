@@ -28,6 +28,9 @@ import musicRoutes from './src/modules/music/music.routes.js'
 import themeRoutes from './src/modules/theme/theme.routes.js'
 import commentRoutes from './src/modules/comment/comment.routes.js'
 import companionRoutes from './src/modules/companion/companion.routes.js'
+import careRoutes from './src/modules/care/care.routes.js'
+import ruleRoutes from './src/modules/rule/rule.routes.js'
+import pinRoutes from './src/modules/pin/pin.routes.js'
 import { backfillConversationTitles } from './src/modules/companion/companion.service.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -65,6 +68,9 @@ app.use('/api/anniversaries', anniversaryRoutes)
 app.use('/api/comments', commentRoutes)
 app.use('/api/companion', companionRoutes)
 app.use('/api/share', shareRoutes)
+app.use('/api/care', careRoutes)
+app.use('/api/rules', ruleRoutes)
+app.use('/api/pins', pinRoutes)
 app.use('/api/music', musicRoutes)
 app.use('/api/users/me/theme', themeRoutes)
 app.use('/api', fileRoutes)

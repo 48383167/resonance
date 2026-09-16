@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { navigationGroups, navigationItems, primaryNavigationNames } from '../navigation.js'
 import { commentUnread } from '../../stores/commentUnread'
+import { notebookUnread } from '../../stores/notebookUnread'
 
 const route = useRoute()
 const dock = ref(null)
@@ -15,6 +16,7 @@ const moreActive = computed(() => navigationItems.some((item) => !primaryNavigat
 function unreadOf(item) {
   if (item.name === 'diary-list') return commentUnread.entry
   if (item.name === 'moments') return commentUnread.moment
+  if (item.name === 'notebook') return notebookUnread.pendingRules
   return 0
 }
 
@@ -80,7 +82,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
         aria-label="更多功能" title="更多功能" :aria-expanded="moreOpen" @click="moreOpen = !moreOpen">
         <span class="app-dock__icon text-xl tracking-widest">•••</span>
         <span class="app-dock__tooltip">更多功能</span>
-        <span v-if="commentUnread.moment" class="app-dock__badge">{{ commentUnread.moment }}</span>
+        <span v-if="commentUnread.moment + notebookUnread.pendingRules" class="app-dock__badge">{{ commentUnread.moment + notebookUnread.pendingRules }}</span>
       </button>
     </div>
   </div>

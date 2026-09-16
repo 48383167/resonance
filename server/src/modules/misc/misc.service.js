@@ -2,6 +2,7 @@ import * as statsRepository from '../stats/stats.repository.js'
 import * as coupleRepository from '../couple/couple.repository.js'
 import * as authRepository from '../auth/auth.repository.js'
 import * as anniversaryRepository from '../anniversary/anniversary.repository.js'
+import * as careService from '../care/care.service.js'
 import * as miscSchema from './misc.schema.js'
 
 export function getDashboard(user) {
@@ -20,6 +21,7 @@ export function getDashboard(user) {
     daysTogether: coupleRepository.daysTogether(),
     stats: s,
     upcomingAnniversary: upcoming,
+    careSummary: careService.dashboardSummary(),
   }
 }
 
