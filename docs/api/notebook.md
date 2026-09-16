@@ -130,6 +130,8 @@
       "latestEnd": "2026-09-05",
       "durationDays": 5,
       "avgCycle": 28,
+      "cycleSource": "history",
+      "variationDays": 2,
       "intervals": 3,
       "nextStart": "2026-09-29"
     }
@@ -137,17 +139,24 @@
 }
 ```
 
-算法：
+- `cycleSource`：周期来源。`history` 按历史间隔智能推算 / `setting` 按记录里填写的 `cycle_days` / `default` 无数据回退 28 天。
+- `variationDays`：历史周期的标准差（波动范围），可用于展示「预计日期 ±N 天」；不足 2 个区间时为 0。
+- `intervals`：参与推算的区间数。
+
+算法（智能推算，纯统计不依赖外部 AI）：
 
 1. 取 `category = 'period'` 且有 `start_date` 的记录，按 `start_date` 升序、去掉重复日期；
    `start_date > end_date` 的脏数据忽略该条的 `end_date`。
-2. 相邻开始日间隔只采用 15~60 天的值；取最近 3 个区间求均值并四舍五入（至少 1 个区间才使用）。
-3. 无有效区间时回退：最近记录的 `cycle_days` → 默认 28。
-4. `nextStart = 最近开始日 + avgCycle`；若算出的 `nextStart <= 最近开始日`，再顺延一个周期。
-5. `durationDays`：优先最近一条的 `end_date - start_date + 1`；否则由有效区间的（结束-开始+1）均值四舍五入；否则 5。
-6. 只返回有记录的 subject。
+2. 相邻开始日间隔只采用 15~60 天的值，取最近 6 个区间。
+3. 区间数 ≥ 3 时用中位数剔除偏离 > 7 天的异常区间（一次记错不会带偏预测）。
+4. `avgCycle` = 剩余区间的**线性加权平均**（越近的周期权重越高，权重 1..n）四舍五入。
+5. 无有效区间时回退：最近记录的 `cycle_days`（`setting`）→ 默认 28（`default`）。
+6. `variationDays` = 参与推算区间的总体标准差四舍五入。
+7. `nextStart = 最近开始日 + avgCycle`；若算出的 `nextStart <= 最近开始日`，再顺延一个周期。
+8. `durationDays`：优先最近一条的 `end_date - start_date + 1`；否则由有效区间的（结束-开始+1）均值四舍五入；否则 5。
+9. 只返回有记录的 subject。
 
-前端用本地日期计算：`daysUntil = nextStart - 今天`；`0 <= 已过天数 < durationDays` 显示「经期第 N 天」；`daysUntil <= 3` 高亮提醒。
+前端用本地日期计算：`daysUntil = nextStart - 今天`；`0 <= 已过天数 < durationDays` 显示「经期第 N 天」；`daysUntil <= 3` 高亮提醒；`variationDays >= 2` 时同时展示波动范围。
 
 ## 规矩
 
@@ -276,6 +285,8 @@
         "latestEnd": "2026-09-05",
         "durationDays": 5,
         "avgCycle": 28,
+        "cycleSource": "history",
+        "variationDays": 2,
         "intervals": 3,
         "nextStart": "2026-09-29"
       }

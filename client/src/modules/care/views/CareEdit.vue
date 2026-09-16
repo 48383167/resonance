@@ -162,7 +162,7 @@ async function remove() {
         </div>
         <div>
           <label class="mb-1 block text-xs text-theme-tertiary">周期天数（15~60，可空）</label>
-          <input v-model="form.cycleDays" type="number" min="15" max="60" class="input-dark" placeholder="默认按历史间隔推算" />
+          <input v-model="form.cycleDays" type="number" min="15" max="60" class="input-dark" placeholder="不填则由系统按历史智能推算" />
         </div>
       </template>
     </div>

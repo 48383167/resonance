@@ -350,6 +350,25 @@ const nbPs = nbSummary.ok ? nbSummary.data.subjects.find((s) => s.subject.id ===
 assert('例假预测 avgCycle=28', nbPs && nbPs.avgCycle === 28, JSON.stringify(nbSummary))
 assert('例假预测 nextStart=后者+28', nbPs && nbPs.nextStart === '2026-10-27', `got=${nbPs?.nextStart}`)
 assert('例假预测 durationDays=5', nbPs && nbPs.durationDays === 5, `got=${nbPs?.durationDays}`)
+assert('例假预测来源=history', nbPs && nbPs.cycleSource === 'history', `got=${nbPs?.cycleSource}`)
+assert('例假预测波动=0', nbPs && nbPs.variationDays === 0, `got=${nbPs?.variationDays}`)
+
+// 4.1 智能推算：补一条 26 天后的记录 → 近期加权 + 波动范围
+const nbP3 = await http('POST', '/api/care/items', { category: 'period', title: '例假三', startDate: '2026-10-25', endDate: '2026-10-29' }, tokenA)
+const nbSummary2 = await http('GET', '/api/care/period/summary', null, tokenA)
+const nbPs2 = nbSummary2.ok ? nbSummary2.data.subjects.find((s) => s.subject.id === regB.data.me.id) : null
+assert('近期周期线性加权', nbPs2 && nbPs2.avgCycle === 27, `got=${nbPs2?.avgCycle}`)
+assert('波动范围=1 天', nbPs2 && nbPs2.variationDays === 1, `got=${nbPs2?.variationDays}`)
+
+// 4.2 无周期数据时智能回退：默认 28 → 填写后按填写值
+const nbSelf = await http('POST', '/api/care/items', { category: 'period', title: '自我记录', subjectId: regA.data.me.id, startDate: '2026-08-01' }, tokenA)
+const nbSummaryA = await http('GET', '/api/care/period/summary', null, tokenA)
+const nbPsA = nbSummaryA.ok ? nbSummaryA.data.subjects.find((s) => s.subject.id === regA.data.me.id) : null
+assert('无周期数据回退默认 28 天', nbPsA && nbPsA.avgCycle === 28 && nbPsA.cycleSource === 'default', JSON.stringify(nbPsA))
+const nbSelfSet = await http('PUT', `/api/care/items/${nbSelf.data.id}`, { cycleDays: 30 }, tokenA)
+const nbSummaryA2 = await http('GET', '/api/care/period/summary', null, tokenA)
+const nbPsA2 = nbSummaryA2.ok ? nbSummaryA2.data.subjects.find((s) => s.subject.id === regA.data.me.id) : null
+assert('填写周期后按填写值估算', nbPsA2 && nbPsA2.avgCycle === 30 && nbPsA2.cycleSource === 'setting', JSON.stringify(nbPsA2))
 
 // 5. 伴侣可见 A 创建的档案
 const nbCareListB = await http('GET', '/api/care/items', null, tokenB)

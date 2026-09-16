@@ -79,6 +79,34 @@ function diffDays(a, b) {
   return Math.round((parseDate(a) - parseDate(b)) / 86400000)
 }
 
+// 智能推算：区间数 >= 3 时用中位数剔除明显异常值（偏离 > 7 天），避免一次记错带偏预测
+function trimOutliers(list) {
+  if (list.length < 3) return list
+  const sorted = [...list].sort((a, b) => a - b)
+  const median = sorted[Math.floor(sorted.length / 2)]
+  const filtered = list.filter((v) => Math.abs(v - median) <= 7)
+  return filtered.length ? filtered : list
+}
+
+// 越近的周期权重越高（线性加权），更贴合身体近期状态
+function weightedAverage(list) {
+  let sum = 0
+  let weight = 0
+  for (let i = 0; i < list.length; i++) {
+    const w = i + 1
+    sum += list[i] * w
+    weight += w
+  }
+  return Math.round(sum / weight)
+}
+
+function stddev(list) {
+  if (list.length < 2) return 0
+  const mean = list.reduce((a, b) => a + b, 0) / list.length
+  const variance = list.reduce((a, b) => a + (b - mean) ** 2, 0) / list.length
+  return Math.round(Math.sqrt(variance))
+}
+
 function computeSubject(subjectId, records) {
   const sorted = [...records].sort((a, b) => a.start_date.localeCompare(b.start_date))
   const seen = new Set()
@@ -95,16 +123,24 @@ function computeSubject(subjectId, records) {
     const d = diffDays(deduped[i].start_date, deduped[i - 1].start_date)
     if (d >= 15 && d <= 60) intervals.push(d)
   }
-  const recent = intervals.slice(-3)
+  const recent = intervals.slice(-6)
+  const used = trimOutliers(recent)
   const latest = deduped[deduped.length - 1]
 
-  // avgCycle：最近 3 个区间均值四舍五入；无有效区间回退 cycle_days → 28
+  // avgCycle：历史推算（去极端 + 近期加权）→ 记录里填的周期 → 默认 28
   let avgCycle
-  if (recent.length) {
-    avgCycle = Math.round(recent.reduce((a, b) => a + b, 0) / recent.length)
+  let cycleSource
+  if (used.length) {
+    avgCycle = weightedAverage(used)
+    cycleSource = 'history'
+  } else if (latest.cycle_days) {
+    avgCycle = latest.cycle_days
+    cycleSource = 'setting'
   } else {
-    avgCycle = latest.cycle_days || 28
+    avgCycle = 28
+    cycleSource = 'default'
   }
+  const variationDays = stddev(used)
 
   // nextStart 不早于最近开始日；若出现倒退再顺延一个周期
   let nextStart = addDays(latest.start_date, avgCycle)
@@ -129,7 +165,9 @@ function computeSubject(subjectId, records) {
     latestEnd,
     durationDays,
     avgCycle,
-    intervals: recent.length,
+    cycleSource,
+    variationDays,
+    intervals: used.length,
     nextStart,
   }
 }

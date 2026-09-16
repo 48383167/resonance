@@ -28,7 +28,14 @@ function periodState(s) {
   if (until < 0) return { text: `预计已推迟 ${-until} 天`, hot: true }
   if (until === 0) return { text: '预计今天来', hot: true }
   const label = `${Number(s.nextStart.slice(5, 7))}月${Number(s.nextStart.slice(8))}日`
-  return { text: `预计 ${until} 天后（${label}）`, hot: until <= 3 }
+  const spread = s.variationDays >= 2 ? ` ±${s.variationDays} 天` : ''
+  return { text: `预计 ${until} 天后（${label}${spread}）`, hot: until <= 3 }
+}
+
+function sourceText(s) {
+  if (s.cycleSource === 'history') return `按最近 ${s.intervals} 个周期的间隔推算`
+  if (s.cycleSource === 'setting') return '按记录里填写的周期估算'
+  return '记录还少，先按平均 28 天估算'
 }
 
 function rangeText(item) {
@@ -74,6 +81,7 @@ defineExpose({ load })
           {{ periodState(s).text }}
         </div>
         <div class="mt-2 text-xs text-theme-tertiary">周期约 {{ s.avgCycle }} 天 · 最近 {{ s.latestStart }}</div>
+        <div class="mt-1 text-xs text-theme-tertiary">{{ sourceText(s) }}</div>
       </article>
     </div>
     <div v-else class="glass p-8 text-center text-sm text-theme-tertiary">
