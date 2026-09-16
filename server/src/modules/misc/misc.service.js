@@ -1,9 +1,11 @@
 import * as statsRepository from '../stats/stats.repository.js'
 import * as coupleRepository from '../couple/couple.repository.js'
+import * as coupleService from '../couple/couple.service.js'
 import * as authRepository from '../auth/auth.repository.js'
 import * as anniversaryRepository from '../anniversary/anniversary.repository.js'
 import * as careService from '../care/care.service.js'
 import * as miscSchema from './misc.schema.js'
+import { emitProfileUpdated } from '../../infrastructure/socket/profile.socket.js'
 
 export function getDashboard(user) {
   const s = statsRepository.stats()
@@ -49,5 +51,20 @@ export function getTreeState() {
 }
 
 export function updateProfile(userId, raw) {
-  return authRepository.updateUser(userId, miscSchema.validateProfile(raw))
+  const profile = miscSchema.validateProfile(raw)
+  const me = authRepository.updateUser(userId, profile)
+
+  // 情侣必为一男一女：一方填写性别后，对方自动同步为相反性别
+  const couple = coupleService.getUserCouple(userId)
+  if (couple?.partner && (profile.gender === 'male' || profile.gender === 'female')) {
+    const opposite = profile.gender === 'male' ? 'female' : 'male'
+    const partner = authRepository.updateUser(couple.partner.id, { gender: opposite })
+    emitProfileUpdated(couple.pairCode, {
+      actorId: userId,
+      gender: me.gender,
+      partnerId: partner.id,
+      partnerGender: partner.gender,
+    })
+  }
+  return me
 }

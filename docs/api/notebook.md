@@ -11,6 +11,7 @@
 ## 数据模型
 
 > 与性别的关系：`users.gender` 为 `''`（未设置）/ `male` / `female`，在「设置 → 个人资料」中可选填。
+> 情侣必为一男一女：**一方填写后，另一方自动同步为相反性别**（`PUT /api/users/me` 时联动，并广播 `profile:updated`）。
 > 例假是按「档案对象」组织的数据，不限制记录人性别；性别只影响新建例假时的默认对象。
 
 ### care_items（关怀档案）
@@ -323,6 +324,7 @@
 | `rule:deleted` | `{ id }` | 删除规矩 |
 | `rule:agreed` | `{ rule, actorId }` | 认同/撤回（作者据此弹「Ta 认同了」提示） |
 | `pin:updated` | `{ targetType, targetId, scope }` | 置顶变化 |
+| `profile:updated` | `{ actorId, gender, partnerId, partnerGender }` | 一方设置性别，对方自动同步（例假默认对象联动） |
 
 ## 错误码
 

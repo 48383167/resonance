@@ -370,18 +370,19 @@ const nbSummaryA2 = await http('GET', '/api/care/period/summary', null, tokenA)
 const nbPsA2 = nbSummaryA2.ok ? nbSummaryA2.data.subjects.find((s) => s.subject.id === regA.data.me.id) : null
 assert('填写周期后按填写值估算', nbPsA2 && nbPsA2.avgCycle === 30 && nbPsA2.cycleSource === 'setting', JSON.stringify(nbPsA2))
 
-// 4.3 性别：可选填、非法拒绝；例假未填对象时默认女性一方
+// 4.3 性别：可选填、非法拒绝；一方填写后对方自动同步为相反性别；例假未填对象时默认女性一方
 const nbGenderBad = await http('PUT', '/api/users/me', { gender: 'x' }, tokenA)
 assert('非法性别被拒绝', nbGenderBad.ok === false)
 const nbGenderA = await http('PUT', '/api/users/me', { gender: 'female' }, tokenA)
-const nbGenderB = await http('PUT', '/api/users/me', { gender: 'male' }, tokenB)
-assert('性别保存成功', nbGenderA.ok && nbGenderA.data.gender === 'female'
-  && nbGenderB.ok && nbGenderB.data.gender === 'male')
-const nbMeGender = await http('GET', '/api/auth/me', null, tokenA)
-assert('会话返回双方性别', nbMeGender.ok && nbMeGender.data.me.gender === 'female'
-  && nbMeGender.data.partner.gender === 'male')
+assert('A 设置性别为女', nbGenderA.ok && nbGenderA.data.gender === 'female')
+const nbMeB = await http('GET', '/api/auth/me', null, tokenB)
+assert('一方填写后对方自动为男', nbMeB.ok && nbMeB.data.me.gender === 'male' && nbMeB.data.partner.gender === 'female')
+const nbGenderB = await http('PUT', '/api/users/me', { gender: 'female' }, tokenB)
+assert('B 改设女覆盖自己', nbGenderB.ok && nbGenderB.data.gender === 'female')
+const nbMeA = await http('GET', '/api/auth/me', null, tokenA)
+assert('另一方自动同步为男', nbMeA.ok && nbMeA.data.me.gender === 'male' && nbMeA.data.partner.gender === 'female')
 const nbAutoSubject = await http('POST', '/api/care/items', { category: 'period', title: '智能对象', startDate: '2026-11-01' }, tokenA)
-assert('例假未填对象时默认女性一方', nbAutoSubject.ok && nbAutoSubject.data.subject_id === regA.data.me.id,
+assert('例假未填对象时默认女性一方', nbAutoSubject.ok && nbAutoSubject.data.subject_id === regB.data.me.id,
   `got=${nbAutoSubject.data?.subject_id}`)
 
 // 5. 伴侣可见 A 创建的档案

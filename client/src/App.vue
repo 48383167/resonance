@@ -48,6 +48,18 @@ function onRuleCreated(rule) {
 function onRuleChanged() {
   loadNotebookUnread()
 }
+function onProfileUpdated(payload) {
+  if (!session.me) return
+  // 事件由「设置性别的一方」触发，payload 同时携带双方最新性别
+  const mine = payload.actorId === session.me.id ? payload.gender : payload.partnerGender
+  const theirs = payload.actorId === session.me.id ? payload.partnerGender : payload.gender
+  session.me.gender = mine
+  if (session.partner) session.partner.gender = theirs
+  if (payload.actorId !== session.userId && payload.partnerId === session.userId) {
+    const label = payload.partnerGender === 'male' ? '男' : payload.partnerGender === 'female' ? '女' : payload.partnerGender
+    toast(`Ta 设置了性别，你的已自动同步为${label}`)
+  }
+}
 function onRuleAgreed(payload) {
   loadNotebookUnread()
   const rule = payload?.rule
@@ -81,6 +93,7 @@ onMounted(() => {
   socket.on('rule:updated', onRuleChanged)
   socket.on('rule:deleted', onRuleChanged)
   socket.on('rule:agreed', onRuleAgreed)
+  socket.on('profile:updated', onProfileUpdated)
 })
 
 onUnmounted(() => {
@@ -92,6 +105,7 @@ onUnmounted(() => {
   socket.off('rule:updated', onRuleChanged)
   socket.off('rule:deleted', onRuleChanged)
   socket.off('rule:agreed', onRuleAgreed)
+  socket.off('profile:updated', onProfileUpdated)
 })
 </script>
 

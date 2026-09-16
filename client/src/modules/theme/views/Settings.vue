@@ -233,7 +233,7 @@ function copyShare() {
       <div>
         <label class="mb-1 block text-xs text-white/50">性别</label>
         <AppSelect v-model="gender" :options="GENDERS" placeholder="选择性别" />
-        <p class="mt-1 text-xs text-white/40">用于例假记录默认到女性一方，可留空不填</p>
+        <p class="mt-1 text-xs text-white/40">一方填写后，对方自动同步为相反性别；用于例假记录默认到女性一方</p>
       </div>
       <div>
         <label class="mb-1 block text-xs text-white/50">头像</label>
