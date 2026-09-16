@@ -43,6 +43,10 @@ function severityClass(severity) {
   return 'text-theme-tertiary'
 }
 
+function togglePin(item) {
+  pinTarget.value = pinTarget.value?.id === item.id ? null : item
+}
+
 async function load() {
   try {
     items.value = await listCareItems()
@@ -109,13 +113,16 @@ defineExpose({ load })
                 </p>
               </div>
               <div class="flex shrink-0 items-center gap-1">
-                <button class="min-h-11 min-w-11 rounded-full text-theme-secondary transition-colors hover:text-accent"
-                  title="设置置顶" @click="pinTarget = item">📌</button>
+                <button class="min-h-11 min-w-11 rounded-full transition-colors"
+                  :class="pinTarget?.id === item.id ? 'text-accent' : 'text-theme-secondary hover:text-accent'"
+                  title="设置置顶" @click="togglePin(item)">📌</button>
                 <button class="min-h-11 px-2 text-xs text-theme-secondary hover:text-theme-primary"
                   @click="router.push(`/notebook/care/${item.id}/edit`)">编辑</button>
                 <button class="min-h-11 px-2 text-xs danger-link" @click="remove(item)">删除</button>
               </div>
             </div>
+            <PinMenu v-if="pinTarget?.id === item.id" target-type="care" :target-id="item.id"
+              :scope="item.pin_scope || 'none'" @close="pinTarget = null" @change="load" />
           </article>
         </div>
       </section>
@@ -126,9 +133,5 @@ defineExpose({ load })
     </div>
 
     <button class="btn-primary w-full" @click="router.push('/notebook/care/new')">＋ 添加档案</button>
-
-    <PinMenu v-if="pinTarget" :open="Boolean(pinTarget)" target-type="care"
-      :target-id="pinTarget.id" :scope="pinTarget.pin_scope || 'none'"
-      @close="pinTarget = null" @change="load" />
   </div>
 </template>

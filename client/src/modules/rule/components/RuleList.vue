@@ -38,6 +38,10 @@ const visible = computed(() => rules.value.filter((rule) => {
 
 const agreedByMe = (rule) => Boolean(rule.agreedIds?.includes(session.userId))
 
+function togglePin(rule) {
+  pinTarget.value = pinTarget.value?.id === rule.id ? null : rule
+}
+
 function statusText(rule) {
   if (rule.effective) return '已生效'
   return rule.author_id === session.userId ? '待 Ta 认同' : '待你认同'
@@ -121,8 +125,9 @@ defineExpose({ load })
             </p>
           </div>
           <div class="flex shrink-0 items-center gap-1">
-            <button class="min-h-11 min-w-11 text-theme-secondary transition-colors hover:text-accent"
-              title="设置置顶" @click="pinTarget = rule">📌</button>
+            <button class="min-h-11 min-w-11 transition-colors"
+              :class="pinTarget?.id === rule.id ? 'text-accent' : 'text-theme-secondary hover:text-accent'"
+              title="设置置顶" @click="togglePin(rule)">📌</button>
             <button class="min-h-11 px-2 text-xs text-theme-secondary hover:text-theme-primary"
               @click="router.push(`/notebook/rule/${rule.id}/edit`)">编辑</button>
           </div>
@@ -138,6 +143,9 @@ defineExpose({ load })
           </button>
           <button class="min-h-9 px-3 text-xs danger-link" @click="remove(rule)">删除</button>
         </div>
+
+        <PinMenu v-if="pinTarget?.id === rule.id" target-type="rule" :target-id="rule.id"
+          :scope="rule.pin_scope || 'none'" @close="pinTarget = null" @change="load" />
       </article>
     </div>
 
@@ -146,9 +154,5 @@ defineExpose({ load })
     </div>
 
     <button class="btn-primary w-full" @click="router.push('/notebook/rule/new')">＋ 添加规矩</button>
-
-    <PinMenu v-if="pinTarget" :open="Boolean(pinTarget)" target-type="rule"
-      :target-id="pinTarget.id" :scope="pinTarget.pin_scope || 'none'"
-      @close="pinTarget = null" @change="load" />
   </div>
 </template>

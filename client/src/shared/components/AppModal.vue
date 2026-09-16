@@ -34,31 +34,34 @@ onUnmounted(unlockBody)
 </script>
 
 <template>
-  <Transition name="am">
-    <div v-if="open" class="am-backdrop fixed inset-0 z-40 overflow-y-auto bg-black/60 backdrop-blur-sm"
-         @click.self="maskClosable && emit('close')">
-      <!-- m-auto 居中：内容短时居中，内容长时从顶部自然展开，避免「固定窗体内滚动」 -->
-      <div class="flex min-h-[100svh] items-start justify-center sm:items-center">
-        <div class="glass am-panel m-auto w-full overflow-y-auto p-0" :class="width">
-          <!-- 页头 -->
-          <div v-if="title"
-            class="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-4 sm:px-6"
-            style="background: linear-gradient(135deg, rgb(var(--accent-rgb) / 0.10), rgb(var(--accent-2-rgb) / 0.08))">
-            <h3 class="serif flex min-w-0 items-center gap-2 text-lg font-semibold">
-              <span class="h-4 w-1 rounded-full" style="background: linear-gradient(180deg,var(--accent),var(--accent-2))" />
-              <span class="break-words">{{ title }}</span>
-            </h3>
-            <button class="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-lg transition-colors hover:bg-white/20"
-              @click="emit('close')">×</button>
-          </div>
-          <!-- 内容 -->
-          <div :class="flush ? 'p-0' : 'p-4 sm:p-6'">
-            <slot />
+  <!-- Teleport 到 body：避免页面祖先的 transform/backdrop-filter 让 fixed 相对内容定位 -->
+  <Teleport to="body">
+    <Transition name="am">
+      <div v-if="open" class="am-backdrop fixed inset-0 z-[65] overflow-y-auto bg-black/60 backdrop-blur-sm"
+           @click.self="maskClosable && emit('close')">
+        <!-- m-auto 居中：内容短时居中，内容长时从顶部自然展开，避免「固定窗体内滚动」 -->
+        <div class="flex min-h-[100svh] items-start justify-center sm:items-center">
+          <div class="glass am-panel m-auto w-full overflow-y-auto p-0" :class="width">
+            <!-- 页头 -->
+            <div v-if="title"
+              class="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-4 sm:px-6"
+              style="background: linear-gradient(135deg, rgb(var(--accent-rgb) / 0.10), rgb(var(--accent-2-rgb) / 0.08))">
+              <h3 class="serif flex min-w-0 items-center gap-2 text-lg font-semibold">
+                <span class="h-4 w-1 rounded-full" style="background: linear-gradient(180deg,var(--accent),var(--accent-2))" />
+                <span class="break-words">{{ title }}</span>
+              </h3>
+              <button class="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-lg transition-colors hover:bg-white/20"
+                @click="emit('close')">×</button>
+            </div>
+            <!-- 内容 -->
+            <div :class="flush ? 'p-0' : 'p-4 sm:p-6'">
+              <slot />
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  </Transition>
+    </Transition>
+  </Teleport>
 </template>
 
 <style>
