@@ -5,14 +5,14 @@ import { listCareItems, removeCareItem } from '../care.api.js'
 import { session } from '../../../stores/session'
 import { toast } from '../../../stores/toast'
 import { confirmDialog } from '../../../stores/confirm'
-import PinMenu from '../../../shared/components/PinMenu.vue'
+import CareItemRow from './CareItemRow.vue'
 
-// 关怀档案列表：一个分类一张卡、条目成行（一条仍是一条，逐条置顶 / 编辑 / 删除）
-// 条目多时分类内折叠，默认露 4 条；筛了分类或对象时全部展开
+// 关怀档案列表：安全速查（搜索 / 能不能吃 / 复制清单）+ 分类卡行式条目 + 分类内折叠
 const router = useRouter()
 const items = ref([])
 const category = ref('')
 const subjectId = ref('')
+const keyword = ref('')
 const pinTarget = ref(null)
 const expanded = ref(new Set())
 
@@ -24,7 +24,10 @@ const CATEGORIES = [
   { value: 'preference', label: '💗 偏好' },
   { value: 'other', label: '📎 其他' },
 ]
+const CATEGORY_LABELS = { diet: '忌口', allergy: '过敏', preference: '偏好', other: '其他' }
 const SEVERITY_LABELS = { mild: '轻度', moderate: '中度', severe: '重度' }
+const SEVERITY_RANK = { severe: 0, moderate: 1, mild: 2 }
+const PRIORITY = { allergy: 0, diet: 1, preference: 2, other: 3 }
 
 const subjectOptions = computed(() => {
   const options = [{ value: '', label: '全部' }, { value: session.userId, label: '我' }]
@@ -32,17 +35,93 @@ const subjectOptions = computed(() => {
   return options
 })
 
+const searching = computed(() => Boolean(keyword.value.trim()))
+const filtering = computed(() => Boolean(category.value || subjectId.value))
+
+const subjectFiltered = (list) =>
+  list.filter((item) => !subjectId.value || item.subject_id === subjectId.value)
+
 const groups = computed(() => CATEGORIES
   .filter((c) => !category.value || c.value === category.value)
   .map((c) => ({
     ...c,
-    items: items.value.filter((item) =>
-      item.category === c.value
-      && (!subjectId.value || item.subject_id === subjectId.value)),
+    items: subjectFiltered(items.value).filter((item) => item.category === c.value),
   }))
   .filter((g) => g.items.length))
 
-const filtering = computed(() => Boolean(category.value || subjectId.value))
+// —— 速查：命中排序 过敏(重→轻) > 忌口 > 偏好 > 其他 ——
+const matches = computed(() => {
+  const k = keyword.value.trim().toLowerCase()
+  if (!k) return []
+  return subjectFiltered(items.value).filter((item) =>
+    String(item.title || '').toLowerCase().includes(k)
+    || String(item.content || '').toLowerCase().includes(k))
+})
+
+const sortedMatches = computed(() => [...matches.value].sort((a, b) =>
+  (PRIORITY[a.category] ?? 9) - (PRIORITY[b.category] ?? 9)
+  || (SEVERITY_RANK[a.severity] ?? 3) - (SEVERITY_RANK[b.severity] ?? 3)))
+
+function subjectWord(item) {
+  if (item.subject_id === session.userId) return '你'
+  return item.subject?.nickname || 'Ta'
+}
+
+// 结论卡：过敏 > 忌口 > 其他命中 > 无记录
+const conclusion = computed(() => {
+  if (!searching.value) return null
+  const list = sortedMatches.value
+  const allergy = list.filter((i) => i.category === 'allergy')
+  if (allergy.length) {
+    const worst = allergy[0]
+    const level = SEVERITY_LABELS[worst.severity] || ''
+    return {
+      tone: 'danger',
+      title: `${subjectWord(worst)}对「${worst.title}」${level ? `${level}过敏` : '过敏'}，别吃！`,
+      detail: worst.content || '',
+    }
+  }
+  const diet = list.filter((i) => i.category === 'diet')
+  if (diet.length) {
+    const first = diet[0]
+    return { tone: 'warn', title: `${subjectWord(first)}忌口里有「${first.title}」`, detail: first.content || '' }
+  }
+  if (list.length) {
+    const first = list[0]
+    return {
+      tone: 'soft',
+      title: `档案里有「${first.title}」（${CATEGORY_LABELS[first.category]}）`,
+      detail: first.content || '',
+    }
+  }
+  return { tone: 'safe', title: `档案里没有「${keyword.value.trim()}」，可以放心`, detail: '' }
+})
+
+const CONCLUSION_CLASSES = {
+  danger: 'danger-link border-current',
+  warn: 'text-accent border-accent bg-accent-soft',
+  soft: 'surface-soft text-theme-secondary border-transparent',
+  safe: 'surface-soft text-theme-secondary border-transparent',
+}
+
+// 同名词同时记在多个分类：行内提示，避免重复/冲突
+const titleIndex = computed(() => {
+  const map = new Map()
+  for (const item of items.value) {
+    const key = String(item.title || '').trim().toLowerCase()
+    if (!key) continue
+    if (!map.has(key)) map.set(key, new Set())
+    map.get(key).add(item.category)
+  }
+  return map
+})
+
+function crossLabelOf(item) {
+  const cats = titleIndex.value.get(String(item.title || '').trim().toLowerCase())
+  if (!cats || cats.size < 2) return ''
+  const others = [...cats].filter((c) => c !== item.category).map((c) => CATEGORY_LABELS[c] || c)
+  return `也记在${others.join('、')}`
+}
 
 function visibleItems(group) {
   if (filtering.value || expanded.value.has(group.value)) return group.items
@@ -59,16 +138,6 @@ function toggleExpand(value) {
   if (next.has(value)) next.delete(value)
   else next.add(value)
   expanded.value = next
-}
-
-function severityClass(severity) {
-  if (severity === 'severe') return 'danger-link'
-  if (severity === 'moderate') return 'text-accent-2'
-  return 'text-theme-tertiary'
-}
-
-function subjectText(item) {
-  return item.subject?.nickname || (item.subject_id === session.userId ? '我' : 'Ta')
 }
 
 function togglePin(item) {
@@ -93,6 +162,43 @@ async function remove(item) {
   } catch (e) {
     toast(e.message)
   }
+}
+
+// —— 复制：清单一键发餐厅 / 结论一键发朋友 ——
+async function copyText(text, okMessage) {
+  try {
+    await navigator.clipboard.writeText(text)
+    toast(okMessage)
+  } catch {
+    toast('复制失败，请手动选择文本')
+  }
+}
+
+function dietListText() {
+  const list = subjectFiltered(items.value).filter((i) => !category.value || i.category === category.value)
+  const byCat = { allergy: [], diet: [], preference: [], other: [] }
+  for (const item of list) byCat[item.category]?.push(item)
+  const subjectLabel = subjectOptions.value.find((o) => o.value === subjectId.value)?.label
+  const lines = [subjectId.value ? `【${subjectLabel}的饮食注意】` : '【饮食注意】']
+  if (byCat.allergy.length) {
+    lines.push(`⚠️ 过敏：${byCat.allergy.map((i) => `${i.title}${i.severity ? `（${SEVERITY_LABELS[i.severity]}）` : ''}`).join('、')}`)
+  }
+  if (byCat.diet.length) lines.push(`🍽️ 忌口：${byCat.diet.map((i) => i.title).join('、')}`)
+  if (byCat.preference.length) lines.push(`💗 偏好：${byCat.preference.map((i) => i.title).join('、')}`)
+  if (byCat.other.length) lines.push(`📎 其他：${byCat.other.map((i) => i.title).join('、')}`)
+  return lines.length > 1 ? lines.join('\n') : ''
+}
+
+async function copyList() {
+  const text = dietListText()
+  if (!text) return toast('还没有可复制的档案')
+  await copyText(text, '已复制，可以发给餐厅啦')
+}
+
+async function copyConclusion() {
+  if (!conclusion.value) return
+  const text = `【饮食注意】${conclusion.value.title}${conclusion.value.detail ? `\n${conclusion.value.detail}` : ''}`
+  await copyText(text, '已复制结论')
 }
 
 onMounted(load)
@@ -121,57 +227,68 @@ defineExpose({ load })
       </button>
     </div>
 
-    <div v-if="groups.length" class="space-y-5">
-      <section v-for="group in groups" :key="group.value" class="fade-up">
-        <div class="mb-2 flex items-center justify-between">
-          <h3 class="text-sm text-theme-secondary">{{ group.label }}</h3>
-          <span class="text-[11px] text-theme-tertiary">{{ group.items.length }} 条</span>
+    <!-- 安全速查 -->
+    <div class="flex items-center gap-2">
+      <input v-model="keyword" class="input-dark !min-h-11 flex-1 text-sm" maxlength="40"
+        placeholder="搜一搜：香菜、花生、牛奶…" />
+      <button class="btn-ghost !min-h-11 shrink-0 !px-3 text-xs" title="复制饮食注意清单" @click="copyList">复制清单</button>
+    </div>
+
+    <!-- 速查结果 -->
+    <template v-if="searching">
+      <div class="rounded-2xl border p-4" :class="CONCLUSION_CLASSES[conclusion.tone]">
+        <p class="text-sm font-medium">{{ conclusion.title }}</p>
+        <p v-if="conclusion.detail" class="mt-1 whitespace-pre-wrap text-xs opacity-80">{{ conclusion.detail }}</p>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button class="btn-ghost !min-h-9 !px-3 text-xs" @click="copyConclusion">复制结论</button>
+          <template v-if="!sortedMatches.length">
+            <button class="btn-ghost !min-h-9 !px-3 text-xs"
+              @click="router.push({ path: '/notebook/care/new', query: { category: 'diet', title: keyword.trim() } })">记一条忌口</button>
+            <button class="btn-ghost !min-h-9 !px-3 text-xs"
+              @click="router.push({ path: '/notebook/care/new', query: { category: 'allergy', title: keyword.trim() } })">记一条过敏</button>
+          </template>
         </div>
+      </div>
 
-        <div class="glass divide-y divide-white/5 px-3">
-          <div v-for="item in visibleItems(group)" :key="item.id" class="rounded-xl py-2.5"
-            :class="item.pin_scope ? '-mx-1.5 bg-accent-soft px-1.5' : ''">
-            <div class="flex items-start gap-2">
-              <div class="min-w-0 flex-1">
-                <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                  <h4 class="text-sm font-medium">{{ item.title }}</h4>
-                  <span v-if="item.severity" class="text-[11px]" :class="severityClass(item.severity)">
-                    {{ SEVERITY_LABELS[item.severity] }}
-                  </span>
-                  <span v-if="item.pin_scope" class="text-[11px] text-accent" title="已置顶">📌</span>
-                </div>
-                <p v-if="item.content" class="mt-1 whitespace-pre-wrap text-xs leading-5 text-theme-secondary">{{ item.content }}</p>
-                <p class="mt-1 text-[11px] text-theme-tertiary">
-                  {{ item.author?.nickname || '我' }} 记录 · 关于 {{ subjectText(item) }}
-                </p>
-              </div>
+      <div v-if="sortedMatches.length" class="glass divide-y divide-white/5 px-3">
+        <CareItemRow v-for="item in sortedMatches" :key="item.id" :item="item" :keyword="keyword"
+          :pin-open="pinTarget?.id === item.id" :cross-label="crossLabelOf(item)"
+          @pin="togglePin(item)" @edit="router.push(`/notebook/care/${item.id}/edit`)" @remove="remove(item)"
+          @pin-close="pinTarget = null" @pin-change="load" />
+      </div>
+      <div v-else class="glass p-6 text-center text-sm text-theme-tertiary">
+        没有找到相关记录，可以放心，也可以随手记下来。
+      </div>
+    </template>
 
-              <div class="flex shrink-0 items-center">
-                <button class="min-h-9 min-w-9 text-xs transition-colors"
-                  :class="pinTarget?.id === item.id ? 'text-accent' : 'text-theme-tertiary hover:text-accent'"
-                  title="设置置顶" @click="togglePin(item)">📌</button>
-                <button class="min-h-9 min-w-9 text-xs text-theme-tertiary transition-colors hover:text-theme-primary"
-                  title="编辑" @click="router.push(`/notebook/care/${item.id}/edit`)">✎</button>
-                <button class="min-h-9 min-w-9 text-xs danger-link" title="删除" @click="remove(item)">×</button>
-              </div>
-            </div>
-
-            <PinMenu v-if="pinTarget?.id === item.id" target-type="care" :target-id="item.id"
-              :scope="item.pin_scope || 'none'" @close="pinTarget = null" @change="load" />
+    <!-- 常规分组 -->
+    <template v-else>
+      <div v-if="groups.length" class="space-y-5">
+        <section v-for="group in groups" :key="group.value" class="fade-up">
+          <div class="mb-2 flex items-center justify-between">
+            <h3 class="text-sm text-theme-secondary">{{ group.label }}</h3>
+            <span class="text-[11px] text-theme-tertiary">{{ group.items.length }} 条</span>
           </div>
 
-          <button v-if="!filtering && group.items.length > COLLAPSE_LIMIT"
-            class="flex min-h-10 w-full items-center justify-center gap-1 text-xs text-theme-tertiary transition-colors hover:text-accent"
-            @click="toggleExpand(group.value)">
-            {{ expanded.has(group.value) ? '收起 ▴' : `展开其余 ${hiddenCount(group)} 条 ▾` }}
-          </button>
-        </div>
-      </section>
-    </div>
+          <div class="glass divide-y divide-white/5 px-3">
+            <CareItemRow v-for="item in visibleItems(group)" :key="item.id" :item="item"
+              :pin-open="pinTarget?.id === item.id" :cross-label="crossLabelOf(item)"
+              @pin="togglePin(item)" @edit="router.push(`/notebook/care/${item.id}/edit`)" @remove="remove(item)"
+              @pin-close="pinTarget = null" @pin-change="load" />
 
-    <div v-else class="glass p-8 text-center text-sm text-theme-tertiary">
-      {{ filtering ? '没有符合筛选的档案，换个条件试试。' : '还没有关怀档案，把那些重要的小事记下来吧。' }}
-    </div>
+            <button v-if="!filtering && group.items.length > COLLAPSE_LIMIT"
+              class="flex min-h-10 w-full items-center justify-center gap-1 text-xs text-theme-tertiary transition-colors hover:text-accent"
+              @click="toggleExpand(group.value)">
+              {{ expanded.has(group.value) ? '收起 ▴' : `展开其余 ${hiddenCount(group)} 条 ▾` }}
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <div v-else class="glass p-8 text-center text-sm text-theme-tertiary">
+        {{ filtering ? '没有符合筛选的档案，换个条件试试。' : '还没有关怀档案，把那些重要的小事记下来吧。' }}
+      </div>
+    </template>
 
     <button class="btn-primary w-full" @click="router.push('/notebook/care/new')">＋ 添加档案</button>
   </div>

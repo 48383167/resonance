@@ -58,7 +58,7 @@ function initialForm() {
   return {
     category: initialCategory,
     subjectId: route.query.subject || defaultSubjectFor(),
-    title: initialCategory === 'period' ? '例假记录' : '',
+    title: initialCategory === 'period' ? '例假记录' : (route.query.title || ''),
     content: '',
     severity: 'mild',
     startDate: '',
