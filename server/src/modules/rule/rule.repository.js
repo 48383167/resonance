@@ -12,6 +12,32 @@ function attachAuthor(rule) {
   return rule
 }
 
+// 待我认同条件（list 与 count 共用）：
+//   1) 已条目化：存在 active 条目，且「该条 agreedIds」与「整条 agreed_ids」都不含我
+//      （条目缺 agreedIds 的首版数据继承整条认同，与 rule.items.js 的读取语义一致）
+//   2) 未条目化的老数据：沿用整条 agreed_ids 判定
+function pendingCondition(alias, userId) {
+  return {
+    sql: `(
+      (${alias}.items != '[]' AND EXISTS (
+        SELECT 1 FROM json_each(${alias}.items) AS it
+        WHERE COALESCE(json_extract(it.value, '$.state'), 'active') = 'active'
+          AND NOT EXISTS (
+            SELECT 1 FROM json_each(json_extract(it.value, '$.agreedIds')) WHERE value = ?
+          )
+          AND NOT EXISTS (
+            SELECT 1 FROM json_each(${alias}.agreed_ids) WHERE value = ?
+          )
+      ))
+      OR
+      (${alias}.items = '[]' AND ${alias}.content != '' AND ${alias}.author_id != ? AND NOT EXISTS (
+        SELECT 1 FROM json_each(${alias}.agreed_ids) WHERE value = ?
+      ))
+    )`,
+    args: [userId, userId, userId, userId],
+  }
+}
+
 // 过滤条件构造：type / status / pending（待我认同），list 与 count 共用
 function buildWhere({ type, status = 'active', pending, userId } = {}) {
   const conds = []
@@ -20,10 +46,9 @@ function buildWhere({ type, status = 'active', pending, userId } = {}) {
   if (status && status !== 'all') { conds.push('r.status = ?'); args.push(status) }
   if (pending) {
     if (!userId) return { where: 'WHERE 1 = 0', args: [] }
-    conds.push('r.author_id != ?')
-    args.push(userId)
-    conds.push('NOT EXISTS (SELECT 1 FROM json_each(r.agreed_ids) WHERE json_each.value = ?)')
-    args.push(userId)
+    const cond = pendingCondition('r', userId)
+    conds.push(cond.sql)
+    args.push(...cond.args)
   }
   return { where: conds.length ? `WHERE ${conds.join(' AND ')}` : '', args }
 }
@@ -65,12 +90,12 @@ export function listPage(opts = {}) {
   return { items, total }
 }
 
-export function create({ authorId, type, title, content, status, agreedIds }) {
+export function create({ authorId, type, title, content, items, status, agreedIds }) {
   const id = newId('rule')
   db.prepare(`
-    INSERT INTO couple_rules (id, author_id, type, title, content, status, agreed_ids, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-  `).run(id, authorId, type, title, content, status, JSON.stringify(agreedIds))
+    INSERT INTO couple_rules (id, author_id, type, title, content, items, status, agreed_ids, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  `).run(id, authorId, type, title, content, JSON.stringify(items || []), status, JSON.stringify(agreedIds))
   return findById(id)
 }
 
@@ -80,6 +105,7 @@ export function update(id, changes) {
   if (changes.type !== undefined) { sets.push('type = ?'); args.push(changes.type) }
   if (changes.title !== undefined) { sets.push('title = ?'); args.push(changes.title) }
   if (changes.content !== undefined) { sets.push('content = ?'); args.push(changes.content) }
+  if (changes.items !== undefined) { sets.push('items = ?'); args.push(JSON.stringify(changes.items)) }
   if (changes.status !== undefined) { sets.push('status = ?'); args.push(changes.status) }
   if (changes.agreedIds !== undefined) { sets.push('agreed_ids = ?'); args.push(JSON.stringify(changes.agreedIds)) }
   sets.push("updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')")
@@ -92,17 +118,13 @@ export function remove(id) {
   db.prepare('DELETE FROM couple_rules WHERE id = ?').run(id)
 }
 
-// 待认同数：active、author_id != 我、agreed_ids 不含我。
+// 待认同数：存在未认同的 active 条目（老数据回退整条判定）。
 // 注意 node:sqlite 的 json_each.value 返回的是「去引号」的字符串，直接用 = ? 比对原始 userId 即可。
 export function pendingCount(userId) {
+  const cond = pendingCondition('couple_rules', userId)
   return db.prepare(`
     SELECT COUNT(*) AS count
     FROM couple_rules
-    WHERE status = 'active'
-      AND author_id != ?
-      AND NOT EXISTS (
-        SELECT 1 FROM json_each(couple_rules.agreed_ids)
-        WHERE json_each.value = ?
-      )
-  `).get(userId, userId).count
+    WHERE status = 'active' AND ${cond.sql}
+  `).get(...cond.args).count
 }

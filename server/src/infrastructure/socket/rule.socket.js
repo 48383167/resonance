@@ -16,3 +16,11 @@ export function emitRuleDeleted(coupleId, payload) {
 export function emitRuleAgreed(coupleId, payload) {
   getIO()?.to(`couple:${coupleId}`).emit('rule:agreed', payload)
 }
+
+export function emitRuleItemAdded(coupleId, payload) {
+  getIO()?.to(`couple:${coupleId}`).emit('rule:item_added', payload)
+}
+
+export function emitRuleItemAgreed(coupleId, payload) {
+  getIO()?.to(`couple:${coupleId}`).emit('rule:item_agreed', payload)
+}

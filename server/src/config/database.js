@@ -207,12 +207,15 @@ CREATE TABLE IF NOT EXISTS care_items (
 CREATE INDEX IF NOT EXISTS idx_care_category ON care_items(category, updated_at);
 
 -- 小本本：相处规矩（底线 / 约定 / 建议），agreed_ids 为认同者 JSON 数组
+-- items 为条目数组 [{ id, text, state }]（state: active 生效 / archived 停用）；
+-- content 是 active 条目的纯文本镜像，供置顶横幅、旧客户端与兜底展示使用
 CREATE TABLE IF NOT EXISTS couple_rules (
     id TEXT PRIMARY KEY,
     author_id TEXT NOT NULL,
     type TEXT NOT NULL DEFAULT 'rule',    -- redline 底线 / rule 约定 / suggestion 建议
     title TEXT NOT NULL,
     content TEXT DEFAULT '',
+    items TEXT NOT NULL DEFAULT '[]',
     status TEXT NOT NULL DEFAULT 'active',-- active 生效中 / archived 已停用
     agreed_ids TEXT NOT NULL DEFAULT '[]',
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
@@ -427,6 +430,8 @@ ensureColumns('album_photos', {
   show_in_observatory: 'INTEGER NOT NULL DEFAULT 0',
 })
 ensureColumns('time_capsules', { photo_file_id: 'TEXT' })
+// 规矩条目化：items 存 [{ id, text, state }]，content 降级为 active 条目的纯文本镜像
+ensureColumns('couple_rules', { items: "TEXT NOT NULL DEFAULT '[]'" })
 ensureColumns('wish_items', {
   completed_at: 'TEXT',
   started_at: 'TEXT',

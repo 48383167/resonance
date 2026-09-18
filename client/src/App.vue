@@ -74,6 +74,19 @@ function onRuleAgreed(payload) {
     toast(`Ta 认同了你的约定：${rule.title}`)
   }
 }
+function onRuleItemAdded(payload) {
+  loadNotebookUnread()
+  const rule = payload?.rule
+  if (rule && payload?.actorId && payload.actorId !== session.userId) {
+    toast(`Ta 在「${rule.title}」里加了一条`)
+  }
+}
+function onRuleItemAgreed(payload) {
+  loadNotebookUnread()
+  if (payload?.actorId && payload.actorId !== session.userId && payload?.item?.text) {
+    toast(`Ta 认同了「${payload.item.text.slice(0, 12)}${payload.item.text.length > 12 ? '…' : ''}」`)
+  }
+}
 
 function doLogout() {
   logout()
@@ -100,6 +113,8 @@ onMounted(() => {
   socket.on('rule:updated', onRuleChanged)
   socket.on('rule:deleted', onRuleChanged)
   socket.on('rule:agreed', onRuleAgreed)
+  socket.on('rule:item_added', onRuleItemAdded)
+  socket.on('rule:item_agreed', onRuleItemAgreed)
   socket.on('profile:updated', onProfileUpdated)
   socket.on('navigation:updated', onNavigationUpdated)
 })
@@ -113,6 +128,8 @@ onUnmounted(() => {
   socket.off('rule:updated', onRuleChanged)
   socket.off('rule:deleted', onRuleChanged)
   socket.off('rule:agreed', onRuleAgreed)
+  socket.off('rule:item_added', onRuleItemAdded)
+  socket.off('rule:item_agreed', onRuleItemAgreed)
   socket.off('profile:updated', onProfileUpdated)
   socket.off('navigation:updated', onNavigationUpdated)
 })

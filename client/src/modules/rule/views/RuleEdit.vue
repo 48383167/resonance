@@ -1,13 +1,16 @@
 <script setup>
-import { nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { createRule, getRule, updateRule, removeRule } from '../rule.api.js'
 import { generateIdempotencyKey } from '../../../utils/idempotency.js'
 import { loadFormDraft, saveFormDraft, clearFormDraft } from '../../../utils/draft.js'
+import { parseContentToItems, splitItemsByState, itemsTextKey, MAX_ITEMS } from '../../../utils/ruleItems.js'
 import { toast } from '../../../stores/toast'
 import { confirmDialog } from '../../../stores/confirm'
+import RuleItemRows from '../components/RuleItemRows.vue'
 
 // 新增 / 编辑规矩：底线 / 约定 / 建议
+// 条目逐条输入（回车续行、粘贴多行自动拆分、可拖动排序），编辑时行尾显示认同状态。
 const route = useRoute()
 const router = useRouter()
 const editingId = route.params.id || null
@@ -22,29 +25,59 @@ const TYPES = [
 
 const DRAFT_KEY = 'rule-new'
 
+let seq = 0
+const rowKey = () => `row_${Date.now().toString(36)}_${++seq}`
+
 function initialForm() {
   return {
     type: route.query.type || 'rule',
     title: '',
-    content: '',
+    rows: [{ key: rowKey(), text: '' }],
     status: 'active',
+  }
+}
+
+function itemToRow(item) {
+  return {
+    key: rowKey(),
+    id: item.id,
+    text: item.text,
+    originalText: item.text,
+    agreedIds: item.agreedIds || [],
+    effective: Boolean(item.effective),
   }
 }
 
 const form = ref(initialForm())
 const draftRestored = ref(false)
+const archivedItems = ref([]) // 编辑时已停用条目（原样保留，可在本页恢复）
+const original = ref(null)
 
 // 新建时缓存草稿（与日记一致）：进入恢复、保存成功后清除；编辑模式不缓存
 if (!editingId) {
   const draft = loadFormDraft(DRAFT_KEY)
   if (draft) {
-    form.value = { ...initialForm(), ...draft }
+    const rows = Array.isArray(draft.rows) && draft.rows.length
+      ? draft.rows.map((r) => ({ key: rowKey(), text: String(r?.text ?? '') }))
+      : parseContentToItems(draft.text ?? draft.content ?? '').map((text) => ({ key: rowKey(), text }))
+    form.value = {
+      ...initialForm(),
+      type: draft.type || 'rule',
+      title: draft.title || '',
+      rows: rows.length ? rows : initialForm().rows,
+      status: draft.status || 'active',
+    }
     draftRestored.value = true
   }
 }
 watch(form, (value) => {
   if (editingId) return
-  saveFormDraft(DRAFT_KEY, value)
+  saveFormDraft(DRAFT_KEY, {
+    type: value.type,
+    title: value.title,
+    status: value.status,
+    rows: value.rows.map((r) => ({ text: r.text })),
+  })
 }, { deep: true })
 
 function discardDraft() {
@@ -60,6 +93,44 @@ function goBack() {
   else router.push({ path: '/notebook', query: { tab: 'rule' } })
 }
 
+// 保存时真正提交的条目：有效行（保留已有 id）+ 保持停用的
+const validRows = computed(() => form.value.rows.filter((r) => r.text.trim()))
+const totalCount = computed(() => validRows.value.length + archivedItems.value.length)
+const tooMany = computed(() => totalCount.value > MAX_ITEMS)
+const submitItems = computed(() => [
+  ...validRows.value.map((r) =>
+    (r.id ? { id: r.id, text: r.text.trim(), state: 'active' } : { text: r.text.trim(), state: 'active' })),
+  ...archivedItems.value.map((it) => ({ id: it.id, text: it.text, state: 'archived' })),
+])
+
+// 编辑已生效规矩时，内容有实质变化才提示需要重新认同（纯改标题/换行不算）
+const substantive = computed(() => {
+  if (!editingId || !original.value) return false
+  if (form.value.type !== original.value.type) return true
+  if (form.value.title.trim() !== original.value.title) return true
+  return itemsTextKey(submitItems.value) !== original.value.itemsKey
+})
+
+// 单条停用：新条目直接删除，已有条目（含 id 与原认同）移入已停用
+function archiveRow(row) {
+  const idx = form.value.rows.findIndex((r) => r.key === row.key)
+  if (idx < 0) return
+  const [removed] = form.value.rows.splice(idx, 1)
+  if (!removed.id) return
+  archivedItems.value.push({
+    id: removed.id,
+    text: removed.text.trim() || removed.originalText || '',
+    state: 'archived',
+    agreedIds: removed.agreedIds || [],
+    effective: Boolean(removed.effective),
+  })
+}
+
+function restoreArchived(item) {
+  archivedItems.value = archivedItems.value.filter((it) => it.id !== item.id)
+  form.value.rows.push(itemToRow(item))
+}
+
 onMounted(async () => {
   if (!editingId) {
     if (draftRestored.value) toast('已恢复上次未保存的草稿 ✏️')
@@ -67,7 +138,15 @@ onMounted(async () => {
   }
   try {
     const rule = await getRule(editingId)
-    form.value = { type: rule.type, title: rule.title, content: rule.content || '', status: rule.status }
+    const { active, archived } = splitItemsByState(rule.items)
+    form.value = {
+      type: rule.type,
+      title: rule.title,
+      rows: active.map(itemToRow),
+      status: rule.status,
+    }
+    archivedItems.value = archived.map((it) => ({ ...it }))
+    original.value = { type: rule.type, title: rule.title, itemsKey: itemsTextKey(rule.items) }
   } catch (e) {
     toast(e.message)
     goBack()
@@ -77,9 +156,10 @@ onMounted(async () => {
 async function save() {
   if (busy.value) return
   if (!form.value.title.trim()) return toast('请填写标题')
+  if (tooMany.value) return toast(`一条规矩最多 ${MAX_ITEMS} 条`)
   busy.value = true
   try {
-    const data = { type: form.value.type, title: form.value.title.trim(), content: form.value.content }
+    const data = { type: form.value.type, title: form.value.title.trim(), items: submitItems.value }
     if (editingId) {
       data.status = form.value.status
       await updateRule(editingId, data)
@@ -141,11 +221,29 @@ async function remove() {
         <input v-model="form.title" class="input-dark" maxlength="80" placeholder="比如：吵架不过夜" />
       </div>
 
-      <div>
-        <label class="mb-1 block text-xs text-theme-tertiary">内容（可留空）</label>
-        <textarea v-model="form.content" class="input-dark resize-none" rows="5" maxlength="2000"
-          placeholder="写清具体怎么做，Ta 更容易认同" />
+      <RuleItemRows :rows="form.rows" :show-status="Boolean(editingId)"
+        :max="MAX_ITEMS - archivedItems.length" @limit="toast(`一条规矩最多 ${MAX_ITEMS} 条`)" />
+
+      <div v-if="archivedItems.length" class="surface-soft rounded-xl p-3">
+        <p class="mb-2 text-xs text-theme-tertiary">已停用 {{ archivedItems.length }} 条（保存后仍保持停用，点一下恢复）</p>
+        <div class="flex flex-wrap gap-2">
+          <button v-for="item in archivedItems" :key="item.id"
+            class="flex min-h-9 max-w-full items-center gap-1.5 rounded-full px-3 text-xs text-theme-secondary transition-colors hover:text-accent"
+            @click="restoreArchived(item)">
+            <span class="min-w-0 truncate line-through opacity-60">{{ item.text }}</span>
+            <span class="shrink-0">恢复</span>
+          </button>
+        </div>
       </div>
+
+      <p v-if="editingId" class="text-[11px] text-theme-tertiary">
+        行尾状态：<span class="text-accent">✓</span> 双方已认同 · <span class="text-theme-tertiary">✓</span> 待 Ta ·
+        <span class="text-accent">○</span> 待你认同 · 新 保存后等待认同；点 <span class="text-theme-tertiary">⊘</span> 停用单条
+      </p>
+
+      <p v-if="substantive" class="rounded-xl bg-accent-soft px-3 py-2 text-xs text-accent">
+        ⚠️ 改动的条目保存后需要 Ta 重新认同（未改动的条目认同不受影响）
+      </p>
 
       <div v-if="editingId">
         <label class="mb-1 block text-xs text-theme-tertiary">状态</label>

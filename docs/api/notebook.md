@@ -38,10 +38,23 @@
 | author_id | TEXT | 提出人 |
 | type | TEXT | `redline` 底线 / `rule` 约定 / `suggestion` 建议 |
 | title | TEXT | 1~80 字 |
-| content | TEXT | ≤ 2000 字，可空 |
+| content | TEXT | active 条目的纯文本镜像（`\n` 连接），≤ 2000 字；供置顶横幅与旧客户端使用 |
+| items | TEXT | JSON 数组 `[{ id, text, state, agreedIds }]`，默认 `[]`；`state`: `active` 生效 / `archived` 停用；`agreedIds` 为认同该条的用户 id。单条 ≤ 200 字、最多 50 条 |
 | status | TEXT | `active` 生效中 / `archived` 已停用 |
-| agreed_ids | TEXT | JSON 数组；作者创建时自动加入；同属两人 → `effective: true` |
+| agreed_ids | TEXT | 整条认同者 JSON 数组，写入时同步为「所有 active 条目 `agreedIds` 的交集」，仅用于兼容与排序 |
 | created_at / updated_at | TEXT | ISO8601 UTC |
+
+条目化说明：录入仍是一整段文本（一行一条），服务端按行拆分为条目并自动剥离开头的
+`1.` `1、` `(1)` `-` `•` `①` 等列表标记。未条目化的老数据（`items = '[]'` 且
+`content` 非空）读取时按行推导条目；首版条目化数据（item 缺 `agreedIds`）继承整条
+`agreed_ids` 的认同；两者都在首次写入时持久化，不需要数据迁移。
+
+认同语义（按条目）：
+
+- 新条目 `agreedIds = [创建者]`；**文本被改动的那一条**重置为 `[改动者]`
+- 停用/恢复、排序、改标题/类型均不重置已有认同
+- 单条生效 = `agreedIds` 含双方；整条 `effective` = 存在 active 条目且全部生效
+- `itemStats = { total, active, archived, effective }`，`effective` 为已生效的 active 条目数
 
 ### pinned_items（通用置顶）
 
@@ -176,7 +189,7 @@
 `GET /api/rules?type=&status=&pending=&offset=&limit=`
 
 - `type` 可选：`redline/rule/suggestion`；`status` 可选：`active`（默认）/ `archived` / `all`
-- `pending=1`：只看「待我认同」（本人非作者且未认同，服务端过滤，翻页不丢数据）
+- `pending=1`：只看「待我认同」（存在 active 条目其 `agreedIds` 不含我；未条目化的老数据沿用整条判定；服务端过滤，翻页不丢数据）
 - 传 `offset/limit` 时返回分页对象 `{ items, total }`（`limit` 默认 20、最大 50）；不传保持旧数组契约
 - 排序：`global 置顶 > list 置顶 > effective 降序 > updated_at DESC > id DESC`
 
@@ -187,10 +200,15 @@
     "author_id": "u_xxx",
     "type": "redline",
     "title": "吵架不过夜",
-    "content": "再生气也要在睡前和好",
+    "content": "再生气也要在睡前和好\n谁先冷静谁先道歉",
+    "items": [
+      { "id": "ri_ab12cd34ef56", "text": "再生气也要在睡前和好", "state": "active", "agreedIds": ["u_xxx", "u_yyy"], "effective": true },
+      { "id": "ri_ab12cd34ef57", "text": "谁先冷静谁先道歉", "state": "active", "agreedIds": ["u_xxx"], "effective": false }
+    ],
+    "itemStats": { "total": 2, "active": 2, "archived": 0, "effective": 1 },
     "status": "active",
-    "agreedIds": ["u_xxx", "u_yyy"],
-    "effective": true,
+    "agreedIds": ["u_xxx"],
+    "effective": false,
     "pin_scope": "list",
     "created_at": "2026-09-16T02:00:00.000Z",
     "updated_at": "2026-09-16T02:00:00.000Z",
@@ -199,43 +217,81 @@
 ]
 ```
 
+- 条目上的 `effective` = 该条 `agreedIds` 含双方；整条 `effective` = active 条目全部生效
+- 整条 `agreedIds` = 所有 active 条目认同者的交集（兼容旧前端展示）
+
 ### 新建
 
 `POST /api/rules`（需 `Idempotency-Key`）
 
 ```json
-{ "type": "rule", "title": "每天说晚安", "content": "睡前互道晚安" }
+{
+  "type": "rule",
+  "title": "每天说晚安",
+  "items": [{ "text": "睡前互道晚安" }, { "text": "不在深夜吵架" }]
+}
 ```
 
 - `type` 缺省 `rule`；枚举校验失败 → 400 `INVALID_RULE_TYPE`
-- 创建后 `agreedIds = [当前用户]`，`effective = false`（等待对方认同）
+- `items` 与旧 `content` 二选一：仅传 `content` 时按行拆分（旧契约兼容）
+- 创建后每条 `agreedIds = [当前用户]`，`effective = false`（等待对方逐条或一键认同）
 
 ### 修改 / 删除
 
 `PUT /api/rules/:id`
 
 ```json
-{ "type": "suggestion", "title": "…", "content": "…", "status": "archived" }
+{
+  "type": "suggestion",
+  "title": "…",
+  "items": [
+    { "id": "ri_ab12cd34ef56", "text": "保留 id 的条目", "state": "active" },
+    { "text": "新增条目（服务端补 id）" }
+  ],
+  "status": "archived"
+}
 ```
 
-- 仅 `type/title/content` 变化时 → `agreedIds` 重置为 `[当前用户]`（需重新认同）
-- 仅 `status` 变化不重置认同
+- `items` 为全量替换；不传 `items`/`content` 则条目不变
+- 客户端传来的 `agreedIds` 一律忽略，服务端按 id 合并：文本未变的条目保留原认同，**只有文本变化的条目**重置为 `[当前用户]`
+- 纯排序、逐条停用/恢复、`title`/`type`/`status` 变化都不重置条目认同
 - 不存在 → 404 `RULE_NOT_FOUND`
 
 `DELETE /api/rules/:id` → 删除并清理置顶。
 
-### 认同 / 撤回
+### 条目级操作
+
+两人都可对未删除的规矩做条目级操作；**文本变化（增/删/改字）只重置该条认同**，
+停用/恢复保留原认同。全部返回更新后的完整 rule。
+
+| 方法 | 路径 | body | 说明 |
+|---|---|---|---|
+| POST | `/api/rules/:id/items` | `{ "text": "不翻旧账" }` | 追加一条（卡片内快捷添加），新条认同 = 操作者 |
+| PATCH | `/api/rules/:id/items/:itemId` | `{ "text": "…" }` 或 `{ "state": "archived" }` | 改文本 / 停用 / 恢复；`text` 传空串删除该条 |
+| DELETE | `/api/rules/:id/items/:itemId` | 无 | 删除一条 |
+
+- 条目不存在 → 404 `RULE_ITEM_NOT_FOUND`
+- 超过 50 条 → 400 `TOO_MANY_RULE_ITEMS`；单条超过 200 字 → 400 `RULE_ITEM_TEXT_TOO_LONG`
+- 追加广播 `rule:updated` + `rule:item_added`；修改/删除广播 `rule:updated`
+
+### 认同 / 撤回（逐条 + 一键全部）
+
+`PUT /api/rules/:id/items/:itemId/agree`
+
+切换当前用户对**单条**的认同（未认同 → 认同；已认同 → 撤回），返回更新后的 rule。
+认同某条后广播 `rule:updated`；认同（非撤回）额外广播 `rule:item_agreed`。停用条目 → 400。
 
 `PUT /api/rules/:id/agree`
 
-切换当前用户的认同状态（未认同 → 认同；已认同 → 撤回），返回更新后的 rule。
-两名成员都在 `agreedIds` 中时 `effective: true`。
+**一键全部**：若当前用户已认同所有 active 条目 → 全部撤回；否则把未认同的 active 条目全部认同。
+返回更新后的 rule，广播 `rule:updated` + `rule:agreed`（`actorId` + `action: agree_all/withdraw_all`）。
+没有 active 条目 → 400。
 
 ### 待认同数
 
 `GET /api/rules/pending/count` → `{ "count": 1 }`
 
-统计：`status = 'active'` 且 `author_id != 我` 且我不在 `agreedIds` 中。
+统计：`status = 'active'` 且存在 active 条目其认同不含我（未条目化的老数据沿用整条 `agreed_ids` 判定）。
 
 > 注意：必须注册在 `GET /api/rules/:id` 之前，避免被 `:id` 参数路由吞掉。
 
@@ -329,7 +385,9 @@
 | `rule:created` | rule | 新建规矩 |
 | `rule:updated` | rule | 修改规矩（含认同状态变化） |
 | `rule:deleted` | `{ id }` | 删除规矩 |
-| `rule:agreed` | `{ rule, actorId }` | 认同/撤回（作者据此弹「Ta 认同了」提示） |
+| `rule:agreed` | `{ rule, actorId, action }` | 一键认同/撤回全部（`action: agree_all/withdraw_all`） |
+| `rule:item_added` | `{ rule, actorId, item }` | 追加条目（对方据此弹「Ta 加了一条」提示） |
+| `rule:item_agreed` | `{ rule, actorId, item: { id, text } }` | 单条认同（对方据此弹「Ta 认同了」提示；撤回不广播） |
 | `pin:updated` | `{ targetType, targetId, scope }` | 置顶变化 |
 | `profile:updated` | `{ actorId, gender, partnerId, partnerGender }` | 一方设置性别，对方自动同步（例假默认对象联动） |
 
@@ -345,6 +403,10 @@
 | `INVALID_CYCLE_DAYS` | 400 | 周期天数超出 15~60 |
 | `RULE_NOT_FOUND` | 404 | 规矩不存在 |
 | `INVALID_RULE_TYPE` | 400 | 规矩类型非法 |
+| `RULE_ITEM_NOT_FOUND` | 404 | 条目不存在 |
+| `TOO_MANY_RULE_ITEMS` | 400 | 条目超过 50 条 |
+| `RULE_ITEM_TEXT_TOO_LONG` | 400 | 单条超过 200 字 |
+| `INVALID_RULE_ITEM_STATE` | 400 | 条目状态非法 |
 | `PIN_TARGET_NOT_FOUND` | 404 | 置顶目标不存在 |
 | `INVALID_PIN_TARGET_TYPE` | 400 | 置顶类型不支持 |
 | `INVALID_PIN_SCOPE` | 400 | 置顶级别非法 |
@@ -356,8 +418,10 @@
 | `/notebook?tab=care\|period\|rule` | `notebook` | 小本本（默认 `care`） |
 | `/notebook/care/new?category=&subject=` | `care-new` | 新增档案 |
 | `/notebook/care/:id/edit` | `care-edit` | 编辑档案 |
-| `/notebook/rule/new?type=` | `rule-new` | 新增规矩 |
-| `/notebook/rule/:id/edit` | `rule-edit` | 编辑规矩 |
+| `/notebook/rule/new?type=` | `rule-new` | 新增规矩（条目逐条输入，粘贴多行自动拆分） |
+| `/notebook/rule/:id/edit` | `rule-edit` | 编辑规矩（逐条行编辑 + 单条停用） |
+| `/notebook/rule/:id` | `rule-detail` | 查看规矩（只读，逐条状态） |
+| `/notebook/rule/:id/agree` | `rule-agree` | 逐条认同 / 一键认同全部 |
 
 ## 明确不接入
 

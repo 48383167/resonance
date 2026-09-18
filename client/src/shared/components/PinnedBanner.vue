@@ -13,7 +13,7 @@ const dismissed = ref(sessionStorage.getItem(DISMISS_KEY) === '1')
 const expanded = ref(false)
 
 // 小本本相关页面本身就是置顶内容的家，不再显示胶囊
-const HIDDEN_ROUTES = ['notebook', 'care-new', 'care-edit', 'rule-new', 'rule-edit']
+const HIDDEN_ROUTES = ['notebook', 'care-new', 'care-edit', 'rule-new', 'rule-edit', 'rule-detail', 'rule-agree']
 
 const shown = computed(() =>
   Boolean(session.me)
