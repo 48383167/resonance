@@ -1,10 +1,11 @@
 <script setup>
-import { nextTick, ref } from 'vue'
+import { nextTick, onMounted, ref, watch } from 'vue'
 import { session } from '../../../stores/session'
 import { MAX_ITEM_TEXT, parseContentToItems } from '../../../utils/ruleItems.js'
 
 // 条目行编辑器（新增 / 编辑规矩共用）：
-//   回车新增下一行、⊖ 删除、≡ 按住拖动排序、粘贴多行自动拆成多条
+//   自动换行多行输入、回车新增下一行、⊖ 删除、≡ 按住拖动排序、粘贴多行自动拆成多条
+//   移动端聚焦时收起两侧元素，整行都是编辑区
 // 约定：rows 由父组件持有（v-model 等价），本组件直接增删改其中的行
 const props = defineProps({
   rows: { type: Array, required: true },
@@ -17,13 +18,34 @@ let seq = 0
 const rowKey = () => `row_${Date.now().toString(36)}_${++seq}`
 
 const listEl = ref(null)
+const focusedKey = ref(null)
+
+// —— 自动增高：1 行起步，最多约 4 行（112px），再多内部滚动 ——
+const MAX_TEXTAREA_HEIGHT = 112
+
+function resize(el) {
+  if (!el) return
+  el.style.height = 'auto'
+  el.style.height = `${Math.min(el.scrollHeight + 2, MAX_TEXTAREA_HEIGHT)}px`
+}
+
+function resizeAll() {
+  nextTick(() => {
+    listEl.value?.querySelectorAll('textarea').forEach(resize)
+  })
+}
+
+watch(focusedKey, resizeAll)
+watch(() => props.rows.length, resizeAll)
+onMounted(resizeAll)
 
 function focusRow(key) {
   nextTick(() => {
-    const input = listEl.value?.querySelector(`[data-key="${key}"] input`)
+    const input = listEl.value?.querySelector(`[data-key="${key}"] textarea`)
     if (!input) return
     input.focus()
     input.setSelectionRange(input.value.length, input.value.length)
+    resize(input)
   })
 }
 
@@ -42,6 +64,20 @@ function onRowEnter(event, index) {
   if (event.isComposing || event.keyCode === 229) return
   event.preventDefault()
   addRow(index)
+}
+
+function onFocus(row) {
+  focusedKey.value = row.key
+}
+
+function onBlur() {
+  focusedKey.value = null
+}
+
+// 「完成」按钮：pointerdown 阻止默认，避免按钮被隐藏前先触发失焦/重新聚焦
+function finishEditing() {
+  document.activeElement?.blur?.()
+  focusedKey.value = null
 }
 
 // 粘贴多行：当前行放第一条，其余插到后面（保住「整段粘贴」的习惯）
@@ -127,24 +163,32 @@ defineExpose({ addRow, focusRow })
   <div>
     <label class="mb-1 block text-xs text-theme-tertiary">条目（可留空）</label>
 
-    <ul ref="listEl" class="surface-soft space-y-1 rounded-xl p-3">
+    <ul ref="listEl" class="surface-soft space-y-1 rounded-xl p-2.5 sm:p-3">
       <li v-for="(row, i) in rows" :key="row.key" :data-key="row.key"
-        class="flex items-center gap-1.5"
+        class="flex items-start gap-1 sm:gap-1.5"
         :class="dragIndex === i ? 'relative z-10 opacity-90' : ''"
         :style="dragIndex === i ? { transform: `translateY(${dragOffset}px)` } : ''">
-        <span class="w-6 shrink-0 text-right text-[11px] tabular-nums text-theme-tertiary">{{ String(i + 1).padStart(2, '0') }}</span>
+        <span v-if="focusedKey !== row.key"
+          class="w-5 shrink-0 pt-2.5 text-right text-[10px] tabular-nums text-theme-tertiary sm:w-6 sm:text-[11px]">{{ String(i + 1).padStart(2, '0') }}</span>
 
-        <input v-model="row.text" class="input-dark !min-h-10 flex-1 !py-1.5 text-sm" :maxlength="MAX_ITEM_TEXT"
-          placeholder="写一条，回车继续" @keydown.enter="onRowEnter($event, i)" @paste="onPaste($event, i)" />
+        <textarea v-model="row.text" rows="1"
+          class="input-dark max-h-28 min-w-0 flex-1 resize-none scroll-mb-32 overflow-y-auto !px-3 !py-1.5 text-sm leading-6"
+          :maxlength="MAX_ITEM_TEXT" placeholder="写一条，回车继续"
+          @input="resize($event.target)" @focus="onFocus(row)" @blur="onBlur"
+          @keydown.enter="onRowEnter($event, i)" @paste="onPaste($event, i)" />
 
-        <span v-if="showStatus" class="w-4 shrink-0 text-center text-xs" :class="STATUS[rowStatus(row)].class"
-          :title="STATUS[rowStatus(row)].title">{{ STATUS[rowStatus(row)].icon }}</span>
+        <span v-if="showStatus && focusedKey !== row.key" class="w-4 shrink-0 pt-2.5 text-center text-xs"
+          :class="STATUS[rowStatus(row)].class" :title="STATUS[rowStatus(row)].title">{{ STATUS[rowStatus(row)].icon }}</span>
 
-        <button class="min-h-10 min-w-9 shrink-0 text-lg text-theme-tertiary transition-colors hover:text-accent"
+        <button v-if="focusedKey !== row.key"
+          class="min-h-10 min-w-8 shrink-0 text-base text-theme-tertiary transition-colors hover:text-accent sm:min-w-9 sm:text-lg"
           title="删除这一条" @click="removeRow(i)">⊖</button>
-        <button
-          class="min-h-10 min-w-9 shrink-0 cursor-grab touch-none select-none text-lg text-theme-tertiary active:cursor-grabbing"
+        <button v-if="focusedKey !== row.key"
+          class="min-h-10 min-w-8 shrink-0 cursor-grab touch-none select-none text-base text-theme-tertiary active:cursor-grabbing sm:min-w-9 sm:text-lg"
           title="按住拖动排序" @pointerdown="onHandleDown($event, i)">≡</button>
+        <button v-if="focusedKey === row.key"
+          class="min-h-10 shrink-0 rounded-lg px-2 text-xs text-accent"
+          title="收起编辑" @pointerdown.prevent="finishEditing" @click="finishEditing">完成</button>
       </li>
 
       <li v-if="!rows.length" class="px-1 py-2 text-center text-xs text-theme-tertiary">
@@ -158,6 +202,8 @@ defineExpose({ addRow, focusRow })
         已 {{ rows.length }} 条（最多 {{ max }} 条）
       </span>
     </div>
-    <p class="mt-1 text-[11px] text-theme-tertiary">粘贴多行到任意一行，会自动拆成多条</p>
+    <p class="mt-1 text-[11px] leading-4 text-theme-tertiary">
+      粘贴多行自动拆条<template v-if="showStatus"> · ✓ 已认同 · ○ 待你认同 · ⊘ 停用</template>
+    </p>
   </div>
 </template>

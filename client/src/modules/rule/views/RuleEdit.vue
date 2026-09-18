@@ -202,7 +202,7 @@ async function remove() {
       <button class="shrink-0 text-xs hover:text-theme-primary" @click="discardDraft">清空草稿</button>
     </div>
 
-    <div class="glass space-y-4 p-5">
+    <div class="glass space-y-4 p-4 sm:p-5">
       <div>
         <label class="mb-1 block text-xs text-theme-tertiary">类型</label>
         <div class="flex gap-2 overflow-x-auto">
@@ -235,11 +235,6 @@ async function remove() {
           </button>
         </div>
       </div>
-
-      <p v-if="editingId" class="text-[11px] text-theme-tertiary">
-        行尾状态：<span class="text-accent">✓</span> 双方已认同 · <span class="text-theme-tertiary">✓</span> 待 Ta ·
-        <span class="text-accent">○</span> 待你认同 · 新 保存后等待认同；点 <span class="text-theme-tertiary">⊘</span> 停用单条
-      </p>
 
       <p v-if="substantive" class="rounded-xl bg-accent-soft px-3 py-2 text-xs text-accent">
         ⚠️ 改动的条目保存后需要 Ta 重新认同（未改动的条目认同不受影响）
