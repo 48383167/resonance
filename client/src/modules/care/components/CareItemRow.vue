@@ -24,7 +24,8 @@ const subjectText = computed(() =>
 </script>
 
 <template>
-  <div class="rounded-xl py-2.5" :class="item.pin_scope ? '-mx-1.5 bg-accent-soft px-1.5' : ''">
+  <div :id="`care-item-${item.id}`" class="rounded-xl py-2.5"
+    :class="item.pin_scope ? '-mx-1.5 bg-accent-soft px-1.5' : ''">
     <div class="flex items-start gap-2">
       <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">

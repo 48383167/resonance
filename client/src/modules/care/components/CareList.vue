@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { listCareItems, removeCareItem } from '../care.api.js'
 import { session } from '../../../stores/session'
@@ -140,6 +140,54 @@ function toggleExpand(value) {
   expanded.value = next
 }
 
+function toggleExpandTo(value, expand) {
+  const next = new Set(expanded.value)
+  if (expand) next.add(value)
+  else next.delete(value)
+  expanded.value = next
+}
+
+// —— 置顶速览：点一下展开所属分类并滚到该条 ——
+const pinnedItems = computed(() => items.value.filter((item) => item.pin_scope))
+
+async function jumpTo(item) {
+  keyword.value = ''
+  if (subjectId.value && item.subject_id !== subjectId.value) subjectId.value = ''
+  toggleExpandTo(item.category, true)
+  await nextTick()
+  document.getElementById(`care-item-${item.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+// —— 随机关怀回顾：重度过敏不参与，避免添堵 ——
+const randomItem = ref(null)
+
+function randomSentence(item) {
+  const who = subjectWord(item)
+  if (item.category === 'preference') return `${who}喜欢「${item.title}」`
+  if (item.category === 'diet') return `${who}不爱吃「${item.title}」`
+  if (item.category === 'allergy') return `${who}对「${item.title}」过敏`
+  return `${who}的小事：「${item.title}」`
+}
+
+function randomEmoji(item) {
+  return { preference: '💗', diet: '🍽️', allergy: '⚠️', other: '📎' }[item.category] || '💭'
+}
+
+function pickRandom() {
+  const pool = subjectFiltered(items.value)
+    .filter((i) => !(i.category === 'allergy' && i.severity === 'severe'))
+  if (!pool.length) {
+    randomItem.value = null
+    return
+  }
+  let next = pool[Math.floor(Math.random() * pool.length)]
+  let guard = 0
+  while (pool.length > 1 && randomItem.value && next.id === randomItem.value.id && guard++ < 8) {
+    next = pool[Math.floor(Math.random() * pool.length)]
+  }
+  randomItem.value = { ...next }
+}
+
 function togglePin(item) {
   pinTarget.value = pinTarget.value?.id === item.id ? null : item
 }
@@ -147,6 +195,7 @@ function togglePin(item) {
 async function load() {
   try {
     items.value = await listCareItems()
+    if (!randomItem.value || !items.value.some((i) => i.id === randomItem.value.id)) pickRandom()
   } catch (e) {
     toast(e.message)
   }
@@ -234,6 +283,17 @@ defineExpose({ load })
       <button class="btn-ghost !min-h-11 shrink-0 !px-3 text-xs" title="复制饮食注意清单" @click="copyList">复制清单</button>
     </div>
 
+    <!-- 置顶速览：点一下展开并定位 -->
+    <div v-if="!searching && !filtering && pinnedItems.length" class="flex gap-2 overflow-x-auto pb-1">
+      <button v-for="item in pinnedItems" :key="item.id"
+        class="surface-soft flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-3 text-xs text-theme-secondary transition-colors hover:text-accent"
+        :title="`定位到：${item.title}`" @click="jumpTo(item)">
+        <span class="shrink-0">📌</span>
+        <span class="max-w-40 truncate">{{ item.title }}</span>
+        <span class="shrink-0 text-[10px] text-theme-tertiary">{{ CATEGORY_LABELS[item.category] }}</span>
+      </button>
+    </div>
+
     <!-- 速查结果 -->
     <template v-if="searching">
       <div class="rounded-2xl border p-4" :class="CONCLUSION_CLASSES[conclusion.tone]">
@@ -289,6 +349,18 @@ defineExpose({ load })
         {{ filtering ? '没有符合筛选的档案，换个条件试试。' : '还没有关怀档案，把那些重要的小事记下来吧。' }}
       </div>
     </template>
+
+    <!-- 随机关怀回顾 -->
+    <div v-if="!searching && !filtering && randomItem" class="glass flex items-center gap-3 p-4">
+      <span class="text-xl">{{ randomEmoji(randomItem) }}</span>
+      <button class="min-w-0 flex-1 text-left" @click="jumpTo(randomItem)">
+        <span class="block text-[11px] text-theme-tertiary">今天想起一件小事</span>
+        <span class="mt-0.5 block truncate text-sm text-theme-secondary">{{ randomSentence(randomItem) }}</span>
+      </button>
+      <button class="min-h-9 shrink-0 px-2 text-xs text-theme-tertiary transition-colors hover:text-accent" @click="pickRandom">
+        换一条
+      </button>
+    </div>
 
     <button class="btn-primary w-full" @click="router.push('/notebook/care/new')">＋ 添加档案</button>
   </div>
