@@ -12,3 +12,7 @@ export function emitCareUpdated(coupleId, careItem) {
 export function emitCareDeleted(coupleId, payload) {
   getIO()?.to(`couple:${coupleId}`).emit('care:deleted', payload)
 }
+
+export function emitCareBatchCreated(coupleId, payload) {
+  getIO()?.to(`couple:${coupleId}`).emit('care:batch_created', payload)
+}

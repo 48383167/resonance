@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { createCareItem, getCareItem, updateCareItem, removeCareItem, listCareItems } from '../care.api.js'
+import { createCareItem, createCareItemsBatch, getCareItem, updateCareItem, removeCareItem, listCareItems } from '../care.api.js'
 import { generateIdempotencyKey } from '../../../utils/idempotency.js'
 import { loadFormDraft, saveFormDraft, clearFormDraft } from '../../../utils/draft.js'
 import { session } from '../../../stores/session'
@@ -105,7 +105,7 @@ watch(() => form.value.category, () => {
 const existingTitles = ref(new Set())
 const quickItems = computed(() => QUICK_ITEMS[form.value.category] || [])
 const copy = computed(() => CATEGORY_COPY[form.value.category] || CATEGORY_COPY.other)
-const canContinue = computed(() => !editingId && ['allergy', 'diet'].includes(form.value.category))
+const canContinue = computed(() => !editingId && !batchTitles.value && ['allergy', 'diet'].includes(form.value.category))
 
 async function loadExistingTitles() {
   if (editingId) return
@@ -122,6 +122,79 @@ watch(() => form.value.category, () => { loadExistingTitles() }, { immediate: tr
 function pickQuick(chip) {
   if (existingTitles.value.has(chip)) return
   form.value.title = chip
+}
+
+// —— 批量粘贴录入：标题里粘「香菜、葱、蒜」自动拆成多条 ——
+const batchTitles = ref(null)
+
+function splitTitles(text) {
+  return String(text || '')
+    .split(/[\n、，,;；／/]+/)
+    .map((t) => t.trim())
+    .filter(Boolean)
+}
+
+function onTitlePaste(event) {
+  if (editingId) return
+  const titles = splitTitles(event.clipboardData?.getData('text') || '')
+  if (titles.length < 2) return
+  event.preventDefault()
+  const seen = new Set()
+  batchTitles.value = titles.filter((t) => {
+    const key = t.toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+  form.value.title = ''
+}
+
+const existingLower = computed(() => new Set([...existingTitles.value].map((t) => t.toLowerCase())))
+
+const batchPreview = computed(() => (batchTitles.value || []).map((title) => ({
+  title,
+  exists: existingLower.value.has(title.toLowerCase()),
+})))
+
+const batchNewCount = computed(() => batchPreview.value.filter((b) => !b.exists).length)
+
+function removeBatchTitle(index) {
+  batchTitles.value.splice(index, 1)
+  if (!batchTitles.value.length) batchTitles.value = null
+}
+
+async function saveBatch() {
+  const titles = batchPreview.value.filter((b) => !b.exists).map((b) => b.title)
+  if (!titles.length) return toast('这些都已经记过了')
+  busy.value = true
+  try {
+    const data = { category: form.value.category, items: titles.map((title) => ({ title })) }
+    if (data.category === 'allergy') data.severity = form.value.severity
+    if (form.value.subjectId) data.subjectId = form.value.subjectId
+    createKey ||= generateIdempotencyKey()
+    const result = await createCareItemsBatch(data, createKey)
+    createKey = null
+    clearFormDraft(DRAFT_KEY)
+    draftRestored.value = false
+    toast(`已记下 ${result.count} 条`)
+    router.push('/notebook')
+  } catch (e) {
+    toast(e.message)
+  } finally {
+    busy.value = false
+  }
+}
+
+// 单条保存前：命中已有标题时温和提醒
+async function confirmDuplicate() {
+  const title = form.value.title.trim()
+  if (!title || editingId) return true
+  if (!existingLower.value.has(title.toLowerCase())) return true
+  return confirmDialog({
+    title: '好像记过了',
+    message: `档案里已经有「${title}」，还要再记一条吗？`,
+    danger: false,
+  })
 }
 
 const canGoBack = Boolean(history.state?.back)
@@ -167,6 +240,7 @@ async function confirmSplitAllergens() {
 async function save(continueAfter = false) {
   if (busy.value) return
   if (!form.value.title.trim()) return toast('请填写标题')
+  if (!(await confirmDuplicate())) return
   if (form.value.category === 'period' && !form.value.startDate) return toast('请填写开始日期')
   if (!(await confirmSplitAllergens())) return
   busy.value = true
@@ -263,10 +337,34 @@ async function remove() {
         </div>
       </div>
 
-      <div>
+      <div v-if="batchTitles" class="surface-soft rounded-xl p-3">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <span class="text-xs text-theme-secondary">
+            已识别 {{ batchTitles.length }} 条<template v-if="batchNewCount < batchTitles.length">（{{ batchTitles.length - batchNewCount }} 条已记过）</template>
+          </span>
+          <button class="shrink-0 text-xs text-theme-tertiary hover:text-theme-primary" @click="batchTitles = null">取消批量</button>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button v-for="(b, i) in batchPreview" :key="b.title + i"
+            class="flex min-h-9 max-w-full items-center gap-1.5 rounded-full px-3 text-xs transition-colors"
+            :class="b.exists ? 'text-theme-tertiary opacity-50' : 'text-theme-secondary hover:text-accent'"
+            :disabled="b.exists" :title="b.exists ? '已记过，不会重复创建' : '点一下移除'"
+            @click="removeBatchTitle(i)">
+            <span class="min-w-0 truncate">{{ b.title }}</span>
+            <span class="shrink-0">{{ b.exists ? '· 已记' : '×' }}</span>
+          </button>
+        </div>
+        <p class="mt-2 text-[11px] text-theme-tertiary">
+          共用当前分类与对象{{ form.category === 'allergy' ? '，严重程度按上面所选' : '' }}；保存后可在列表里单独调整
+        </p>
+      </div>
+
+      <div v-else>
         <label class="mb-1 block text-xs text-theme-tertiary">{{ copy.titleLabel }}</label>
-        <input v-model="form.title" class="input-dark" maxlength="80" :placeholder="copy.placeholder" />
+        <input v-model="form.title" class="input-dark" maxlength="80" :placeholder="copy.placeholder"
+          @paste="onTitlePaste" />
         <p v-if="copy.hint" class="mt-1 text-xs text-theme-tertiary">{{ copy.hint }}</p>
+        <p class="mt-1 text-[11px] text-theme-tertiary">支持粘贴多条：香菜、葱、蒜（自动拆成多条）</p>
         <div v-if="quickItems.length && !editingId" class="mt-2">
           <div class="mb-1 text-xs text-theme-tertiary">常见项（点一下填入）</div>
           <div class="flex flex-wrap gap-2">
@@ -314,8 +412,9 @@ async function remove() {
       <button v-if="canContinue" class="btn-ghost w-full sm:w-auto" :disabled="busy" @click="save(true)">
         保存并再记一个
       </button>
-      <button class="btn-primary w-full sm:w-auto" :disabled="busy" @click="save()">
-        {{ busy ? '保存中…' : '保存' }}
+      <button class="btn-primary w-full sm:w-auto" :disabled="busy || (batchTitles && !batchNewCount)"
+        @click="batchTitles ? saveBatch() : save()">
+        {{ busy ? '保存中…' : (batchTitles ? `批量保存 ${batchNewCount} 条` : '保存') }}
       </button>
     </div>
   </div>

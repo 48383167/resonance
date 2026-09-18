@@ -6,6 +6,7 @@ import { idempotency } from '../../middleware/idempotency.middleware.js'
 const router = express.Router()
 
 router.get('/items', requireAuth, careController.list)
+router.post('/items/batch', requireAuth, idempotency, careController.createBatch)
 router.post('/items', requireAuth, idempotency, careController.create)
 router.get('/period/summary', requireAuth, careController.periodSummary)
 router.get('/items/:id', requireAuth, careController.detail)

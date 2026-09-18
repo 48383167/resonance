@@ -32,7 +32,7 @@ watch(tab, (v) => {
 
 // 实时事件只刷新当前 Tab；切换 Tab 时组件会重新挂载并自行加载
 const LIVE_EVENTS = [
-  'care:created', 'care:updated', 'care:deleted',
+  'care:created', 'care:updated', 'care:deleted', 'care:batch_created',
   'rule:created', 'rule:updated', 'rule:deleted',
   'pin:updated',
 ]

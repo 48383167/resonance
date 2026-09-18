@@ -12,6 +12,10 @@ export async function create(req, res, next) {
   try { res.success(careService.create(req.user.id, req.body)) } catch (e) { next(e) }
 }
 
+export async function createBatch(req, res, next) {
+  try { res.success(careService.createBatch(req.user.id, req.body)) } catch (e) { next(e) }
+}
+
 export async function update(req, res, next) {
   try { res.success(careService.update(req.params.id, req.user.id, req.body)) } catch (e) { next(e) }
 }

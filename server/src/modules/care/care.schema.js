@@ -62,6 +62,24 @@ export function validateCreate(body = {}) {
   })
 }
 
+// 批量创建：共用分类 / 对象 / 严重程度，逐条只带标题与可选内容；例假不支持批量
+const MAX_BATCH = 20
+
+export function validateBatch(body = {}) {
+  if (!Array.isArray(body.items) || !body.items.length) throw new BadRequestError('请提供要创建的条目')
+  if (body.items.length > MAX_BATCH) throw new AppError(`一次最多创建 ${MAX_BATCH} 条`, 400, 'TOO_MANY_BATCH_ITEMS')
+  if (body.category === 'period') throw new BadRequestError('例假不支持批量录入')
+  return body.items.map((entry) => normalizeFields({
+    category: body.category,
+    title: entry?.title,
+    content: entry?.content ?? '',
+    severity: body.severity ?? null,
+    startDate: null,
+    endDate: null,
+    cycleDays: null,
+  }))
+}
+
 // 合并更新：字段可选；切换分类时清理不适用字段（非 allergy 清 severity，非 period 清日期）
 export function validateUpdate(body = {}, existing = {}) {
   const category = body.category !== undefined ? body.category : existing.category

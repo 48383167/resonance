@@ -134,6 +134,23 @@
 - `severity` 仅 `allergy` 允许，枚举 `mild/moderate/severe`，否则 400 `INVALID_CARE_SEVERITY`
 - `title` 去除空白后不能为空
 
+### 批量新建
+
+`POST /api/care/items/batch`（需 `Idempotency-Key`）
+
+```json
+{
+  "category": "diet",
+  "subjectId": "u_yyy",
+  "items": [{ "title": "香菜" }, { "title": "葱" }]
+}
+```
+
+- 共用 `category` / `subjectId` / `severity`（仅过敏），逐条只带 `title` 与可选 `content`
+- 一次最多 20 条 → 400 `TOO_MANY_BATCH_ITEMS`；`category = period` 不支持批量
+- 单事务创建，成功后广播一次 `care:batch_created`（`{ items }`）
+- 返回 `{ items, count }`；去重由前端处理（已存在的标题不高亮创建）
+
 ### 修改 / 删除
 
 `PUT /api/care/items/:id` 请求体同新建（字段可选，合并更新）；`DELETE /api/care/items/:id`。
@@ -380,6 +397,7 @@
 | 事件 | 负载 | 触发 |
 |---|---|---|
 | `care:created` | careItem | 新建档案 |
+| `care:batch_created` | `{ items }` | 批量新建档案（一次事务，广播一次） |
 | `care:updated` | careItem | 修改档案 |
 | `care:deleted` | `{ id }` | 删除档案 |
 | `rule:created` | rule | 新建规矩 |
@@ -401,6 +419,7 @@
 | `INVALID_CARE_SEVERITY` | 400 | 严重程度非法 |
 | `INVALID_PERIOD_RANGE` | 400 | 例假日期区间非法 |
 | `INVALID_CYCLE_DAYS` | 400 | 周期天数超出 15~60 |
+| `TOO_MANY_BATCH_ITEMS` | 400 | 批量录入超过 20 条 |
 | `RULE_NOT_FOUND` | 404 | 规矩不存在 |
 | `INVALID_RULE_TYPE` | 400 | 规矩类型非法 |
 | `RULE_ITEM_NOT_FOUND` | 404 | 条目不存在 |

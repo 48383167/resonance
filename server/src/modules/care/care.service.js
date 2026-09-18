@@ -6,7 +6,7 @@ import { getUserCouple } from '../couple/couple.service.js'
 import * as careRepository from './care.repository.js'
 import * as careSchema from './care.schema.js'
 import * as pinRepository from '../pin/pin.repository.js'
-import { emitCareCreated, emitCareUpdated, emitCareDeleted } from '../../infrastructure/socket/care.socket.js'
+import { emitCareCreated, emitCareUpdated, emitCareDeleted, emitCareBatchCreated } from '../../infrastructure/socket/care.socket.js'
 
 // 例假固定到情侣中唯一的女性成员；其余分类缺省为伴侣（未配对为自己）；不在成员内 → INVALID_CARE_SUBJECT
 function resolveSubject(couple, subjectId, category) {
@@ -55,6 +55,18 @@ export function create(userId, raw) {
   const item = careRepository.create({ authorId: userId, subjectId, ...data })
   broadcast(couple, (pairCode) => emitCareCreated(pairCode, item))
   return item
+}
+
+// 批量录入：一次事务创建多条，成功后只广播一次事件（对方列表整刷一次）
+export function createBatch(userId, raw) {
+  const couple = getUserCouple(userId)
+  const list = careSchema.validateBatch(raw)
+  const items = transaction(() => list.map((data) => {
+    const subjectId = resolveSubject(couple, raw.subjectId, data.category)
+    return careRepository.create({ authorId: userId, subjectId, ...data })
+  }))
+  broadcast(couple, (pairCode) => emitCareBatchCreated(pairCode, { items }))
+  return { items, count: items.length }
 }
 
 export function update(id, userId, raw) {
