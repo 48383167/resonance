@@ -312,6 +312,60 @@
 
 > 注意：必须注册在 `GET /api/rules/:id` 之前，避免被 `:id` 参数路由吞掉。
 
+## AI 整理建议
+
+> 运行时政策唯一来源 `server/src/modules/suggestion/suggestion.policy.js`；维护约定见
+> `.opencode/skills/resonance-notebook-ai/SKILL.md`。
+> 本功能**不要求同意流程**：靠前端可关闭的「AI 建议」开关控制；关闭后不分析、不显示、零出站。
+> 这是与情感陪伴的有意差异，勿按陪伴规则改回。
+
+分析 `care`（档案）或 `rule`（规矩）的重复 / 冲突 / 模糊 / 归类线索。
+出站数据只含标题级文本：档案 = 标题 + 分类 + 严重程度，**不含例假记录**（例假在独立 Tab，不参与档案建议）；
+规矩 = 标题 + 最多 12 条 active 条目文本。
+不含 id、昵称、时间，也不读取日记 / 照片 / 情书 / 瞬间 / 评论 / 陪伴对话。
+
+### 分析（缓存优先）
+
+`POST /api/suggestions/analyze`
+
+```json
+{ "target": "care" }
+```
+
+- `target` 仅 `care` / `rule`，否则 400 `INVALID_SUGGESTION_TARGET`
+- 结果按情侣空间共享（`pair:<pairCode>`；未配对为 `solo:<userId>`）
+- 内容哈希未变 → 直接返回缓存，**不调用模型、不占额度**（提示词版本参与哈希，改提示词后缓存自动失效）
+- 内容变化才调用模型；**不做每日次数限制**，调用频率由内容变化天然约束
+- 没有可分析的条目 → 返回 `empty: true`，不调用模型
+- 未配置密钥 → 503 `AI_NOT_CONFIGURED`；调用失败 → 503 `AI_UNAVAILABLE`
+
+```json
+{
+  "target": "care",
+  "suggestions": [
+    {
+      "id": "sg_1",
+      "type": "conflict",
+      "level": "warn",
+      "reason": "「花生」重度过敏与喜欢花生酱互相矛盾",
+      "refs": [{ "id": "care_ab12cd34ef56", "title": "花生" }]
+    }
+  ],
+  "createdAt": "2026-09-19T08:00:00.000Z",
+  "cached": false
+}
+```
+
+- `type`：`duplicate` 重复 / `conflict` 冲突 / `vague` 表述模糊 / `category` 归类建议
+- `level`：`conflict` → `warn`，其余 `info`（前端配色用）
+- `refs` 为真实资源引用，供「去处理」跳转；模型返回的非法类型 / 越界索引 / 脏 JSON 会被丢弃，最多保留 8 条
+- 建议仅供参考：服务端与前端都不会自动修改任何档案 / 规矩
+
+### 最近一次结果
+
+`GET /api/suggestions/latest?target=care` → 结构同上；
+无缓存时返回 `{ "target": "care", "suggestions": [], "createdAt": null, "cached": true, "empty": true }`。
+
 ## 置顶
 
 ### 设置 / 取消
@@ -420,6 +474,9 @@
 | `INVALID_PERIOD_RANGE` | 400 | 例假日期区间非法 |
 | `INVALID_CYCLE_DAYS` | 400 | 周期天数超出 15~60 |
 | `TOO_MANY_BATCH_ITEMS` | 400 | 批量录入超过 20 条 |
+| `INVALID_SUGGESTION_TARGET` | 400 | AI 整理建议的分析对象非法 |
+| `AI_NOT_CONFIGURED` | 503 | 未配置 DeepSeek 密钥 |
+| `AI_UNAVAILABLE` | 503 | 模型调用失败或超时 |
 | `RULE_NOT_FOUND` | 404 | 规矩不存在 |
 | `INVALID_RULE_TYPE` | 400 | 规矩类型非法 |
 | `RULE_ITEM_NOT_FOUND` | 404 | 条目不存在 |
@@ -444,4 +501,4 @@
 
 ## 明确不接入
 
-分享链接（share）、公开观测台（observatory/public）、时间线（timeline）、恋爱树与统计（stats/tree）、心语陪伴 AI 上下文一律不读取小本本数据。导出（`GET /api/export`）通过整库打包自动包含。
+分享链接（share）、公开观测台（observatory/public）、时间线（timeline）、恋爱树与统计（stats/tree）、心语陪伴 AI 上下文一律不读取小本本数据。唯一例外是「AI 整理建议」：在用户未关闭开关时，仅发送标题级文本用于生成整理线索（见上节），且不会进入陪伴对话上下文。导出（`GET /api/export`）通过整库打包自动包含。

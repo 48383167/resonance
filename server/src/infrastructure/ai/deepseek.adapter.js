@@ -10,6 +10,7 @@ import {
 } from '../../config/deepseek.js'
 import { EMOTIONAL_COMPANION_SYSTEM_PROMPT, CONVERSATION_TITLE_SYSTEM_PROMPT } from '../../modules/companion/companion.policy.js'
 import { PERIOD_REMINDER_SYSTEM_PROMPT, ANNIVERSARY_REMINDER_SYSTEM_PROMPT } from '../../modules/notification/notification.policy.js'
+import { SUGGESTION_SYSTEM_PROMPT } from '../../modules/suggestion/suggestion.policy.js'
 
 function providerUserId(userId) {
   // DeepSeek 的 user_id 用于隔离；使用 HMAC 后的稳定伪标识，避免发送原始账户 ID 或个人资料。
@@ -133,6 +134,23 @@ export async function createReminderContent({ userId, kind, facts }) {
     ],
     temperature: 0.8,
     maxTokens: 240,
+  })
+  return result.content
+}
+
+// 小本本 AI 整理建议：只发送标题/条目文本（无 id、昵称、时间），
+// 提示词与输出边界见 suggestion.policy.js；调用方负责解析与索引映射。
+export async function createNotebookSuggestions({ userId, target, data }) {
+  assertDeepSeekConfigured()
+
+  const result = await chatCompletion({
+    userId,
+    messages: [
+      { role: 'system', content: SUGGESTION_SYSTEM_PROMPT },
+      { role: 'user', content: JSON.stringify({ target, items: data.items }) },
+    ],
+    temperature: 0.2,
+    maxTokens: 700,
   })
   return result.content
 }

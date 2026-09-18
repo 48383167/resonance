@@ -117,3 +117,12 @@ client/ 仅放前端代码。
 跨端接口文档放：
 
 docs/api/
+
+## AI 功能
+
+- 小本本 AI 整理建议（档案 / 规矩）：唯一政策来源
+  `server/src/modules/suggestion/suggestion.policy.js`；改动前先读它、
+  `.opencode/skills/resonance-notebook-ai/SKILL.md` 与 `docs/api/notebook.md`。
+  该功能无同意流程，靠可关闭的「AI 建议」开关控制，属有意设计，勿按陪伴规则改回。
+- 情感陪伴（心语陪伴）：唯一政策来源 `server/src/modules/companion/companion.policy.js`，
+  接口契约 `docs/api/companion.md`，维护 skill 为 `resonance-emotional-companion`。

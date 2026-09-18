@@ -6,6 +6,7 @@ import { useInfiniteScroll } from '../../../composables/useInfiniteScroll'
 import { session } from '../../../stores/session'
 import { toast } from '../../../stores/toast'
 import PinMenu from '../../../shared/components/PinMenu.vue'
+import SuggestionCard from '../../suggestion/components/SuggestionCard.vue'
 
 // 相处规矩列表：只读预览 + 查看 / 编辑 / 认同 三个入口（列表内不做修改，避免误触）
 const router = useRouter()
@@ -79,6 +80,11 @@ async function chooseFilter(value) {
   await load(true)
 }
 
+// AI 建议「去处理」：跳到对应规矩详情
+function onSuggestionOpen(ref) {
+  if (ref?.id) router.push(`/notebook/rule/${ref.id}`)
+}
+
 const previewItems = (rule) => (rule.items || []).slice(0, PREVIEW)
 const moreCount = (rule) => Math.max(0, (rule.items?.length || 0) - PREVIEW)
 
@@ -129,6 +135,8 @@ defineExpose({ load })
 
 <template>
   <div class="space-y-4">
+    <SuggestionCard target="rule" @open="onSuggestionOpen" />
+
     <div class="flex gap-2 overflow-x-auto pb-1">
       <button v-for="c in FILTERS" :key="c.value"
         class="min-h-11 shrink-0 rounded-full px-3 text-sm transition-colors"

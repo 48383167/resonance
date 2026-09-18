@@ -408,6 +408,19 @@ CREATE TABLE IF NOT EXISTS companion_daily_usage (
     model_reply_count INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (owner_id, usage_date)
 );
+
+-- AI 整理建议：结果按情侣空间共享；content_hash 未变时直接复用缓存，不调用模型。
+-- scope = pair:<pairCode>；未配对用户为 solo:<userId>。
+CREATE TABLE IF NOT EXISTS notebook_suggestions (
+    id TEXT PRIMARY KEY,
+    scope TEXT NOT NULL,
+    target TEXT NOT NULL,                 -- care 档案 / rule 规矩
+    content_hash TEXT NOT NULL,
+    result_json TEXT NOT NULL,
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    updated_at TEXT,
+    UNIQUE(scope, target)
+);
 `)
 
 // 兼容旧库：观测台开关 singleton 行缺省初始化 enabled=1，保证已有行为不变（幂等）

@@ -6,6 +6,7 @@ import { session } from '../../../stores/session'
 import { toast } from '../../../stores/toast'
 import { confirmDialog } from '../../../stores/confirm'
 import CareItemRow from './CareItemRow.vue'
+import SuggestionCard from '../../suggestion/components/SuggestionCard.vue'
 
 // 关怀档案列表：安全速查（搜索 / 能不能吃 / 复制清单）+ 分类卡行式条目 + 分类内折叠
 const router = useRouter()
@@ -158,9 +159,14 @@ async function jumpTo(item) {
   document.getElementById(`care-item-${item.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
 }
 
+// AI 建议「去处理」：展开并定位到对应档案
+function onSuggestionOpen(ref) {
+  const item = items.value.find((i) => i.id === ref?.id)
+  if (item) jumpTo(item)
+}
+
 // —— 随机关怀回顾：重度过敏不参与，避免添堵 ——
 const randomItem = ref(null)
-
 function randomSentence(item) {
   const who = subjectWord(item)
   if (item.category === 'preference') return `${who}喜欢「${item.title}」`
@@ -282,6 +288,8 @@ defineExpose({ load })
         placeholder="搜一搜：香菜、花生、牛奶…" />
       <button class="btn-ghost !min-h-11 shrink-0 !px-3 text-xs" title="复制饮食注意清单" @click="copyList">复制清单</button>
     </div>
+
+    <SuggestionCard target="care" @open="onSuggestionOpen" />
 
     <!-- 置顶速览：点一下展开并定位 -->
     <div v-if="!searching && !filtering && pinnedItems.length" class="flex gap-2 overflow-x-auto pb-1">

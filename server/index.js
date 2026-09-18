@@ -34,6 +34,7 @@ import ruleRoutes from './src/modules/rule/rule.routes.js'
 import pinRoutes from './src/modules/pin/pin.routes.js'
 import notificationRoutes from './src/modules/notification/notification.routes.js'
 import navigationRoutes from './src/modules/navigation/navigation.routes.js'
+import suggestionRoutes from './src/modules/suggestion/suggestion.routes.js'
 import { backfillConversationTitles } from './src/modules/companion/companion.service.js'
 import { startScheduler } from './src/infrastructure/scheduler/index.js'
 
@@ -79,6 +80,7 @@ app.use('/api/rules', ruleRoutes)
 app.use('/api/pins', pinRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/navigation', navigationRoutes)
+app.use('/api/suggestions', suggestionRoutes)
 app.use('/api/music', musicRoutes)
 app.use('/api/users/me/theme', themeRoutes)
 app.use('/api', fileRoutes)
