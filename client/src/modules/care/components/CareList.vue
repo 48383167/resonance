@@ -7,12 +7,16 @@ import { toast } from '../../../stores/toast'
 import { confirmDialog } from '../../../stores/confirm'
 import PinMenu from '../../../shared/components/PinMenu.vue'
 
-// 关怀档案列表：分类 / 对象筛选（前端过滤）+ 列表置顶 + 编辑删除
+// 关怀档案列表：一个分类一张卡、条目成行（一条仍是一条，逐条置顶 / 编辑 / 删除）
+// 条目多时分类内折叠，默认露 4 条；筛了分类或对象时全部展开
 const router = useRouter()
 const items = ref([])
 const category = ref('')
 const subjectId = ref('')
 const pinTarget = ref(null)
+const expanded = ref(new Set())
+
+const COLLAPSE_LIMIT = 4
 
 const CATEGORIES = [
   { value: 'diet', label: '🍽️ 忌口' },
@@ -40,10 +44,31 @@ const groups = computed(() => CATEGORIES
 
 const filtering = computed(() => Boolean(category.value || subjectId.value))
 
+function visibleItems(group) {
+  if (filtering.value || expanded.value.has(group.value)) return group.items
+  return group.items.slice(0, COLLAPSE_LIMIT)
+}
+
+function hiddenCount(group) {
+  if (filtering.value) return 0
+  return Math.max(0, group.items.length - COLLAPSE_LIMIT)
+}
+
+function toggleExpand(value) {
+  const next = new Set(expanded.value)
+  if (next.has(value)) next.delete(value)
+  else next.add(value)
+  expanded.value = next
+}
+
 function severityClass(severity) {
   if (severity === 'severe') return 'danger-link'
   if (severity === 'moderate') return 'text-accent-2'
   return 'text-theme-tertiary'
+}
+
+function subjectText(item) {
+  return item.subject?.nickname || (item.subject_id === session.userId ? '我' : 'Ta')
 }
 
 function togglePin(item) {
@@ -97,36 +122,49 @@ defineExpose({ load })
     </div>
 
     <div v-if="groups.length" class="space-y-5">
-      <section v-for="group in groups" :key="group.value">
-        <h3 class="mb-2 text-sm text-theme-secondary">{{ group.label }}</h3>
-        <div class="space-y-3">
-          <article v-for="item in group.items" :key="item.id" class="glass fade-up relative p-4">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <div class="flex flex-wrap items-center gap-2">
-                  <h4 class="font-medium">{{ item.title }}</h4>
-                  <span v-if="item.severity" class="text-xs" :class="severityClass(item.severity)">
+      <section v-for="group in groups" :key="group.value" class="fade-up">
+        <div class="mb-2 flex items-center justify-between">
+          <h3 class="text-sm text-theme-secondary">{{ group.label }}</h3>
+          <span class="text-[11px] text-theme-tertiary">{{ group.items.length }} 条</span>
+        </div>
+
+        <div class="glass divide-y divide-white/5 px-3">
+          <div v-for="item in visibleItems(group)" :key="item.id" class="rounded-xl py-2.5"
+            :class="item.pin_scope ? '-mx-1.5 bg-accent-soft px-1.5' : ''">
+            <div class="flex items-start gap-2">
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <h4 class="text-sm font-medium">{{ item.title }}</h4>
+                  <span v-if="item.severity" class="text-[11px]" :class="severityClass(item.severity)">
                     {{ SEVERITY_LABELS[item.severity] }}
                   </span>
-                  <span v-if="item.pin_scope" class="text-xs text-accent" title="已置顶">📌</span>
+                  <span v-if="item.pin_scope" class="text-[11px] text-accent" title="已置顶">📌</span>
                 </div>
-                <p v-if="item.content" class="mt-2 whitespace-pre-wrap text-sm text-theme-secondary">{{ item.content }}</p>
-                <p class="mt-3 text-xs text-theme-tertiary">
-                  {{ item.author?.nickname || '我' }} 记录 · 关于 {{ item.subject?.nickname || (item.subject_id === session.userId ? '我' : 'Ta') }}
+                <p v-if="item.content" class="mt-1 whitespace-pre-wrap text-xs leading-5 text-theme-secondary">{{ item.content }}</p>
+                <p class="mt-1 text-[11px] text-theme-tertiary">
+                  {{ item.author?.nickname || '我' }} 记录 · 关于 {{ subjectText(item) }}
                 </p>
               </div>
-              <div class="flex shrink-0 items-center gap-1">
-                <button class="min-h-11 min-w-11 rounded-full transition-colors"
-                  :class="pinTarget?.id === item.id ? 'text-accent' : 'text-theme-secondary hover:text-accent'"
+
+              <div class="flex shrink-0 items-center">
+                <button class="min-h-9 min-w-9 text-xs transition-colors"
+                  :class="pinTarget?.id === item.id ? 'text-accent' : 'text-theme-tertiary hover:text-accent'"
                   title="设置置顶" @click="togglePin(item)">📌</button>
-                <button class="min-h-11 px-2 text-xs text-theme-secondary hover:text-theme-primary"
-                  @click="router.push(`/notebook/care/${item.id}/edit`)">编辑</button>
-                <button class="min-h-11 px-2 text-xs danger-link" @click="remove(item)">删除</button>
+                <button class="min-h-9 min-w-9 text-xs text-theme-tertiary transition-colors hover:text-theme-primary"
+                  title="编辑" @click="router.push(`/notebook/care/${item.id}/edit`)">✎</button>
+                <button class="min-h-9 min-w-9 text-xs danger-link" title="删除" @click="remove(item)">×</button>
               </div>
             </div>
+
             <PinMenu v-if="pinTarget?.id === item.id" target-type="care" :target-id="item.id"
               :scope="item.pin_scope || 'none'" @close="pinTarget = null" @change="load" />
-          </article>
+          </div>
+
+          <button v-if="!filtering && group.items.length > COLLAPSE_LIMIT"
+            class="flex min-h-10 w-full items-center justify-center gap-1 text-xs text-theme-tertiary transition-colors hover:text-accent"
+            @click="toggleExpand(group.value)">
+            {{ expanded.has(group.value) ? '收起 ▴' : `展开其余 ${hiddenCount(group)} 条 ▾` }}
+          </button>
         </div>
       </section>
     </div>
