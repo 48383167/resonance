@@ -11,6 +11,7 @@ import {
 import { EMOTIONAL_COMPANION_SYSTEM_PROMPT, CONVERSATION_TITLE_SYSTEM_PROMPT } from '../../modules/companion/companion.policy.js'
 import { PERIOD_REMINDER_SYSTEM_PROMPT, ANNIVERSARY_REMINDER_SYSTEM_PROMPT } from '../../modules/notification/notification.policy.js'
 import { SUGGESTION_SYSTEM_PROMPT } from '../../modules/suggestion/suggestion.policy.js'
+import { FOOD_EXTRACT_SYSTEM_PROMPT } from '../../modules/food/food.policy.js'
 
 function providerUserId(userId) {
   // DeepSeek 的 user_id 用于隔离；使用 HMAC 后的稳定伪标识，避免发送原始账户 ID 或个人资料。
@@ -151,6 +152,23 @@ export async function createNotebookSuggestions({ userId, target, data }) {
     ],
     temperature: 0.2,
     maxTokens: 700,
+  })
+  return result.content
+}
+
+// 美食 AI 粘贴录入：仅把用户主动粘贴的文本变成表单草稿；
+// 提示词与数据边界见 food.policy.js；调用方负责白名单校验，绝不自动落库。
+export async function createFoodDraft({ userId, text }) {
+  assertDeepSeekConfigured()
+
+  const result = await chatCompletion({
+    userId,
+    messages: [
+      { role: 'system', content: FOOD_EXTRACT_SYSTEM_PROMPT },
+      { role: 'user', content: text },
+    ],
+    temperature: 0.2,
+    maxTokens: 500,
   })
   return result.content
 }

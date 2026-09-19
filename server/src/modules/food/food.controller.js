@@ -20,6 +20,10 @@ export async function create(req, res, next) {
   try { res.success(foodService.create(req.user.id, req.body)) } catch (e) { next(e) }
 }
 
+export async function parseDraft(req, res, next) {
+  try { res.success(await foodService.parseDraft(req.user.id, req.body)) } catch (e) { next(e) }
+}
+
 export async function update(req, res, next) {
   try { res.success(foodService.update(req.params.id, req.user.id, req.body)) } catch (e) { next(e) }
 }

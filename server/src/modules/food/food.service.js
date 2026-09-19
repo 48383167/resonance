@@ -1,6 +1,7 @@
 import { AppError } from '../../common/errors/AppError.js'
 import { parsePage } from '../../common/utils/paging.js'
 import { transaction } from '../../config/database.js'
+import { assertDeepSeekConfigured, createFoodDraft } from '../../infrastructure/ai/deepseek.adapter.js'
 import { assertSamePair, getUserCouple } from '../couple/couple.service.js'
 import { softDeleteQuietly } from '../file/file.service.js'
 import * as momentRepository from '../moment/moment.repository.js'
@@ -8,6 +9,7 @@ import * as commentService from '../comment/comment.service.js'
 import * as pinRepository from '../pin/pin.repository.js'
 import * as foodRepository from './food.repository.js'
 import * as foodSchema from './food.schema.js'
+import { parseFoodDraft } from './food.draft.js'
 import { emitFoodCreated, emitFoodUpdated, emitFoodDeleted } from '../../infrastructure/socket/food.socket.js'
 
 // 美食探店：双人空间共享；读取永远限定在本情侣空间内（AGENTS.md 权限要求）
@@ -70,6 +72,15 @@ export function create(userId, raw) {
   const place = foodRepository.create({ authorId: userId, data: foodSchema.validateCreate(raw) })
   broadcast(userId, (pairCode) => emitFoodCreated(pairCode, place))
   return place
+}
+
+// AI 粘贴成店：把用户主动粘贴的文本变成表单草稿（不落库、不自动保存）
+export async function parseDraft(userId, raw) {
+  const { text } = foodSchema.validateParse(raw)
+  assertDeepSeekConfigured()
+  const draft = parseFoodDraft(await createFoodDraft({ userId, text }))
+  if (!draft) throw new AppError('没有提取到有效信息，换个写法再试试', 502, 'AI_RESPONSE_INVALID')
+  return { draft }
 }
 
 export function update(id, userId, raw) {

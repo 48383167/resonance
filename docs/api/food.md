@@ -102,6 +102,40 @@
 店详情「去过的约会」：返回关联的瞬间摘要（`id / content / mood / moment_date / location / photos / author`），
 按发生日期倒序，最多 50 条。权限同详情。
 
+### 8. POST /api/foods/parse（AI 粘贴成店）
+
+```json
+{ "text": "老陈家炒河粉，晚上六点开门，炒河粉和牛腩粉超好吃，人均 15 左右" }
+```
+
+把用户主动粘贴的一段探店笔记提取成表单草稿。**只预填、不落库**；结果由用户核对后手动保存。
+
+- 输入 ≤ 800 字（`FOOD_EXTRACT_MAX_LENGTH`），否则 `400`
+- 政策唯一来源：`server/src/modules/food/food.policy.js`；出站数据只有这段粘贴文本，
+  不读取库内任何资源；不受「AI 建议」开关影响（显式动作触发）
+- 模型输出经 `food.draft.js` 白名单校验：分类枚举、评分 1~5、人均 0~9999、菜品 ≤10、长度截断；
+  未提及字段留空，脏 JSON → `502 AI_RESPONSE_INVALID`
+- 未配置密钥 → `503 AI_NOT_CONFIGURED`；调用失败 → `503 AI_UNAVAILABLE`
+
+```json
+{
+  "draft": {
+    "name": "老陈家炒河粉",
+    "category": "snack",
+    "rating": 5,
+    "hours": "18:00 开门",
+    "phone": "",
+    "avgPrice": 15,
+    "location": "",
+    "note": "",
+    "dishes": [
+      { "name": "炒河粉", "rating": null, "note": "超好吃", "price": null },
+      { "name": "牛腩粉", "rating": null, "note": "超好吃", "price": null }
+    ]
+  }
+}
+```
+
 ## Socket 事件（房间 `couple:{pairCode}`）
 
 | 事件 | 负载 | 触发 |

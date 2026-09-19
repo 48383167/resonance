@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { createFood, getFood, updateFood, removeFood } from '../food.api.js'
+import { createFood, getFood, updateFood, removeFood, parseFoodDraft } from '../food.api.js'
 import { MAX_PHOTOS, FOOD_CATEGORIES, FOOD_STATUSES } from '../food.constants.js'
 import { generateIdempotencyKey } from '../../../utils/idempotency.js'
 import { loadFormDraft, saveFormDraft, clearFormDraft } from '../../../utils/draft.js'
@@ -66,6 +66,48 @@ function discardDraft() {
   nextTick(() => clearFormDraft(DRAFT_KEY))
   draftRestored.value = false
   toast('草稿已清空')
+}
+
+// —— AI 粘贴成店：把一段笔记变成表单草稿（仅新建；只预填、不保存）——
+const aiOpen = ref(false)
+const aiText = ref('')
+const aiBusy = ref(false)
+
+function applyDraft(draft) {
+  const f = form.value
+  if (draft.name && !f.name.trim()) f.name = draft.name
+  if (draft.category && draft.category !== 'other' && f.category === 'snack') f.category = draft.category
+  if (draft.rating && !f.rating) f.rating = draft.rating
+  if (draft.hours && !f.hours.trim()) f.hours = draft.hours
+  if (draft.phone && !f.phone.trim()) f.phone = draft.phone
+  if (draft.avgPrice != null && (f.avgPrice === '' || f.avgPrice === null)) f.avgPrice = draft.avgPrice
+  if (draft.location && !f.location.trim()) f.location = draft.location
+  if (draft.note && !f.note.trim()) f.note = draft.note
+  if (draft.dishes?.length) {
+    let seq = 0
+    const existing = new Set(f.dishes.map((d) => String(d.name || '').trim().toLowerCase()))
+    for (const dish of draft.dishes) {
+      const key = String(dish.name || '').trim().toLowerCase()
+      if (!key || existing.has(key)) continue
+      existing.add(key)
+      f.dishes.push({ _key: `ai_${Date.now().toString(36)}_${++seq}`, name: dish.name, rating: dish.rating, note: dish.note, price: dish.price })
+    }
+  }
+}
+
+async function generateDraft() {
+  const text = aiText.value.trim()
+  if (!text || aiBusy.value) return
+  aiBusy.value = true
+  try {
+    const { draft } = await parseFoodDraft(text)
+    applyDraft(draft)
+    toast('已填入表单，请核对后保存')
+  } catch (e) {
+    toast(e.message)
+  } finally {
+    aiBusy.value = false
+  }
 }
 
 const canGoBack = Boolean(history.state?.back)
@@ -179,6 +221,25 @@ const categoryOptions = computed(() => FOOD_CATEGORIES)
     </div>
 
     <div class="glass space-y-4 p-4 sm:p-5">
+      <!-- AI 粘贴成店（仅新建） -->
+      <div v-if="!editingId" class="surface-soft rounded-xl p-3">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs text-theme-secondary">🧠 粘贴探店笔记，AI 帮我填</span>
+          <button class="shrink-0 text-xs text-accent" @click="aiOpen = !aiOpen">{{ aiOpen ? '收起' : '展开' }}</button>
+        </div>
+        <div v-if="aiOpen" class="mt-2 space-y-2">
+          <textarea v-model="aiText" class="input-dark !px-3 !py-2 text-sm resize-none" rows="4" maxlength="800"
+            placeholder="例如：老陈家炒河粉，晚上六点开门，炒河粉和牛腩粉超好吃，人均 15 左右…" />
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[11px] leading-4 text-theme-tertiary">只把这段文字发给 DeepSeek，结果仅预填、不自动保存</span>
+            <button class="btn-ghost !min-h-9 shrink-0 !px-3 text-xs"
+              :disabled="aiBusy || !aiText.trim()" @click="generateDraft">
+              {{ aiBusy ? '生成中…' : '生成草稿' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div>
         <label class="mb-1 block text-xs text-theme-tertiary">店名</label>
         <input v-model="form.name" class="input-dark" maxlength="40" placeholder="比如：老陈家炒河粉" />

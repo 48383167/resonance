@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { BadRequestError } from '../../common/errors/BadRequestError.js'
+import { FOOD_EXTRACT_MAX_LENGTH } from './food.policy.js'
 
 export const FOOD_CATEGORIES = ['snack', 'meal', 'hotpot', 'bbq', 'dessert', 'drink', 'other']
 export const FOOD_STATUSES = ['want', 'visited', 'favorite']
@@ -137,4 +138,14 @@ export function validateUpdate(body = {}, existing = {}) {
 export function validateStatus(body = {}) {
   if (!FOOD_STATUSES.includes(body.status)) throw new BadRequestError('状态不合法')
   return { status: body.status }
+}
+
+// AI 粘贴成店：输入一段探店笔记，仅用于生成表单草稿
+export function validateParse(body = {}) {
+  const text = typeof body.text === 'string' ? body.text.trim() : ''
+  if (!text) throw new BadRequestError('请先粘贴一段笔记')
+  if (text.length > FOOD_EXTRACT_MAX_LENGTH) {
+    throw new BadRequestError(`笔记最多 ${FOOD_EXTRACT_MAX_LENGTH} 字`)
+  }
+  return { text }
 }

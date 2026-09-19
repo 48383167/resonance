@@ -124,5 +124,8 @@ docs/api/
   `server/src/modules/suggestion/suggestion.policy.js`；改动前先读它、
   `.opencode/skills/resonance-notebook-ai/SKILL.md` 与 `docs/api/notebook.md`。
   该功能无同意流程，靠可关闭的「AI 建议」开关控制，属有意设计，勿按陪伴规则改回。
+- 美食 AI 粘贴成店（美食）：唯一政策来源 `server/src/modules/food/food.policy.js`；
+  改动前先读它、`.opencode/skills/resonance-food-ai/SKILL.md` 与 `docs/api/food.md`。
+  显式点击触发、只出站用户粘贴的文本、只预填不自动保存。
 - 情感陪伴（心语陪伴）：唯一政策来源 `server/src/modules/companion/companion.policy.js`，
   接口契约 `docs/api/companion.md`，维护 skill 为 `resonance-emotional-companion`。
