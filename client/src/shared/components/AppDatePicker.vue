@@ -1,7 +1,9 @@
 <script setup>
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { usePopupAnchor } from '../../composables/usePopupAnchor'
 
 // 主题化日期选择器：替代原生 date 控件；v-model 为 YYYY-MM-DD，可留空
+// 弹层 Teleport 到 body 并用 fixed 定位：避免玻璃卡 backdrop-filter 造成的层叠遮挡
 const props = defineProps({
   modelValue: { type: String, default: '' },
   placeholder: { type: String, default: '选择日期' },
@@ -9,9 +11,6 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:modelValue'])
 
-const open = ref(false)
-const rootEl = ref(null)
-const direction = ref('down')
 const today = new Date()
 const viewYear = ref(today.getFullYear())
 const viewMonth = ref(today.getMonth()) // 0-11
@@ -21,6 +20,16 @@ watch(() => props.modelValue, (v) => {
   const [y, m] = v.split('-').map(Number)
   if (y && m) { viewYear.value = y; viewMonth.value = m - 1 }
 }, { immediate: true })
+
+const { open, anchorEl, position, close, toggle } = usePopupAnchor({
+  estimateHeight: 340,
+  estimateWidth: () => Math.min(288, window.innerWidth - 32),
+})
+
+const popupStyle = computed(() => ({
+  left: `${position.value.left}px`,
+  ...(position.value.top != null ? { top: `${position.value.top}px` } : { bottom: `${position.value.bottom}px` }),
+}))
 
 const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
 
@@ -56,34 +65,19 @@ function isDisabled(day) {
 }
 
 function pick(day) {
-  if (!day || isDisabled(day)) return
+  if (isDisabled(day)) return
   emit('update:modelValue', day)
-  open.value = false
+  close()
 }
 
 function clear() {
   emit('update:modelValue', '')
+  close()
 }
-
-async function toggle() {
-  open.value = !open.value
-  if (!open.value) return
-  await nextTick()
-  const rect = rootEl.value?.getBoundingClientRect()
-  if (!rect) return
-  const spaceBelow = window.innerHeight - rect.bottom
-  direction.value = spaceBelow < 300 && rect.top > spaceBelow ? 'up' : 'down'
-}
-
-function onDocClick(e) {
-  if (rootEl.value && !rootEl.value.contains(e.target)) open.value = false
-}
-onMounted(() => document.addEventListener('click', onDocClick))
-onUnmounted(() => document.removeEventListener('click', onDocClick))
 </script>
 
 <template>
-  <div ref="rootEl" class="relative">
+  <div ref="anchorEl" class="relative">
     <button type="button" class="input-dark flex items-center justify-between gap-2 text-left"
       @click="toggle">
       <span :class="modelValue ? 'text-white/40' : ''">📅</span>
@@ -91,10 +85,13 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
       <span v-if="modelValue" class="text-xs text-white/40 hover:text-white" @click.stop="clear">×</span>
       <span class="text-xs text-white/40 transition-transform" :class="open ? 'rotate-180' : ''">▾</span>
     </button>
+  </div>
+
+  <Teleport to="body">
     <Transition name="dp">
-      <div v-if="open"
-         class="date-picker-popup theme-popup absolute left-0 z-[1100] rounded-xl border border-white/15 p-3 shadow-2xl backdrop-blur-xl"
-         :class="direction === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'">
+      <div v-if="open" data-popup
+         class="date-picker-popup theme-popup fixed z-[68] rounded-xl border border-white/15 p-3 shadow-2xl backdrop-blur-xl"
+         :style="popupStyle">
         <div class="mb-2 flex items-center justify-between">
           <button type="button" class="flex h-7 w-7 items-center justify-center rounded-lg text-white/60 hover:bg-white/10 hover:text-white"
             @click="shift(-1)">‹</button>
@@ -117,7 +114,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
         </div>
       </div>
     </Transition>
-  </div>
+  </Teleport>
 </template>
 
 <style>

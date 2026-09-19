@@ -1,7 +1,9 @@
 <script setup>
-import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed } from 'vue'
+import { usePopupAnchor } from '../../composables/usePopupAnchor'
 
 // 主题化下拉选择器（替代原生 select）
+// 弹层 Teleport 到 body 并用 fixed 定位：避免玻璃卡 backdrop-filter 造成的层叠遮挡
 const props = defineProps({
   modelValue: { type: [String, Number], default: '' },
   options: { type: Array, default: () => [] }, // [{ value, label, icon? }]
@@ -9,36 +11,27 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:modelValue'])
 
-const open = ref(false)
-const rootEl = ref(null)
-const direction = ref('down')
+const { open, anchorEl, position, close, toggle } = usePopupAnchor({
+  estimateHeight: 240,
+  estimateWidth: (rect) => rect.width,
+})
+
+const popupStyle = computed(() => ({
+  left: `${position.value.left}px`,
+  ...(position.value.top != null ? { top: `${position.value.top}px` } : { bottom: `${position.value.bottom}px` }),
+  width: `${position.value.width}px`,
+}))
 
 const current = () => props.options.find((o) => o.value === props.modelValue)
 
 function pick(o) {
   emit('update:modelValue', o.value)
-  open.value = false
+  close()
 }
-
-async function toggle() {
-  open.value = !open.value
-  if (!open.value) return
-  await nextTick()
-  const rect = rootEl.value?.getBoundingClientRect()
-  if (!rect) return
-  const spaceBelow = window.innerHeight - rect.bottom
-  direction.value = spaceBelow < 240 && rect.top > spaceBelow ? 'up' : 'down'
-}
-
-function onDocClick(e) {
-  if (rootEl.value && !rootEl.value.contains(e.target)) open.value = false
-}
-onMounted(() => document.addEventListener('click', onDocClick))
-onUnmounted(() => document.removeEventListener('click', onDocClick))
 </script>
 
 <template>
-  <div ref="rootEl" class="relative">
+  <div ref="anchorEl" class="relative">
     <button type="button" @click="toggle"
       class="input-dark flex items-center justify-between gap-2 text-left">
       <span class="flex items-center gap-2">
@@ -47,10 +40,13 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
       </span>
       <span class="text-xs text-white/40 transition-transform" :class="open ? 'rotate-180' : ''">▾</span>
     </button>
+  </div>
+
+  <Teleport to="body">
     <Transition name="dd">
-      <div v-if="open"
-         class="theme-popup absolute z-[65] max-h-[min(14rem,50dvh)] w-full overflow-y-auto rounded-xl border border-white/15 p-1 shadow-2xl backdrop-blur-xl"
-         :class="direction === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'">
+      <div v-if="open" data-popup
+         class="theme-popup fixed z-[68] max-h-[min(14rem,50dvh)] overflow-y-auto rounded-xl border border-white/15 p-1 shadow-2xl backdrop-blur-xl"
+         :style="popupStyle">
         <button v-for="o in options" :key="o.value" type="button"
           class="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-white/10"
           :class="o.value === modelValue ? 'bg-accent-soft text-accent' : 'text-white/80'"
@@ -59,7 +55,7 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
         </button>
       </div>
     </Transition>
-  </div>
+  </Teleport>
 </template>
 
 <style>

@@ -31,7 +31,7 @@ onMounted(restoreMusic)
 </script>
 
 <template>
-  <div class="music-player fixed bottom-6 right-4 z-40 flex flex-col items-end">
+  <div class="music-player fixed bottom-6 right-4 z-[56] flex flex-col items-end">
     <!-- 迷你播放卡片 -->
     <Transition name="mp">
       <div v-if="expanded && current" class="glass mb-3 w-64 p-4">
