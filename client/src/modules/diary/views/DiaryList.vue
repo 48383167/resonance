@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { listDiary, setVisibility } from '../diary.api.js'
 import EntryCard from '../components/EntryCard.vue'
@@ -47,6 +47,25 @@ function onCommentCreated(comment) {
   if (comment.user_id !== session.userId) entry.unread_comment_count = (entry.unread_comment_count || 0) + 1
 }
 
+// 月份分组（分页加载时同月自动合并）：手机端可吸顶定位
+const monthGroups = computed(() => {
+  const groups = []
+  const map = new Map()
+  const currentYear = new Date().getFullYear()
+  for (const entry of entries.value) {
+    const d = new Date(entry.created_at)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    if (!map.has(key)) {
+      const label = d.getFullYear() === currentYear ? `${d.getMonth() + 1}月` : `${d.getFullYear()}年${d.getMonth() + 1}月`
+      const group = { key, label, items: [] }
+      map.set(key, group)
+      groups.push(group)
+    }
+    map.get(key).items.push(entry)
+  }
+  return groups
+})
+
 function onCommentDeleted(payload) {
   if (payload?.targetType !== 'entry') return
   const entry = entries.value.find((item) => item.id === payload.targetId)
@@ -74,8 +93,7 @@ async function togglePublic(entry) {
   <div class="fade-up space-y-4">
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h2 class="serif text-xl">日记</h2>
-        <p class="text-xs text-white/45">共 {{ total }} 篇</p>
+        <h2 class="serif text-xl">日记 <span class="ml-1 align-middle text-xs font-normal text-white/45">共 {{ total }} 篇</span></h2>
       </div>
       <div class="flex w-full flex-wrap gap-2 sm:w-auto">
         <button class="btn-ghost flex-1 whitespace-nowrap sm:flex-none" @click="router.push('/diary')">🗓️ 日历视图</button>
@@ -89,9 +107,17 @@ async function togglePublic(entry) {
       <p class="mt-2">还没有日记，写下第一篇吧</p>
       <button class="btn-primary mt-4" @click="router.push('/write/solo')">写第一篇日记</button>
     </div>
-    <div v-else class="grid gap-4">
-      <EntryCard v-for="e in entries" :key="e.id" :entry="e" @open="(id) => router.push(`/entry/${id}`)"
-        @toggle-public="togglePublic" />
+    <div v-else class="space-y-3">
+      <section v-for="g in monthGroups" :key="g.key" class="space-y-2.5 sm:space-y-4">
+        <div class="sticky top-2 z-10 flex">
+          <span class="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-1.5 text-xs shadow-lg backdrop-blur-xl">
+            <span class="serif font-semibold text-white/90">{{ g.label }}</span>
+            <span class="text-white/35">{{ g.items.length }} 篇</span>
+          </span>
+        </div>
+        <EntryCard v-for="e in g.items" :key="e.id" :entry="e" @open="(id) => router.push(`/entry/${id}`)"
+          @toggle-public="togglePublic" />
+      </section>
     </div>
 
     <div v-if="!loading && entries.length < total" ref="sentinel" class="py-6 text-center text-xs text-white/40">
