@@ -116,10 +116,11 @@ const statCards = (s) => [
   { icon: '🍜', label: '美食', value: s.foods || 0, route: '/foods' },
 ]
 
-// 评论未读角标：日记 / 恋爱瞬间模块入口
+// 评论未读角标：日记 / 恋爱瞬间 / 美食模块入口
 function unreadOfModule(name) {
   if (name === 'diary-list') return commentUnread.entry
   if (name === 'moments') return commentUnread.moment
+  if (name === 'foods') return commentUnread.food
   return 0
 }
 </script>

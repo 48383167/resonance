@@ -20,10 +20,11 @@ const primaryItems = computed(() => {
 })
 const moreActive = computed(() => navigationItems.some((item) => !primaryItems.value.includes(item) && isItemActive(item)))
 
-// 评论未读角标：日记在主导航，瞬间在「更多」里（••• 按钮上同步提示）
+// 评论未读角标：日记在主导航，瞬间/美食在「更多」里（••• 按钮上同步提示）
 function unreadOf(item) {
   if (item.name === 'diary-list') return commentUnread.entry
   if (item.name === 'moments') return commentUnread.moment
+  if (item.name === 'foods') return commentUnread.food
   if (item.name === 'notebook') return notebookUnread.pendingRules
   return 0
 }
@@ -90,7 +91,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
         aria-label="更多功能" title="更多功能" :aria-expanded="moreOpen" @click="moreOpen = !moreOpen">
         <span class="app-dock__icon text-xl tracking-widest">•••</span>
         <span class="app-dock__tooltip">更多功能</span>
-        <span v-if="commentUnread.moment + notebookUnread.pendingRules" class="app-dock__badge">{{ commentUnread.moment + notebookUnread.pendingRules }}</span>
+        <span v-if="commentUnread.moment + commentUnread.food + notebookUnread.pendingRules" class="app-dock__badge">{{ commentUnread.moment + commentUnread.food + notebookUnread.pendingRules }}</span>
       </button>
     </div>
   </div>

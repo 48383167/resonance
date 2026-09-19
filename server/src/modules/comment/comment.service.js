@@ -4,6 +4,7 @@ import { BadRequestError } from '../../common/errors/BadRequestError.js'
 import * as coupleService from '../couple/couple.service.js'
 import * as diaryRepository from '../diary/diary.repository.js'
 import * as momentRepository from '../moment/moment.repository.js'
+import * as foodRepository from '../food/food.repository.js'
 import { emitCommentCreated, emitCommentDeleted } from '../../infrastructure/socket/comment.socket.js'
 import * as commentRepository from './comment.repository.js'
 import * as commentSchema from './comment.schema.js'
@@ -20,6 +21,13 @@ function assertTargetAccessible(userId, targetType, targetId) {
     const authorIds = diaryRepository.listContentUserIds(targetId)
     if (!authorIds.length) throw new NotFoundError('日记不存在')
     coupleService.assertSamePair(userId, authorIds[0])
+    return
+  }
+  if (targetType === 'food') {
+    const place = foodRepository.findById(targetId)
+    if (!place) throw new NotFoundError('这家店不存在')
+    if (userId === place.author_id) return
+    coupleService.assertSamePair(userId, place.author_id)
     return
   }
   const moment = momentRepository.findById(targetId)

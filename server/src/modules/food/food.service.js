@@ -1,8 +1,10 @@
 import { AppError } from '../../common/errors/AppError.js'
 import { parsePage } from '../../common/utils/paging.js'
+import { transaction } from '../../config/database.js'
 import { assertSamePair, getUserCouple } from '../couple/couple.service.js'
 import { softDeleteQuietly } from '../file/file.service.js'
 import * as momentRepository from '../moment/moment.repository.js'
+import * as commentService from '../comment/comment.service.js'
 import * as foodRepository from './food.repository.js'
 import * as foodSchema from './food.schema.js'
 import { emitFoodCreated, emitFoodUpdated, emitFoodDeleted } from '../../infrastructure/socket/food.socket.js'
@@ -39,8 +41,9 @@ export function list(query = {}, userId) {
     keyword: (query.keyword || '').trim() || undefined,
     authorIds: memberIdsOf(userId),
   }
-  if (!paginated) return foodRepository.list(opts)
-  return { items: foodRepository.list({ ...opts, offset, limit }), total: foodRepository.count(opts) }
+  if (!paginated) return commentService.attachCounts('food', foodRepository.list(opts), userId)
+  const items = commentService.attachCounts('food', foodRepository.list({ ...opts, offset, limit }), userId)
+  return { items, total: foodRepository.count(opts) }
 }
 
 export function getDetail(id, userId) {
@@ -97,8 +100,11 @@ export function remove(id, userId) {
   const existing = findOrThrow(id)
   assertAccessible(userId, existing.author_id)
   for (const fileId of existing.photoIds) softDeleteQuietly(fileId, userId)
-  foodRepository.removeMomentLinks(id)
-  foodRepository.remove(id)
+  transaction(() => {
+    foodRepository.removeMomentLinks(id)
+    commentService.removeByTarget('food', id)
+    foodRepository.remove(id)
+  })
   broadcast(userId, (pairCode) => emitFoodDeleted(pairCode, { id }))
   return null
 }

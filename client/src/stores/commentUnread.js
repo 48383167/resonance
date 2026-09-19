@@ -3,13 +3,14 @@ import { getCommentUnread } from '../modules/comment/comment.api.js'
 
 // 全局评论未读角标：底部导航 / 首页 / 列表页共享。
 // 打开评论区后由 markRead 响应覆盖为服务端最新值；对方新评论由 socket 事件 +1。
-export const commentUnread = reactive({ entry: 0, moment: 0, total: 0 })
+export const commentUnread = reactive({ entry: 0, moment: 0, food: 0, total: 0 })
 
 export function applyCommentUnread(summary) {
   if (!summary) return
   commentUnread.entry = summary.entry || 0
   commentUnread.moment = summary.moment || 0
-  commentUnread.total = summary.total ?? commentUnread.entry + commentUnread.moment
+  commentUnread.food = summary.food || 0
+  commentUnread.total = summary.total ?? commentUnread.entry + commentUnread.moment + commentUnread.food
 }
 
 export async function loadCommentUnread() {
@@ -19,11 +20,11 @@ export async function loadCommentUnread() {
 }
 
 export function bumpCommentUnread(targetType) {
-  if (targetType !== 'entry' && targetType !== 'moment') return
+  if (targetType !== 'entry' && targetType !== 'moment' && targetType !== 'food') return
   commentUnread[targetType] += 1
   commentUnread.total += 1
 }
 
 export function resetCommentUnread() {
-  applyCommentUnread({ entry: 0, moment: 0, total: 0 })
+  applyCommentUnread({ entry: 0, moment: 0, food: 0, total: 0 })
 }

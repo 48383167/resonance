@@ -97,12 +97,13 @@ export function attachCounts(targetType, targets, userId) {
 
 // 全局未读总览：只统计当前情侣空间内、对方发表的未删除评论
 export function countUnread(userId, memberIds) {
-  if (!memberIds.length) return { entry: 0, moment: 0, total: 0 }
+  if (!memberIds.length) return { entry: 0, moment: 0, food: 0, total: 0 }
   const placeholders = memberIds.map(() => '?').join(', ')
   const row = db.prepare(
     `SELECT
        COALESCE(SUM(CASE WHEN c.target_type = 'entry' THEN 1 ELSE 0 END), 0) AS entry,
-       COALESCE(SUM(CASE WHEN c.target_type = 'moment' THEN 1 ELSE 0 END), 0) AS moment
+       COALESCE(SUM(CASE WHEN c.target_type = 'moment' THEN 1 ELSE 0 END), 0) AS moment,
+       COALESCE(SUM(CASE WHEN c.target_type = 'food' THEN 1 ELSE 0 END), 0) AS food
      FROM comments c
      LEFT JOIN comment_reads r
        ON r.user_id = ? AND r.target_type = c.target_type AND r.target_id = c.target_id
@@ -116,7 +117,10 @@ export function countUnread(userId, memberIds) {
          OR (c.target_type = 'moment' AND c.target_id IN (
             SELECT m.id FROM moments m WHERE m.user_id IN (${placeholders})
          ))
+         OR (c.target_type = 'food' AND c.target_id IN (
+            SELECT f.id FROM food_places f WHERE f.author_id IN (${placeholders})
+         ))
        )`
-  ).get(userId, userId, ...memberIds, ...memberIds)
-  return { entry: row.entry, moment: row.moment, total: row.entry + row.moment }
+  ).get(userId, userId, ...memberIds, ...memberIds, ...memberIds)
+  return { entry: row.entry, moment: row.moment, food: row.food, total: row.entry + row.moment + row.food }
 }

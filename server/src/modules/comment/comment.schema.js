@@ -1,11 +1,11 @@
 import { BadRequestError } from '../../common/errors/BadRequestError.js'
 
-export const TARGET_TYPES = ['entry', 'moment']
+export const TARGET_TYPES = ['entry', 'moment', 'food']
 export const MAX_CONTENT_LENGTH = 500
 
 function normalizeTargetType(value) {
   if (!TARGET_TYPES.includes(value)) {
-    throw new BadRequestError('targetType 必须是 entry 或 moment')
+    throw new BadRequestError('targetType 必须是 entry、moment 或 food')
   }
   return value
 }

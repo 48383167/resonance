@@ -1,10 +1,13 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { listFoods } from '../food.api.js'
 import { toast } from '../../../stores/toast'
+import { socket } from '../../../socket'
+import { session } from '../../../stores/session'
 import { FOOD_CATEGORIES, FOOD_STATUSES, CATEGORY_LABELS, STATUS_LABELS, STATUS_CLASSES } from '../food.constants.js'
 import FoodRating from '../components/FoodRating.vue'
+import CommentCountBadge from '../../../shared/components/CommentCountBadge.vue'
 
 // 美食列表：状态 / 分类筛选 + 关键词搜索（店名 / 菜名 / 地点 / 笔记），数据量小走本地过滤
 const router = useRouter()
@@ -41,7 +44,31 @@ async function load() {
   }
 }
 
-onMounted(load)
+// 评论实时更新：自己发的只加总数，对方发的未读 +1
+function onCommentCreated(comment) {
+  if (comment?.target_type !== 'food') return
+  const place = items.value.find((f) => f.id === comment.target_id)
+  if (!place) return
+  place.comment_count = (place.comment_count || 0) + 1
+  if (comment.user_id !== session.userId) place.unread_comment_count = (place.unread_comment_count || 0) + 1
+}
+
+function onCommentDeleted(payload) {
+  if (payload?.targetType !== 'food') return
+  const place = items.value.find((f) => f.id === payload.targetId)
+  if (place) place.comment_count = Math.max(0, (place.comment_count || 0) - 1)
+}
+
+onMounted(() => {
+  load()
+  socket.on('comment:created', onCommentCreated)
+  socket.on('comment:deleted', onCommentDeleted)
+})
+
+onUnmounted(() => {
+  socket.off('comment:created', onCommentCreated)
+  socket.off('comment:deleted', onCommentDeleted)
+})
 defineExpose({ load })
 </script>
 
@@ -107,6 +134,10 @@ defineExpose({ load })
           <template v-if="f.avg_price != null"> · 人均 ¥{{ f.avg_price }}</template>
           <template v-if="f.hours"> · {{ f.hours }}</template>
         </p>
+
+        <div v-if="f.comment_count" class="mt-2">
+          <CommentCountBadge :count="f.comment_count" :unread="f.unread_comment_count" />
+        </div>
       </article>
     </div>
 

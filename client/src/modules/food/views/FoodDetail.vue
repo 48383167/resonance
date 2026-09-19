@@ -5,6 +5,7 @@ import { getFood, listFoodMoments, removeFood, setFoodStatus } from '../food.api
 import { listCareItems } from '../../care/care.api.js'
 import { CATEGORY_LABELS, FOOD_STATUSES, STATUS_LABELS, STATUS_CLASSES } from '../food.constants.js'
 import FoodRating from '../components/FoodRating.vue'
+import CommentSection from '../../comment/components/CommentSection.vue'
 import { socket } from '../../../socket'
 import { toast } from '../../../stores/toast'
 import { confirmDialog } from '../../../stores/confirm'
@@ -216,6 +217,8 @@ onUnmounted(() => {
         <button class="danger-link min-h-11 px-4 text-sm" @click="remove">删除</button>
         <button class="btn-primary w-full sm:w-auto" @click="router.push(`/foods/${place.id}/edit`)">编辑</button>
       </div>
+
+      <CommentSection class="mt-4" target-type="food" :target-id="place.id" />
     </template>
   </div>
 </template>

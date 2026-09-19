@@ -1,6 +1,6 @@
 # 评论 API
 
-> 评论用于双人空间内对「日记」与「恋爱瞬间」的互动。
+> 评论用于双人空间内对「日记」「恋爱瞬间」与「美食」的互动。
 > 支持一级回复（回复的回复会扁平化到同一顶层评论，仅记录被回复人用于 @显示）。
 > 评论必须由当前登录用户在其所属情侣空间内创建。
 
@@ -11,7 +11,7 @@
 ```sql
 CREATE TABLE IF NOT EXISTS comments (
     id TEXT PRIMARY KEY,
-    target_type TEXT NOT NULL,       -- 'entry'（日记） | 'moment'（恋爱瞬间）
+    target_type TEXT NOT NULL,       -- 'entry'（日记） | 'moment'（恋爱瞬间） | 'food'（美食店）
     target_id TEXT NOT NULL,         -- 目标资源 ID
     user_id TEXT NOT NULL,           -- 评论作者
     content TEXT NOT NULL,           -- 评论正文（1~500 字）
@@ -27,7 +27,7 @@ CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parent_id);
 -- 已读状态：每个用户对每个目标最后一次查看评论区的时间点
 CREATE TABLE IF NOT EXISTS comment_reads (
     user_id TEXT NOT NULL,
-    target_type TEXT NOT NULL,       -- 'entry' | 'moment'
+    target_type TEXT NOT NULL,       -- 'entry' | 'moment' | 'food'
     target_id TEXT NOT NULL,
     last_read_at TEXT NOT NULL,      -- ISO8601，与 comments.created_at 同格式
     PRIMARY KEY (user_id, target_type, target_id)
@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS comment_reads (
 
 | 位置 | 字段 | 类型 | 说明 |
 |---|---|---|---|
-| query | `targetType` | string | `entry` 或 `moment` |
+| query | `targetType` | string | `entry`、`moment` 或 `food` |
 | query | `targetId` | string | 目标资源 ID |
 
 成功响应（`200`）：
@@ -118,9 +118,9 @@ CREATE TABLE IF NOT EXISTS comment_reads (
 
 失败响应（`error` 为对象形态）：
 
-- `targetType` 非法：`400` `{ code: "BAD_REQUEST", message: "targetType 必须是 entry 或 moment" }`
+- `targetType` 非法：`400` `{ code: "BAD_REQUEST", message: "targetType 必须是 entry、moment 或 food" }`
 - `targetId` 缺失：`400` `{ code: "BAD_REQUEST", message: "targetId 不能为空" }`
-- 目标不存在：`404` `{ code: "NOT_FOUND", message: "日记不存在" }` / `{ "...", message: "瞬间不存在" }`
+- 目标不存在：`404` `{ code: "NOT_FOUND", message: "日记不存在" }` / `{ "...", message: "瞬间不存在" }` / `{ "...", message: "这家店不存在" }`
 - 目标不属于当前用户的情侣空间：`403` `{ code: "FORBIDDEN", message: "无权访问该情侣空间的数据" }`
 - 未登录：`401` `{ code: "UNAUTHORIZED", message: "未登录或登录已过期" }`
 
@@ -177,7 +177,7 @@ CREATE TABLE IF NOT EXISTS comment_reads (
 成功响应（`200`）：
 
 ```json
-{ "ok": true, "data": { "entry": 2, "moment": 1, "total": 3 } }
+{ "ok": true, "data": { "entry": 2, "moment": 1, "food": 0, "total": 3 } }
 ```
 
 ### 5. POST /api/comments/read（需登录）
@@ -197,7 +197,7 @@ CREATE TABLE IF NOT EXISTS comment_reads (
     "targetType": "entry",
     "targetId": "e_xxxxxxxx",
     "lastReadAt": "2026-09-12T08:30:00.123Z",
-    "unread": { "entry": 0, "moment": 1, "total": 1 }
+    "unread": { "entry": 0, "moment": 1, "food": 0, "total": 1 }
   }
 }
 ```
@@ -217,11 +217,11 @@ CREATE TABLE IF NOT EXISTS comment_reads (
 - 客户端按 `target_type` + `target_id` 过滤后再更新对应评论区。
 - 创建者本人也会收到 `comment:created`，前端需按评论 `id` 去重。
 - `comment:deleted` 按 `tombstoned` 区分处理：`true` → 本地标记墓碑（正文清空 + `deleted_at`），`false` → 从列表移除。
-- 级联删除（日记 / 瞬间被删除时清理其全部评论）不单独广播评论事件，由对应资源的 `diary:deleted` / `moment:deleted` 事件负责刷新。
+- 级联删除（日记 / 瞬间 / 美食店被删除时清理其全部评论与已读）不单独广播评论事件，由对应资源的 `diary:deleted` / `moment:deleted` / `food:deleted` 事件负责刷新。
 
 ### 未读角标联动
 
-- 全局监听 `comment:created`：`user_id` 为对方时，对应模块（`entry` / `moment`）未读数 +1；自己的评论不计数。
+- 全局监听 `comment:created`：`user_id` 为对方时，对应模块（`entry` / `moment` / `food`）未读数 +1；自己的评论不计数。
 - `comment:deleted` 后重新拉取 `GET /api/comments/unread` 校正角标（删除事件负载不含作者与已读状态）。
 - 打开评论区的 `POST /api/comments/read` 响应携带最新 `unread`，直接覆盖全局角标。
 - 列表页收到 `comment:created` / `comment:deleted` 时按 `target_type` + `target_id` 就地增减该条目的 `comment_count` / `unread_comment_count`（`comment:deleted` 无法判断作者，未读数以服务端下次返回为准）。
@@ -231,6 +231,6 @@ CREATE TABLE IF NOT EXISTS comment_reads (
 - 读取 / 创建评论前，先定位目标资源并校验其作者与当前用户同属一个情侣空间（`coupleService.assertSamePair`）；跨空间一律 `403`。
 - 回复的父评论必须存在于同一目标（同一日记 / 瞬间），否则 `404` / `400`。
 - 删除仅允许评论作者本人。
-- 日记目标归属按正文作者（`entry_contents.user_id`）判定；瞬间目标归属按作者（`moments.user_id`）判定。
+- 日记目标归属按正文作者（`entry_contents.user_id`）判定；瞬间目标归属按作者（`moments.user_id`）判定；美食目标归属按记录人（`food_places.author_id`）判定。
 - 评论不进入分享链接与观测台公开内容，公开链路不下发评论。
-- 日记 / 瞬间被删除时，其评论（含回复）级联清理，不产生孤儿数据。
+- 日记 / 瞬间 / 美食店被删除时，其评论（含回复）与已读记录级联清理，不产生孤儿数据。
