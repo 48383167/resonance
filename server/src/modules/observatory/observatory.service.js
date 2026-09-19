@@ -5,6 +5,7 @@ import * as shareRepository from '../share/share.repository.js'
 import * as statsRepository from '../stats/stats.repository.js'
 import * as coupleRepository from '../couple/couple.repository.js'
 import * as albumRepository from '../album/album.repository.js'
+import * as foodRepository from '../food/food.repository.js'
 import * as observatoryRepository from './observatory.repository.js'
 import * as observatorySchema from './observatory.schema.js'
 
@@ -53,16 +54,30 @@ export function getShare(token, password) {
   const includeMoments = st.include_moments !== 0
   const includeEntries = st.include_entries !== 0
   const includeAnniversaries = st.include_anniversaries !== 0
+  const includeFoods = st.include_foods !== 0
 
   const moments = includeMoments ? momentRepository.listPublic() : []
   const entries = includeEntries ? diaryRepository.attachContentsBatch(diaryRepository.listPublic()) : []
   const anniversaries = includeAnniversaries ? anniversaryRepository.listPublic() : []
+  const foods = includeFoods ? foodRepository.listVisited().map((f) => ({
+    id: f.id,
+    name: f.name,
+    category: f.category,
+    status: f.status,
+    rating: f.rating,
+    location: f.location,
+    hours: f.hours,
+    note: f.note,
+    dishes: (f.dishes || []).map((d) => ({ name: d.name, rating: d.rating, note: d.note, price: d.price })),
+    photos: (f.photos || []).map((p) => p.url).filter(Boolean),
+  })) : []
 
-  const stats = statsRepository.stats({ includeMoments, includeEntries, includeAnniversaries })
-  // 三类计数与实际下发数组长度保持一致；其余统计字段保留
+  const stats = statsRepository.stats({ includeMoments, includeEntries, includeAnniversaries, includeFoods })
+  // 各类计数与实际下发数组长度保持一致；其余统计字段保留
   stats.moments = moments.length
   stats.entries = entries.length
   stats.anniversaries = anniversaries.length
+  stats.foods = foods.length
 
   return {
     status: 'ok',
@@ -73,6 +88,7 @@ export function getShare(token, password) {
       moments,
       entries,
       anniversaries,
+      foods,
     },
   }
 }

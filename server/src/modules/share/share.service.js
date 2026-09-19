@@ -14,6 +14,7 @@ function presentShare(st) {
     includeMoments: Boolean(st.include_moments),
     includeEntries: Boolean(st.include_entries),
     includeAnniversaries: Boolean(st.include_anniversaries),
+    includeFoods: Boolean(st.include_foods),
   }
 }
 
@@ -43,6 +44,7 @@ export function updateCurrent(raw = {}) {
     includeMoments: flags.includeMoments ?? null,
     includeEntries: flags.includeEntries ?? null,
     includeAnniversaries: flags.includeAnniversaries ?? null,
+    includeFoods: flags.includeFoods ?? null,
   })
   if (!st) throw new NotFoundError('当前没有有效的分享链接')
   return presentShare(st)

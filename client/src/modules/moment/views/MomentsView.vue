@@ -220,6 +220,13 @@ function openMomentPhoto(photos, photo) {
           </div>
         </div>
         <p class="mt-3 break-words whitespace-pre-wrap leading-relaxed">{{ m.content }}</p>
+        <div v-if="m.places?.length" class="mt-3 flex flex-wrap gap-2">
+          <button v-for="place in m.places" :key="place.id" type="button"
+            class="inline-flex min-h-8 items-center gap-1.5 rounded-full border border-theme surface-soft px-3 py-1.5 text-[11px] text-theme-secondary transition-colors hover-text-accent"
+            @click="router.push(`/foods/${place.id}`)">
+            🍜 {{ place.name }}<span v-if="place.rating" class="text-accent">{{ place.rating }}★</span>
+          </button>
+        </div>
         <div v-if="m.photos?.length" class="mt-3 flex flex-wrap gap-2">
           <img v-for="(u, pi) in m.photos" :key="u.id || u.url || pi" :src="u.url" class="h-24 w-24 cursor-zoom-in rounded-lg object-cover"
             loading="lazy" @click="openMomentPhoto(m.photos, u)" />

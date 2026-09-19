@@ -19,6 +19,7 @@ const KINDS = [
   { key: 'wish', label: '🧭 心愿' },
   { key: 'capsule', label: '⏳ 胶囊' },
   { key: 'anniversary', label: '📅 纪念日' },
+  { key: 'food', label: '🍜 美食' },
   { key: 'photo', label: '📷 照片' },
 ]
 
@@ -29,6 +30,7 @@ const META = {
   wish: { color: '#ffcd78' },
   capsule: { color: '#a0b4ff' },
   anniversary: { color: '#ff96a0' },
+  food: { color: '#ffb27a' },
   photo: { color: '#8cdcbe' },
 }
 
@@ -43,7 +45,7 @@ const filtered = computed(() => {
 
 // 各类型数量（筛选计数）
 const kindCounts = computed(() => {
-  const map = { entry: 0, moment: 0, letter: 0, wish: 0, capsule: 0, anniversary: 0, photo: 0 }
+  const map = { entry: 0, moment: 0, letter: 0, wish: 0, capsule: 0, anniversary: 0, food: 0, photo: 0 }
   for (const e of data.value?.events || []) map[e.kind] = (map[e.kind] || 0) + 1
   return map
 })
@@ -150,7 +152,7 @@ const anniversaryTypeLabel = (t) => ({ first_meet: '初遇', together: '在一�
               :style="{ background: `linear-gradient(135deg, ${metaColor(e.kind)}55, ${metaColor(e.kind)}22)`, boxShadow: `0 0 14px ${metaColor(e.kind)}88` }">
               {{ {
                 entry: '📔', moment: moodEmoji(e.mood), letter: '💌', wish: '🧭', capsule: e.unlocked ? '⏳' : '🔒',
-                anniversary: '📅', photo: '📷',
+                anniversary: '📅', food: '🍜', photo: '📷',
               }[e.kind] }}
             </span>
           </div>
@@ -167,6 +169,7 @@ const anniversaryTypeLabel = (t) => ({ first_meet: '初遇', together: '在一�
                   <template v-else-if="e.kind === 'wish'">完成了心愿：{{ e.title }}</template>
                   <template v-else-if="e.kind === 'capsule'">{{ e.title }}</template>
                   <template v-else-if="e.kind === 'anniversary'">{{ anniversaryTypeLabel(e.anniversaryType) }} · {{ e.title }}</template>
+                  <template v-else-if="e.kind === 'food'">🍜 打卡了「{{ e.title }}」</template>
                   <template v-else>📷 {{ e.album }}</template>
                 </span>
                 <span class="shrink-0 text-[10px] leading-5 text-white/40">{{ timeOf(e.ts) }}</span>
@@ -190,10 +193,14 @@ const anniversaryTypeLabel = (t) => ({ first_meet: '初遇', together: '在一�
               <!-- 尾巴信息 -->
               <div class="mt-2 flex items-center gap-2 text-[11px] text-white/35">
                  <span v-if="e.kind === 'moment' && e.location" class="break-words">📍 {{ e.location }}</span>
+                 <span v-if="e.kind === 'food' && e.location" class="break-words">📍 {{ e.location }}</span>
+                 <span v-if="e.kind === 'food' && e.rating" class="shrink-0 text-accent">{{ e.rating }}★</span>
                  <span v-if="e.kind === 'letter'" class="break-words">来自 {{ e.sender }}</span>
                 <span v-if="e.kind === 'wish' && e.proposer">by {{ e.proposer }}</span>
                 <span v-if="e.kind === 'capsule'">解锁于 {{ e.unlockDate }}</span>
                 <router-link v-if="e.kind === 'entry'" :to="`/entry/${e.entryId}`"
+                  class="ml-auto text-accent hover:underline" @click.stop>查看详情 →</router-link>
+                <router-link v-else-if="e.kind === 'food' && e.foodId" :to="`/foods/${e.foodId}`"
                   class="ml-auto text-accent hover:underline" @click.stop>查看详情 →</router-link>
               </div>
             </article>

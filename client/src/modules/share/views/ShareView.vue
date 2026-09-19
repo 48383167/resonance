@@ -35,7 +35,8 @@ onMounted(fetchData)
 const moments = computed(() => data.value?.moments || [])
 const entries = computed(() => data.value?.entries || [])
 const anniversaries = computed(() => data.value?.anniversaries || [])
-const hasContent = computed(() => moments.value.length || entries.value.length || anniversaries.value.length)
+const foods = computed(() => data.value?.foods || [])
+const hasContent = computed(() => moments.value.length || entries.value.length || anniversaries.value.length || foods.value.length)
 
 function dateText(item, key = 'created_at') {
   const value = item.moment_date || item[key] || item.date
@@ -202,6 +203,25 @@ async function saveScrapbook() {
         <section v-if="anniversaries.length">
           <div class="mb-5"><p class="text-xs tracking-[.24em] text-[#bd8880]">IMPORTANT DAYS</p><h2 class="serif mt-1 text-3xl">纪念日</h2></div>
           <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"><article v-for="anniversary in anniversaries" :key="anniversary.id" class="rounded-lg border border-[#e7c0b6] bg-[#fff8f3] p-5 shadow-[0_7px_16px_rgba(132,91,70,.12)]"><div class="flex items-start justify-between gap-3"><span class="text-2xl">🌷</span><time class="rounded-full bg-[#f6dfd8] px-3 py-1 text-xs text-[#a87570]">{{ anniversary.date }}</time></div><h3 class="serif mt-4 break-words text-lg">{{ anniversary.title }}</h3><p v-if="anniversary.description" class="mt-2 break-words text-sm leading-6 text-[#98776f]">{{ anniversary.description }}</p></article></div>
+        </section>
+
+        <section v-if="foods.length">
+          <div class="mb-5"><p class="text-xs tracking-[.24em] text-[#bd8880]">TASTY PLACES</p><h2 class="serif mt-1 text-3xl">美食地图</h2></div>
+          <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <article v-for="food in foods" :key="food.id" class="rounded-lg border border-[#e4cec0] bg-[#fffdf7] p-5 shadow-[0_7px_16px_rgba(132,91,70,.12)]">
+              <div class="flex items-start justify-between gap-3">
+                <span class="text-2xl">🍜</span>
+                <span class="rounded-full bg-[#f6e3d4] px-3 py-1 text-xs text-[#a87570]">{{ food.status === 'favorite' ? '常去' : '去过' }}</span>
+              </div>
+              <h3 class="serif mt-3 break-words text-lg">{{ food.name }}</h3>
+              <p v-if="food.rating" class="mt-1 text-sm text-[#c98a3c]">{{ '★'.repeat(food.rating) }}<span class="text-[#e3cdb8]">{{ '★'.repeat(5 - food.rating) }}</span></p>
+              <p v-if="food.dishes?.length" class="mt-2 break-words text-sm leading-6 text-[#98776f]">
+                招牌：{{ food.dishes.slice(0, 3).map((d) => d.name).join('、') }}
+              </p>
+              <p v-if="food.location" class="mt-1 break-words text-xs text-[#b48a7f]">📍 {{ food.location }}<span v-if="food.hours"> · {{ food.hours }}</span></p>
+              <p v-if="food.note" class="mt-2 break-words text-sm leading-6 text-[#98776f]">{{ food.note }}</p>
+            </article>
+          </div>
         </section>
 
         <footer class="pb-6 text-center"><p class="text-sm text-[#ad8378]">愿每一个普通日子，都被好好记住。</p></footer>

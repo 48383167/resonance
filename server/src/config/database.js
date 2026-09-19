@@ -270,12 +270,45 @@ CREATE TABLE IF NOT EXISTS navigation_settings (
 CREATE INDEX IF NOT EXISTS idx_entry_contents_entry ON entry_contents(entry_id);
 CREATE INDEX IF NOT EXISTS idx_entry_contents_user ON entry_contents(user_id);
 CREATE INDEX IF NOT EXISTS idx_moment_photos_moment ON moment_photos(moment_id);
+
+-- 瞬间 ↔ 美食关联（约会打卡）：多对多；删除任一侧时清理
+CREATE TABLE IF NOT EXISTS moment_places (
+    moment_id TEXT NOT NULL,
+    place_id TEXT NOT NULL,
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    PRIMARY KEY (moment_id, place_id)
+);
+CREATE INDEX IF NOT EXISTS idx_moment_places_place ON moment_places(place_id);
 CREATE INDEX IF NOT EXISTS idx_album_photos_album ON album_photos(album_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_entries_created ON entries(created_at);
 CREATE INDEX IF NOT EXISTS idx_love_letters_created ON love_letters(created_at);
 CREATE INDEX IF NOT EXISTS idx_wish_items_status ON wish_items(status);
 CREATE INDEX IF NOT EXISTS idx_time_capsules_unlock ON time_capsules(unlock_date);
 CREATE INDEX IF NOT EXISTS idx_anniversaries_date ON anniversaries(date);
+
+-- 美食探店：一家店一条记录；菜品存在 dishes JSON（与规矩 items 同思路）
+-- status: want 想去 / visited 去过 / favorite 常去；photos 存 fileId 数组
+CREATE TABLE IF NOT EXISTS food_places (
+    id TEXT PRIMARY KEY,
+    author_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'other',   -- snack 小吃 / meal 正餐 / hotpot 火锅 / bbq 烧烤 / dessert 甜品 / drink 饮品 / other
+    status TEXT NOT NULL DEFAULT 'want',
+    rating INTEGER,                           -- 1~5，NULL 未评分
+    location TEXT DEFAULT '',
+    longitude REAL,
+    latitude REAL,
+    hours TEXT DEFAULT '',                    -- 营业时间（自由文本）
+    phone TEXT DEFAULT '',
+    avg_price INTEGER,                        -- 人均（元）
+    note TEXT DEFAULT '',
+    dishes TEXT NOT NULL DEFAULT '[]',        -- [{ id, name, rating, note, price }]
+    photos TEXT NOT NULL DEFAULT '[]',        -- fileId 数组
+    visited_at TEXT,                          -- 最近去/想去的日期 YYYY-MM-DD
+    created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+    updated_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_food_places_status ON food_places(status, updated_at);
 
 -- 评论：挂在日记（entry）或恋爱瞬间（moment）上，支持一级回复
 -- parent_id 为空 = 顶层评论；回复统一挂到顶层评论（回复的回复会扁平化）
@@ -464,6 +497,7 @@ ensureColumns('share_tokens', {
   include_moments: 'INTEGER NOT NULL DEFAULT 1',
   include_entries: 'INTEGER NOT NULL DEFAULT 1',
   include_anniversaries: 'INTEGER NOT NULL DEFAULT 1',
+  include_foods: 'INTEGER NOT NULL DEFAULT 1',
 })
 ensureColumns('companion_consents', { consent_version: 'INTEGER NOT NULL DEFAULT 0' })
 ensureColumns('comments', {

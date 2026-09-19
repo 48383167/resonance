@@ -3,7 +3,7 @@ import { resolveUrl } from '../file/file.service.js'
 
 // 跨模块聚合查询：Dashboard / 恋爱树 / 分享页 / 时间线共用
 // 单条标量子查询一次取回所有计数（原先 10 次独立 COUNT）
-export function stats({ includeMoments = true, includeEntries = true, includeAnniversaries = true } = {}) {
+export function stats({ includeMoments = true, includeEntries = true, includeAnniversaries = true, includeFoods = true } = {}) {
   const row = db.prepare(
     `SELECT
        (SELECT COUNT(*) FROM moments) AS moments,
@@ -15,7 +15,8 @@ export function stats({ includeMoments = true, includeEntries = true, includeAnn
        (SELECT COUNT(*) FROM wish_items WHERE status = 'doing') AS wishesDoing,
        (SELECT COUNT(*) FROM wish_items WHERE status = 'done') AS wishesDone,
        (SELECT COUNT(*) FROM time_capsules) AS capsules,
-       (SELECT COUNT(*) FROM anniversaries) AS anniversaries`
+       (SELECT COUNT(*) FROM anniversaries) AS anniversaries,
+       (SELECT COUNT(*) FROM food_places) AS foods`
   ).get()
   return {
     moments: includeMoments ? row.moments : 0,
@@ -28,6 +29,7 @@ export function stats({ includeMoments = true, includeEntries = true, includeAnn
     wishesDone: row.wishesDone,
     capsules: row.capsules,
     anniversaries: includeAnniversaries ? row.anniversaries : 0,
+    foods: includeFoods ? row.foods : 0,
   }
 }
 

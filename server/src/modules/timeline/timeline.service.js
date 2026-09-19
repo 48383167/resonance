@@ -6,9 +6,10 @@ import { list as listLetters } from '../letter/letter.repository.js'
 import { list as listWishes } from '../wish/wish.repository.js'
 import { list as listCapsules } from '../capsule/capsule.repository.js'
 import { list as listAnniversaries } from '../anniversary/anniversary.repository.js'
+import { listVisitedLite as listVisitedFoods } from '../food/food.repository.js'
 import { pairStartedAt } from '../couple/couple.repository.js'
 
-// 时光时间线：把两人的全部点滴（日记/瞬间/情书/心愿/胶囊/纪念日/照片）按时间合并
+// 时光时间线：把两人的全部点滴（日记/瞬间/情书/心愿/胶囊/纪念日/照片/探店）按时间合并
 export function getTimeline() {
   const events = []
 
@@ -55,6 +56,17 @@ export function getTimeline() {
     events.push({
       kind: 'anniversary', ts: `${a.date}T00:00:00.000Z`,
       title: a.title, text: a.description, anniversaryType: a.type,
+    })
+  }
+
+  for (const f of listVisitedFoods()) {
+    const topDish = f.dishes?.[0]?.name || ''
+    events.push({
+      kind: 'food',
+      ts: f.visited_at ? `${f.visited_at}T12:00:00.000Z` : f.created_at,
+      title: f.name, foodId: f.id,
+      text: [topDish ? `招牌：${topDish}` : '', f.note].filter(Boolean).join(' · '),
+      rating: f.rating, location: f.location, status: f.status, category: f.category,
     })
   }
 

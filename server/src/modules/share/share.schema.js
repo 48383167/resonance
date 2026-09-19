@@ -1,9 +1,9 @@
 import { BadRequestError } from '../../common/errors/BadRequestError.js'
 
 // 分享链接内容范围开关（camelCase 请求字段 ↔ snake_case 数据库列）
-const INCLUDE_KEYS = ['includeMoments', 'includeEntries', 'includeAnniversaries']
+const INCLUDE_KEYS = ['includeMoments', 'includeEntries', 'includeAnniversaries', 'includeFoods']
 
-// 校验三个布尔开关；defaultMissing=true 时缺省补 true（创建），否则只保留已提交字段（更新）
+// 校验布尔开关；defaultMissing=true 时缺省补 true（创建），否则只保留已提交字段（更新）
 function validateIncludeFlags(body = {}, { defaultMissing } = {}) {
   const out = {}
   for (const key of INCLUDE_KEYS) {

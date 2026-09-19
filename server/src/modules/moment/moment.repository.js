@@ -37,6 +37,30 @@ function getPhotos(momentId) {
   return getPhotosByMomentIds([momentId]).get(momentId) || []
 }
 
+// 批量取关联美食：一次 IN 查询后按 moment_id 分组
+export function getPlacesByMomentIds(ids) {
+  const uniq = [...new Set((ids || []).filter(Boolean))]
+  const byMoment = new Map(uniq.map((id) => [id, []]))
+  if (!uniq.length) return byMoment
+  const placeholders = uniq.map(() => '?').join(', ')
+  const rows = db.prepare(
+    `SELECT mp.moment_id, f.id, f.name, f.category, f.status, f.rating
+     FROM moment_places mp
+     INNER JOIN food_places f ON f.id = mp.place_id
+     WHERE mp.moment_id IN (${placeholders})
+     ORDER BY datetime(mp.created_at) ASC`
+  ).all(...uniq)
+  for (const row of rows) {
+    const { moment_id, ...place } = row
+    byMoment.get(moment_id)?.push(place)
+  }
+  return byMoment
+}
+
+function getPlaces(momentId) {
+  return getPlacesByMomentIds([momentId]).get(momentId) || []
+}
+
 function attachAuthor(moment) {
   moment.author = findUserById(moment.user_id)
   return moment
@@ -51,10 +75,18 @@ function setPhotos(momentId, fileIds) {
   }
 }
 
+function setPlaces(momentId, placeIds) {
+  db.prepare('DELETE FROM moment_places WHERE moment_id = ?').run(momentId)
+  for (const placeId of placeIds || []) {
+    db.prepare('INSERT INTO moment_places (moment_id, place_id) VALUES (?, ?)').run(momentId, placeId)
+  }
+}
+
 export function findById(id) {
   const m = db.prepare('SELECT * FROM moments WHERE id = ?').get(id)
   if (!m) return null
   m.photos = getPhotos(id)
+  m.places = getPlaces(id)
   return attachAuthor(m)
 }
 
@@ -62,7 +94,13 @@ export function list({ mood, keyword, startDate, endDate } = {}) {
   const conds = []
   const args = []
   if (mood) { conds.push('mood = ?'); args.push(mood) }
-  if (keyword) { conds.push('(content LIKE ? OR location LIKE ?)'); args.push(`%${keyword}%`, `%${keyword}%`) }
+  if (keyword) {
+    conds.push(`(content LIKE ? OR location LIKE ? OR EXISTS (
+      SELECT 1 FROM moment_places mp JOIN food_places f ON f.id = mp.place_id
+      WHERE mp.moment_id = moments.id AND f.name LIKE ?
+    ))`)
+    args.push(`%${keyword}%`, `%${keyword}%`, `%${keyword}%`)
+  }
   if (startDate) { conds.push('COALESCE(moment_date, date(created_at)) >= ?'); args.push(startDate) }
   if (endDate) { conds.push('COALESCE(moment_date, date(created_at)) <= ?'); args.push(endDate) }
   const where = conds.length ? 'WHERE ' + conds.join(' AND ') : ''
@@ -70,8 +108,10 @@ export function list({ mood, keyword, startDate, endDate } = {}) {
     `SELECT * FROM moments ${where} ORDER BY COALESCE(moment_date, date(created_at)) DESC, datetime(created_at) DESC`
   ).all(...args)
   const photos = getPhotosByMomentIds(rows.map((m) => m.id))
+  const places = getPlacesByMomentIds(rows.map((m) => m.id))
   return rows.map((m) => {
     m.photos = photos.get(m.id) || []
+    m.places = places.get(m.id) || []
     return attachAuthor(m)
   })
 }
@@ -82,8 +122,10 @@ export function listPublic() {
     'SELECT * FROM moments WHERE show_in_share = 1 ORDER BY COALESCE(moment_date, date(created_at)) DESC, datetime(created_at) DESC'
   ).all()
   const photos = getPhotosByMomentIds(rows.map((m) => m.id))
+  const places = getPlacesByMomentIds(rows.map((m) => m.id))
   return rows.map((m) => {
     m.photos = photos.get(m.id) || []
+    m.places = places.get(m.id) || []
     return attachAuthor(m)
   })
 }
@@ -95,23 +137,43 @@ export function listWithCoords() {
   ).all()
 }
 
-export function create({ userId, content, mood, location, longitude, latitude, momentDate, photos }) {
+// 美食详情「去过的约会」：按关联查瞬间（含照片与作者）
+export function listByPlaceId(placeId, limit = 50) {
+  const rows = db.prepare(`
+    SELECT m.* FROM moments m
+    INNER JOIN moment_places mp ON mp.moment_id = m.id
+    WHERE mp.place_id = ?
+    ORDER BY datetime(COALESCE(m.moment_date, m.created_at)) DESC, m.id DESC
+    LIMIT ?
+  `).all(placeId, limit)
+  const photos = getPhotosByMomentIds(rows.map((m) => m.id))
+  return rows.map((m) => {
+    m.photos = photos.get(m.id) || []
+    return attachAuthor(m)
+  })
+}
+
+export function create({ userId, content, mood, location, longitude, latitude, momentDate, photos, placeIds }) {
   const id = newId('m')
-  // moments + moment_photos 两写原子化：照片写入失败时回滚主记录
+  // moments + moment_photos + moment_places 多写原子化：任一步失败都回滚
   transaction(() => {
     db.prepare(
       'INSERT INTO moments (id, user_id, content, mood, location, longitude, latitude, moment_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
     ).run(id, userId, content, mood || 'normal', location || '', longitude ?? null, latitude ?? null, momentDate || null)
     setPhotos(id, photos || [])
+    setPlaces(id, placeIds || [])
   })
   return findById(id)
 }
 
-export function update(id, { content, mood, location, longitude, latitude, momentDate, photos }) {
-  db.prepare(
-    'UPDATE moments SET content = COALESCE(?, content), mood = COALESCE(?, mood), location = COALESCE(?, location), longitude = COALESCE(?, longitude), latitude = COALESCE(?, latitude), moment_date = COALESCE(?, moment_date) WHERE id = ?'
-  ).run(content ?? null, mood ?? null, location ?? null, longitude ?? null, latitude ?? null, momentDate ?? null, id)
-  if (photos) setPhotos(id, photos)
+export function update(id, { content, mood, location, longitude, latitude, momentDate, photos, placeIds }) {
+  transaction(() => {
+    db.prepare(
+      'UPDATE moments SET content = COALESCE(?, content), mood = COALESCE(?, mood), location = COALESCE(?, location), longitude = COALESCE(?, longitude), latitude = COALESCE(?, latitude), moment_date = COALESCE(?, moment_date) WHERE id = ?'
+    ).run(content ?? null, mood ?? null, location ?? null, longitude ?? null, latitude ?? null, momentDate ?? null, id)
+    if (photos) setPhotos(id, photos)
+    if (placeIds !== undefined) setPlaces(id, placeIds)
+  })
   return findById(id)
 }
 
@@ -122,6 +184,7 @@ export function updateShowInShare(id, showInShare) {
 }
 
 export function remove(id) {
+  db.prepare('DELETE FROM moment_places WHERE moment_id = ?').run(id)
   db.prepare('DELETE FROM moment_photos WHERE moment_id = ?').run(id)
   db.prepare('DELETE FROM moments WHERE id = ?').run(id)
 }

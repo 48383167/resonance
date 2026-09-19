@@ -28,6 +28,7 @@ export const navigationItems = [
   { name: 'companion', route: 'companion', label: '心语陪伴', icon: '☾', group: '连接', activeRoutes: ['companion'] },
   { name: 'albums', route: 'albums', label: '相册', icon: '▧', group: '回忆', activeRoutes: ['albums', 'album-new', 'album-edit', 'album-detail'] },
   { name: 'map', route: 'map', label: '地图', icon: '⌖', group: '回忆', activeRoutes: ['map'] },
+  { name: 'foods', route: 'foods', label: '美食', icon: '🍜', group: '回忆', activeRoutes: ['foods', 'food-new', 'food-edit', 'food-detail'] },
   { name: 'wishes', route: 'wishes', label: '心愿', icon: '◇', group: '计划', activeRoutes: ['wishes', 'wish-new', 'wish-edit', 'wish-read'] },
   { name: 'notebook', route: 'notebook', label: '小本本', icon: '✎', group: '日常', activeRoutes: ['notebook', 'care-new', 'care-edit', 'rule-new', 'rule-edit', 'rule-detail', 'rule-agree'] },
   { name: 'capsules', route: 'capsules', label: '胶囊', icon: '◌', group: '计划', activeRoutes: ['capsules', 'capsule-new', 'capsule-read'] },

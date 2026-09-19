@@ -92,7 +92,7 @@ async function saveDockSettings() {
 }
 const pw = ref({ old: '', next: '' })
 const share = ref(null)
-const shareForm = ref({ password: '', expireDays: 30, includeMoments: true, includeEntries: true, includeAnniversaries: true })
+const shareForm = ref({ password: '', expireDays: 30, includeMoments: true, includeEntries: true, includeAnniversaries: true, includeFoods: true })
 const locationOrigin = globalThis.location.origin
 const themeDraft = ref(normalizeTheme(currentTheme))
 const themeSaving = ref(false)
@@ -122,6 +122,7 @@ const shareOptions = [
   { key: 'includeMoments', label: '恋爱瞬间', icon: '📷', description: '照片与当时写下的心情' },
   { key: 'includeEntries', label: '公开日记', icon: '📝', description: '标记为公开的文字日记' },
   { key: 'includeAnniversaries', label: '纪念日', icon: '🌷', description: '一起珍藏的重要日期' },
+  { key: 'includeFoods', label: '美食', icon: '🍜', description: '去过和常去的店与招牌菜' },
 ]
 const GENDERS = [
   { value: '', label: '不填' },
@@ -297,6 +298,7 @@ function syncShareForm(value) {
   shareForm.value.includeMoments = value.includeMoments !== false
   shareForm.value.includeEntries = value.includeEntries !== false
   shareForm.value.includeAnniversaries = value.includeAnniversaries !== false
+  shareForm.value.includeFoods = value.includeFoods !== false
 }
 
 async function createShare() {
@@ -310,6 +312,7 @@ async function createShare() {
       includeMoments: shareForm.value.includeMoments,
       includeEntries: shareForm.value.includeEntries,
       includeAnniversaries: shareForm.value.includeAnniversaries,
+      includeFoods: shareForm.value.includeFoods,
     }, createShareKey)
     createShareKey = null
     share.value = data
@@ -335,6 +338,7 @@ async function saveShareContent() {
       includeMoments: shareForm.value.includeMoments,
       includeEntries: shareForm.value.includeEntries,
       includeAnniversaries: shareForm.value.includeAnniversaries,
+      includeFoods: shareForm.value.includeFoods,
     })
     share.value = updated
     syncShareForm(updated)

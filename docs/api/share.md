@@ -2,20 +2,21 @@
 
 > 分享链接用于将双人空间的部分内容以只读方式公开给访客。
 > 每次仅存在一个有效分享链接；链接支持可选密码、有效期、浏览计数，
-> 并可按内容范围（恋爱瞬间 / 公开日记 / 纪念日）控制对外可见类别。
+> 并可按内容范围（恋爱瞬间 / 公开日记 / 纪念日 / 美食）控制对外可见类别。
 
 ## 数据模型
 
-`share_tokens` 新增三列（建表与老库补列均覆盖，迁移幂等）：
+`share_tokens` 新增四列（建表与老库补列均覆盖，迁移幂等）：
 
 ```sql
 include_moments       INTEGER NOT NULL DEFAULT 1  -- 1=分享恋爱瞬间，0=关闭
 include_entries       INTEGER NOT NULL DEFAULT 1  -- 1=分享公开日记，0=关闭
 include_anniversaries INTEGER NOT NULL DEFAULT 1  -- 1=分享纪念日，0=关闭
+include_foods         INTEGER NOT NULL DEFAULT 1  -- 1=分享去过/常去的美食，0=关闭
 ```
 
 - 老库既有 `share_tokens` 行由 `ensureColumns` 自动补列，默认值为 `1`，
-  保证既有分享行为不变（三类内容照旧可见）。
+  保证既有分享行为不变（四类内容照旧可见）。
 
 ## 条目级可见性（show_in_share）
 
@@ -39,8 +40,9 @@ anniversaries.show_in_share INTEGER NOT NULL DEFAULT 1  -- 1=该纪念日可进�
 | `includeMoments` | `include_moments` | `true` | 恋爱瞬间 |
 | `includeEntries` | `include_entries` | `true` | 公开日记（`entries.is_public = 1`） |
 | `includeAnniversaries` | `include_anniversaries` | `true` | 纪念日 |
+| `includeFoods` | `include_foods` | `true` | 美食（`status` 为 `visited/favorite` 的店） |
 
-三个开关均为 boolean，非 boolean 一律返回 `400`。
+四个开关均为 boolean，非 boolean 一律返回 `400`。
 
 ## API 契约
 
@@ -58,7 +60,8 @@ anniversaries.show_in_share INTEGER NOT NULL DEFAULT 1  -- 1=该纪念日可进�
   "password": "",
   "includeMoments": true,
   "includeEntries": false,
-  "includeAnniversaries": true
+  "includeAnniversaries": true,
+  "includeFoods": true
 }
 ```
 
@@ -71,6 +74,7 @@ anniversaries.show_in_share INTEGER NOT NULL DEFAULT 1  -- 1=该纪念日可进�
 | `includeMoments` | boolean | `true` | 是否分享恋爱瞬间 |
 | `includeEntries` | boolean | `true` | 是否分享公开日记 |
 | `includeAnniversaries` | boolean | `true` | 是否分享纪念日 |
+| `includeFoods` | boolean | `true` | 是否分享美食（去过/常去的店） |
 
 成功响应（`200`）：
 
@@ -85,7 +89,8 @@ anniversaries.show_in_share INTEGER NOT NULL DEFAULT 1  -- 1=该纪念日可进�
     "hasPassword": false,
     "includeMoments": true,
     "includeEntries": false,
-    "includeAnniversaries": true
+    "includeAnniversaries": true,
+    "includeFoods": true
   }
 }
 ```
@@ -112,7 +117,8 @@ anniversaries.show_in_share INTEGER NOT NULL DEFAULT 1  -- 1=该纪念日可进�
     "hasPassword": false,
     "includeMoments": true,
     "includeEntries": false,
-    "includeAnniversaries": true
+    "includeAnniversaries": true,
+    "includeFoods": true
   }
 }
 ```
@@ -143,7 +149,8 @@ anniversaries.show_in_share INTEGER NOT NULL DEFAULT 1  -- 1=该纪念日可进�
     "hasPassword": false,
     "includeMoments": true,
     "includeEntries": false,
-    "includeAnniversaries": true
+    "includeAnniversaries": true,
+    "includeFoods": true
   }
 }
 ```
@@ -282,9 +289,11 @@ anniversaries.show_in_share INTEGER NOT NULL DEFAULT 1  -- 1=该纪念日可进�
 - `include_moments = 0` → `moments: []`，`stats.moments = 0`
 - `include_entries = 0` → `entries: []`，`stats.entries = 0`
 - `include_anniversaries = 0` → `anniversaries: []`，`stats.anniversaries = 0`
-- 类别开关开启时，`moments` 只下发 `show_in_share = 1` 的瞬间，`anniversaries` 只下发 `show_in_share = 1` 的纪念日；
+- `include_foods = 0` → `foods: []`，`stats.foods = 0`
+- 类别开关开启时，`moments` 只下发 `show_in_share = 1` 的瞬间，`anniversaries` 只下发 `show_in_share = 1` 的纪念日，
+  `foods` 只下发 `status` 为 `visited/favorite` 的店（想去的不进分享）；
   条目级过滤在 repository 的 public list 中完成，不在 controller/前端过滤。
-- `stats.moments / stats.entries / stats.anniversaries` 与实际下发数组长度一致；其余统计字段保留。
+- `stats.moments / stats.entries / stats.anniversaries / stats.foods` 与实际下发数组长度一致；其余统计字段保留。
 
 特殊状态（保持原 API 兼容）：
 

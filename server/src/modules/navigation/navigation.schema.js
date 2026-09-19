@@ -3,7 +3,7 @@ import { AppError } from '../../common/errors/AppError.js'
 // 合法导航入口：与前端 shared/navigation.js 的 name 一一对应
 export const NAV_ITEM_NAMES = [
   'home', 'timeline', 'diary-list', 'moments', 'letters', 'companion',
-  'albums', 'map', 'wishes', 'notebook', 'capsules', 'anniversaries', 'observatory', 'settings',
+  'albums', 'map', 'foods', 'wishes', 'notebook', 'capsules', 'anniversaries', 'observatory', 'settings',
 ]
 export const MIN_NAV_ITEMS = 1
 export const MAX_NAV_ITEMS = 5

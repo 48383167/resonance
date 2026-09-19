@@ -26,6 +26,7 @@ const modules = [
   { name: 'diary-list', icon: '📔', label: '日记', desc: '全部日记列表', color: 'rgb(var(--accent-2-rgb) / 0.22)' },
   { name: 'moments', icon: '✨', label: '恋爱瞬间', desc: '此刻的心情与地点', color: 'rgb(var(--accent-rgb) / 0.22)' },
   { name: 'map', icon: '🗺️', label: '恋爱地图', desc: '一起走过的足迹', color: 'rgb(var(--accent-2-rgb) / 0.22)' },
+  { name: 'foods', icon: '🍜', label: '美食', desc: '哪家的什么好吃', color: 'rgb(var(--accent-2-rgb) / 0.2)' },
   { name: 'letters', icon: '💌', label: '情书', desc: '写给 Ta 的话', color: 'rgb(var(--accent-rgb) / 0.22)' },
   { name: 'companion', icon: '☾', label: '心语陪伴', desc: '只听你说说', color: 'rgb(var(--accent-2-rgb) / 0.2)' },
   { name: 'albums', icon: '📷', label: '相册', desc: '照片与回忆', color: 'rgb(var(--accent-2-rgb) / 0.2)' },
@@ -112,6 +113,7 @@ const statCards = (s) => [
   { icon: '📷', label: '照片', value: s.photos, route: '/albums' },
   { icon: '🎉', label: '心愿完成', value: s.wishesDone, route: '/wishes' },
   { icon: '⏳', label: '时间胶囊', value: s.capsules, route: '/capsules' },
+  { icon: '🍜', label: '美食', value: s.foods || 0, route: '/foods' },
 ]
 
 // 评论未读角标：日记 / 恋爱瞬间模块入口

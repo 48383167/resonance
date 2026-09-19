@@ -5,15 +5,15 @@ function newId(prefix) {
   return prefix + '_' + randomUUID().slice(0, 12)
 }
 
-export function create({ token, password, expiresAt, includeMoments, includeEntries, includeAnniversaries }) {
+export function create({ token, password, expiresAt, includeMoments, includeEntries, includeAnniversaries, includeFoods }) {
   const id = newId('st')
   // 删除旧分享 + 插入新分享原子化：新分享插入失败时不至于误删旧分享
   transaction(() => {
     db.prepare('DELETE FROM share_tokens WHERE status = 1').run() // 同时仅一个有效分享
     db.prepare(
       `INSERT INTO share_tokens
-         (id, token, password, expires_at, view_count, status, include_moments, include_entries, include_anniversaries)
-       VALUES (?, ?, ?, ?, 0, 1, ?, ?, ?)`
+         (id, token, password, expires_at, view_count, status, include_moments, include_entries, include_anniversaries, include_foods)
+       VALUES (?, ?, ?, ?, 0, 1, ?, ?, ?, ?)`
     ).run(
       id,
       token,
@@ -21,7 +21,8 @@ export function create({ token, password, expiresAt, includeMoments, includeEntr
       expiresAt || null,
       includeMoments ? 1 : 0,
       includeEntries ? 1 : 0,
-      includeAnniversaries ? 1 : 0
+      includeAnniversaries ? 1 : 0,
+      includeFoods ? 1 : 0
     )
   })
   return db.prepare('SELECT * FROM share_tokens WHERE id = ?').get(id)
@@ -32,19 +33,21 @@ export function getActive() {
 }
 
 // 更新当前有效分享的内容范围开关；null 表示保留当前值
-export function updateActive({ includeMoments = null, includeEntries = null, includeAnniversaries = null }) {
+export function updateActive({ includeMoments = null, includeEntries = null, includeAnniversaries = null, includeFoods = null }) {
   const st = getActive()
   if (!st) return null
   db.prepare(
     `UPDATE share_tokens SET
        include_moments = COALESCE(?, include_moments),
        include_entries = COALESCE(?, include_entries),
-       include_anniversaries = COALESCE(?, include_anniversaries)
+       include_anniversaries = COALESCE(?, include_anniversaries),
+       include_foods = COALESCE(?, include_foods)
      WHERE id = ?`
   ).run(
     includeMoments == null ? null : (includeMoments ? 1 : 0),
     includeEntries == null ? null : (includeEntries ? 1 : 0),
     includeAnniversaries == null ? null : (includeAnniversaries ? 1 : 0),
+    includeFoods == null ? null : (includeFoods ? 1 : 0),
     st.id
   )
   return db.prepare('SELECT * FROM share_tokens WHERE id = ?').get(st.id)
