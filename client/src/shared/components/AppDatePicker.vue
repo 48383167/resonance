@@ -5,6 +5,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 const props = defineProps({
   modelValue: { type: String, default: '' },
   placeholder: { type: String, default: '选择日期' },
+  max: { type: String, default: '' }, // 可选上限 YYYY-MM-DD（如不允许未来）
 })
 const emit = defineEmits(['update:modelValue'])
 
@@ -44,12 +45,18 @@ const label = computed(() => {
 
 function shift(n) {
   const d = new Date(viewYear.value, viewMonth.value + n, 1)
+  // 有上限时不允许翻到超过上限的月份
+  if (n > 0 && props.max && `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` > props.max.slice(0, 7)) return
   viewYear.value = d.getFullYear()
   viewMonth.value = d.getMonth()
 }
 
+function isDisabled(day) {
+  return !day || Boolean(props.max && day > props.max)
+}
+
 function pick(day) {
-  if (!day) return
+  if (!day || isDisabled(day)) return
   emit('update:modelValue', day)
   open.value = false
 }
@@ -97,10 +104,10 @@ onUnmounted(() => document.removeEventListener('click', onDocClick))
         </div>
         <div class="grid grid-cols-7 gap-0.5 text-center">
           <span v-for="w in WEEKDAYS" :key="w" class="py-1 text-[11px] text-white/35">{{ w }}</span>
-          <button v-for="(day, i) in cells" :key="i" type="button" :disabled="!day"
-             class="aspect-square min-h-8 rounded-lg text-[13px] transition-colors"
+          <button v-for="(day, i) in cells" :key="i" type="button" :disabled="isDisabled(day)"
+             class="aspect-square min-h-8 rounded-lg text-[13px] transition-colors disabled:opacity-30"
             :class="[
-              day ? 'text-white/80 hover:bg-accent-soft' : '',
+              day && !isDisabled(day) ? 'text-white/80 hover:bg-accent-soft' : '',
               day === modelValue ? 'bg-accent-soft font-semibold text-accent ring-1 ring-accent' : '',
               day === todayStr && day !== modelValue ? 'ring-1 ring-accent-2' : '',
             ]"

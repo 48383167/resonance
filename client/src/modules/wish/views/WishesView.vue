@@ -3,7 +3,8 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { listWishes, setWishStatus, removeWish } from '../wish.api.js'
 import { toast } from '../../../stores/toast'
-import { confirmDialog } from '../../../stores/confirm'
+import { confirmDialog, promptDateDialog } from '../../../stores/confirm'
+import { localDateStr } from '../../../utils/date'
 
 const router = useRouter()
 const wishes = ref([])
@@ -34,10 +35,21 @@ async function move(w, dir) {
   const order = ['todo', 'doing', 'done']
   const i = order.indexOf(w.status) + dir
   if (i < 0 || i > 2) return
+  const next = order[i]
+  // 向前流转先选日期（默认今天，用于补记真实开始/完成日）；退回不弹窗、照旧清空
+  let date = null
+  if (dir > 0) {
+    date = await promptDateDialog({
+      title: next === 'done' ? '什么时候完成的？' : '什么时候开始的？',
+      message: `「${w.title}」—— 默认今天，可改成实际发生的日期`,
+      defaultDate: localDateStr(),
+    })
+    if (!date) return
+  }
   try {
-    await setWishStatus(w.id, order[i])
-    if (order[i] === 'done') toast(`🎉 完成了一个心愿：${w.title}`)
-    else toast(`「${w.title}」已进入${order[i] === 'doing' ? '进行中' : '待办'}`)
+    await setWishStatus(w.id, next, date)
+    if (next === 'done') toast(`🎉 完成了一个心愿：${w.title}`)
+    else toast(`「${w.title}」已进入${next === 'doing' ? '进行中' : '待办'}`)
     await load()
   } catch (e) {
     toast(e.message)

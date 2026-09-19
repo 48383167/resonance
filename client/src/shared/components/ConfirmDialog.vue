@@ -1,12 +1,15 @@
 <script setup>
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { confirmState } from '../../stores/confirm'
+import { localDateStr } from '../../utils/date'
 
 const inputEl = ref(null)
 let onKey = null
 let previousOverflow = ''
+const todayStr = localDateStr()
 const confirmed = computed(() =>
-  !confirmState.requireText || confirmState.inputValue.trim() === confirmState.requireText)
+  (!confirmState.requireText || confirmState.inputValue.trim() === confirmState.requireText)
+  && (!confirmState.dateMode || Boolean(confirmState.dateValue)))
 
 function unlockBody() {
   if (onKey) window.removeEventListener('keydown', onKey)
@@ -56,12 +59,18 @@ onUnmounted(unlockBody)
             :placeholder="confirmState.requireText" @keyup.enter="answer(true)" />
         </div>
 
+        <!-- 日期选择：补记真实发生日期（不允许未来） -->
+        <div v-if="confirmState.dateMode" class="mt-4 text-left">
+          <label class="mb-1 block text-xs text-white/50">日期（最多选到今天）</label>
+          <input ref="inputEl" v-model="confirmState.dateValue" type="date" class="input-dark" :max="todayStr" />
+        </div>
+
         <div class="mt-5 flex flex-col-reverse justify-center gap-3 sm:flex-row">
           <button class="btn-ghost w-full flex-1" @click="answer(false)">再想想</button>
           <button class="btn-primary w-full flex-1"
             :class="{ 'opacity-40': !confirmed }"
             :style="confirmState.danger ? 'background: linear-gradient(135deg,#fb7185,#f43f5e); box-shadow: 0 4px 24px rgba(244,63,94,.35)' : ''"
-            @click="answer(true)">{{ confirmState.danger ? '确认删除' : '确认' }}</button>
+            @click="answer(true)">{{ confirmState.danger ? '确认删除' : confirmState.dateConfirmText }}</button>
         </div>
       </div>
     </div>

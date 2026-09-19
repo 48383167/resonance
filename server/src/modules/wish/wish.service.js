@@ -20,15 +20,19 @@ export function create(userId, raw) {
 export function update(id, raw) {
   const wish = wishRepository.findById(id)
   if (!wish) throw new NotFoundError('心愿不存在')
-  return wishRepository.update(id, raw)
+  return wishRepository.update(id, wishSchema.validateUpdate(raw))
 }
 
-// 快捷看板流转：todo -> doing -> done
+// 快捷看板流转：todo -> doing -> done；可带 date 补记本次流转的真实日期（缺省今天）
 export function setStatus(id, raw) {
   const wish = wishRepository.findById(id)
   if (!wish) throw new NotFoundError('心愿不存在')
-  const { status } = wishSchema.validateStatus(raw)
-  return wishRepository.update(id, { status })
+  const { status, date } = wishSchema.validateStatus(raw)
+  if (!date) return wishRepository.update(id, { status })
+  const changes = { status }
+  if (status === 'doing') changes.startedAt = date
+  if (status === 'done') changes.completedAt = date
+  return wishRepository.update(id, changes)
 }
 
 export function remove(id) {

@@ -4,15 +4,17 @@ import { useRoute, useRouter } from 'vue-router'
 import { getWish, createWish, updateWish } from '../wish.api.js'
 import { toast } from '../../../stores/toast'
 import AppSelect from '../../../shared/components/AppSelect.vue'
+import AppDatePicker from '../../../shared/components/AppDatePicker.vue'
+import { localDateStr } from '../../../utils/date'
 import { generateIdempotencyKey } from '../../../utils/idempotency.js'
 
-// 许愿 / 编辑心愿：独立页面
+// 许愿 / 编辑心愿：独立页面；开始/完成日期可补记与修正
 const route = useRoute()
 const router = useRouter()
 const editingId = route.params.id || null
 const busy = ref(false)
 let createKey = null
-const form = ref({ title: '', description: '', category: 'other', priority: 0 })
+const form = ref({ title: '', description: '', category: 'other', priority: 0, startedAt: '', completedAt: '' })
 
 const CATEGORIES = [
   { value: 'travel', label: '旅行', icon: '✈️' },
@@ -33,11 +35,20 @@ function goBack() {
   else router.push('/wishes')
 }
 
+const today = localDateStr()
+
 onMounted(async () => {
   if (!editingId) return
   try {
     const w = await getWish(editingId)
-    form.value = { title: w.title, description: w.description, category: w.category, priority: w.priority }
+    form.value = {
+      title: w.title,
+      description: w.description,
+      category: w.category,
+      priority: w.priority,
+      startedAt: (w.started_at || '').slice(0, 10),
+      completedAt: (w.completed_at || '').slice(0, 10),
+    }
   } catch (e) {
     toast(e.message)
     router.push('/wishes')
@@ -49,7 +60,12 @@ async function save() {
   if (!form.value.title.trim()) return toast('写个心愿吧')
   busy.value = true
   try {
-    const payload = { ...form.value, title: form.value.title.trim() }
+    const payload = {
+      ...form.value,
+      title: form.value.title.trim(),
+      startedAt: form.value.startedAt || null,
+      completedAt: form.value.completedAt || null,
+    }
     if (editingId) await updateWish(editingId, payload)
     else {
       createKey ||= generateIdempotencyKey()
@@ -93,6 +109,20 @@ async function save() {
         <div>
           <label class="mb-1 block text-xs text-white/50">优先级</label>
           <AppSelect v-model="form.priority" :options="PRIORITIES" placeholder="优先级" />
+        </div>
+      </div>
+    </div>
+
+    <div class="glass mb-4 p-5">
+      <p class="mb-3 text-xs text-white/50">时间补记（可留空；用于修正真实的开始 / 完成日期）</p>
+      <div class="grid gap-4 md:grid-cols-2">
+        <div>
+          <label class="mb-1 block text-xs text-white/50">开始日期</label>
+          <AppDatePicker v-model="form.startedAt" :max="today" placeholder="选择日期（可空）" />
+        </div>
+        <div>
+          <label class="mb-1 block text-xs text-white/50">完成日期</label>
+          <AppDatePicker v-model="form.completedAt" :max="today" placeholder="选择日期（可空）" />
         </div>
       </div>
     </div>
