@@ -6,6 +6,7 @@ import { listCareItems } from '../../care/care.api.js'
 import { CATEGORY_LABELS, FOOD_STATUSES, STATUS_LABELS, STATUS_CLASSES } from '../food.constants.js'
 import FoodRating from '../components/FoodRating.vue'
 import CommentSection from '../../comment/components/CommentSection.vue'
+import PinMenu from '../../../shared/components/PinMenu.vue'
 import { socket } from '../../../socket'
 import { toast } from '../../../stores/toast'
 import { confirmDialog } from '../../../stores/confirm'
@@ -19,6 +20,7 @@ const loading = ref(true)
 const busy = ref(false)
 const careItems = ref([])
 const moments = ref([])
+const pinOpen = ref(false)
 
 const canGoBack = Boolean(history.state?.back)
 function goBack() {
@@ -124,6 +126,13 @@ onUnmounted(() => {
         <h1 class="serif text-xl">{{ place.name }}</h1>
         <span class="rounded-full px-2 py-0.5 text-[11px]" :class="STATUS_CLASSES[place.status]">{{ STATUS_LABELS[place.status] }}</span>
         <span class="text-[11px] text-theme-tertiary">{{ CATEGORY_LABELS[place.category] }}</span>
+        <button class="ml-auto min-h-10 min-w-10 transition-colors"
+          :class="pinOpen || place.pin_scope ? 'text-accent' : 'text-theme-tertiary hover:text-accent'"
+          title="设置置顶" @click="pinOpen = !pinOpen">📌</button>
+      </div>
+      <div v-if="pinOpen">
+        <PinMenu target-type="food" :target-id="place.id" :scope="place.pin_scope || 'none'"
+          @close="pinOpen = false" @change="load" />
       </div>
       <div class="mt-1.5 flex items-center gap-2">
         <FoodRating :model-value="place.rating" readonly />

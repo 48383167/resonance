@@ -97,12 +97,17 @@
 
 删除记录，并软删全部图片文件。
 
+### 7. GET /api/foods/:id/moments
+
+店详情「去过的约会」：返回关联的瞬间摘要（`id / content / mood / moment_date / location / photos / author`），
+按发生日期倒序，最多 50 条。权限同详情。
+
 ## Socket 事件（房间 `couple:{pairCode}`）
 
 | 事件 | 负载 | 触发 |
 |---|---|---|
 | `food:created` | foodPlace | 新建 |
-| `food:updated` | foodPlace | 更新 / 状态流转 |
+| `food:updated` | foodPlace | 更新 / 状态流转 / 约会打卡自动标记 |
 | `food:deleted` | `{ id }` | 删除 |
 
 ## 错误码
@@ -120,13 +125,21 @@
 | `/foods` | `foods` | 美食列表（状态/分类筛选 + 搜索） |
 | `/foods/new` | `food-new` | 记一家店 |
 | `/foods/:id/edit` | `food-edit` | 编辑 |
-| `/foods/:id` | `food-detail` | 详情（菜品、避雷提示、照片） |
+| `/foods/:id` | `food-detail` | 详情（菜品、避雷提示、照片、评论、去过的约会） |
 
 ## 与其他模块的集成
 
+- **约会打卡（瞬间 ↔ 店）**：瞬间创建/编辑接受 `placeIds`（最多 5 家，自动过滤非本空间 id），
+  响应带 `places: [{ id, name, category, status, rating }]`；瞬间列表按关联店名也能搜到。
+  关联「想去」的店时自动标记为「去过」并写 `visited_at = 瞬间日期`（`markVisited` 仅作用于 `want`）。
+  删除瞬间或店都会清理 `moment_places` 关联行。
 - **恋爱地图**：`GET /api/foods/map` 作为「美食」图层与足迹叠加展示，标记点击可进详情。
 - **时间线**：`status` 为 `visited/favorite` 的店进入 `food` kind（时间取 `visited_at || created_at`）。
 - **首页**：模块入口「🍜 美食」与统计卡「美食 N 家」。
+- **评论**：`comments.target_type = 'food'`，权限按 `food_places.author_id` 判定；
+  删除店时级联清理评论与已读记录（见 `docs/api/comment.md`）。
+- **置顶**：`PUT /api/pins` 支持 `targetType = 'food'`；列表置顶在美食列表排最前，
+  全站置顶进入顶部横幅与首页「我们记着」，点击直达店详情（见 `docs/api/notebook.md` 置顶章节）。
 - **分享链接**：`includeFoods` 开关（见 `docs/api/share.md`）；开启时分享页展示「美食地图」区块，
   仅包含 `visited/favorite`，不下发「想去」。
 - **忌口避雷（前端规则）**：详情页读取 `care` 的 `diet/allergy` 条目，与店名/菜品名做双向名称包含匹配，

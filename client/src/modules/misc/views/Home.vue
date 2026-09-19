@@ -123,13 +123,19 @@ function unreadOfModule(name) {
   if (name === 'foods') return commentUnread.food
   return 0
 }
+
+// 全站置顶点击：美食直达详情，其余回小本本对应 Tab
+function openPin(item) {
+  if (item.targetType === 'food') return router.push(`/foods/${item.targetId}`)
+  router.push({ path: '/notebook', query: { tab: item.targetType === 'care' && item.category === 'period' ? 'period' : item.targetType } })
+}
 </script>
 
 <template>
   <div v-if="dash" class="fade-up space-y-5">
     <section v-if="pins.global.length" class="glass p-5">
       <div class="mb-3 flex items-center justify-between"><h2 class="serif text-lg">📌 我们记着</h2><button class="text-xs text-accent" @click="router.push('/notebook')">查看全部 →</button></div>
-      <div class="flex flex-wrap gap-2"><button v-for="item in pins.global.slice(0, 6)" :key="item.targetType + item.targetId" class="rounded-full border px-3 py-2 text-sm" :class="item.type === 'redline' ? 'danger-link border-current' : 'border-accent text-accent'" @click="router.push({ path: '/notebook', query: { tab: item.targetType === 'care' && item.category === 'period' ? 'period' : item.targetType } })">{{ item.title }}</button></div>
+      <div class="flex flex-wrap gap-2"><button v-for="item in pins.global.slice(0, 6)" :key="item.targetType + item.targetId" class="rounded-full border px-3 py-2 text-sm" :class="item.type === 'redline' ? 'danger-link border-current' : 'border-accent text-accent'" @click="openPin(item)">{{ item.title }}</button></div>
     </section>
     <!-- 我们 -->
     <div class="relative z-20 rounded-2xl bg-white/5 p-5 backdrop-blur">

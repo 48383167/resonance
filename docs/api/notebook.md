@@ -61,7 +61,7 @@
 | 字段 | 类型 | 说明 |
 |---|---|---|
 | id | TEXT | `pin_` + uuid 前 12 位 |
-| target_type | TEXT | v1 仅支持 `care` / `rule`（预留扩展其他模块） |
+| target_type | TEXT | 支持 `care` 档案 / `rule` 规矩 / `food` 美食（预留扩展其他模块） |
 | target_id | TEXT | 目标资源 ID |
 | pin_scope | TEXT | `list` 列表置顶 / `global` 全站置顶 |
 | pinned_by | TEXT | 操作人 |
@@ -376,10 +376,11 @@
 { "targetType": "care", "targetId": "care_ab12cd34ef56", "scope": "global" }
 ```
 
-- `targetType` 仅 `care` / `rule`，否则 400 `INVALID_PIN_TARGET_TYPE`
+- `targetType` 仅 `care` / `rule` / `food`，否则 400 `INVALID_PIN_TARGET_TYPE`
 - `scope` 仅 `none` / `list` / `global`，否则 400 `INVALID_PIN_SCOPE`
 - `scope = "none"` 即取消置顶（删除置顶行）
 - 目标不存在 → 404 `PIN_TARGET_NOT_FOUND`
+- 目标不属于当前用户的情侣空间 → 403（置顶是空间内私有操作）
 - 成功返回 `{ "targetType": "care", "targetId": "care_ab12cd34ef56", "scope": "global" }`
 - 广播 `pin:updated`
 
@@ -387,7 +388,7 @@
 
 `GET /api/pins/global`
 
-按置顶时间倒序；解析目标内容，目标已删除的孤儿行跳过。
+按置顶时间倒序；只返回当前用户所属情侣空间的置顶，解析目标内容，目标已删除的孤儿行跳过。
 
 ```json
 {
@@ -409,7 +410,9 @@
 }
 ```
 
-> `type` 仅 rule 条目有值；`category/severity/subject_id` 仅 care 条目有值。
+> `type` 仅 rule 条目有值；`category/severity/subject_id` 仅 care 条目有值；
+> food 条目：`title = 店名`、`content = 总评`，并额外带 `status`（want/visited/favorite）与 `rating`，
+> `category` 为美食分类（snack/meal/hotpot/bbq/dessert/drink/other）。
 
 ## Dashboard 增量
 

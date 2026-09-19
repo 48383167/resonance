@@ -26,16 +26,25 @@ const restCount = computed(() => Math.max(0, pins.global.length - 1))
 
 const CARE_LABELS = { diet: '忌口', allergy: '过敏', period: '例假', preference: '偏好', other: '其他' }
 const RULE_LABELS = { redline: '底线', rule: '约定', suggestion: '建议' }
+const FOOD_LABELS = { snack: '小吃', meal: '正餐', hotpot: '火锅', bbq: '烧烤', dessert: '甜品', drink: '饮品', other: '美食' }
+const FOOD_STATUS_LABELS = { want: '想去', visited: '去过', favorite: '常去' }
 
 function badgeOf(item) {
   if (item.targetType === 'rule') {
     return { text: RULE_LABELS[item.type] || '规矩', danger: item.type === 'redline' }
+  }
+  if (item.targetType === 'food') {
+    return { text: FOOD_STATUS_LABELS[item.status] || FOOD_LABELS[item.category] || '美食', danger: false }
   }
   return { text: CARE_LABELS[item.category] || '档案', danger: false }
 }
 
 function go(item) {
   expanded.value = false
+  if (item.targetType === 'food') {
+    router.push(`/foods/${item.targetId}`)
+    return
+  }
   const tab = item.targetType === 'care' && item.category === 'period' ? 'period' : item.targetType
   router.push({ path: '/notebook', query: { tab } })
 }

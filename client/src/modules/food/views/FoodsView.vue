@@ -8,6 +8,7 @@ import { session } from '../../../stores/session'
 import { FOOD_CATEGORIES, FOOD_STATUSES, CATEGORY_LABELS, STATUS_LABELS, STATUS_CLASSES } from '../food.constants.js'
 import FoodRating from '../components/FoodRating.vue'
 import CommentCountBadge from '../../../shared/components/CommentCountBadge.vue'
+import PinMenu from '../../../shared/components/PinMenu.vue'
 
 // 美食列表：状态 / 分类筛选 + 关键词搜索（店名 / 菜名 / 地点 / 笔记），数据量小走本地过滤
 const router = useRouter()
@@ -16,6 +17,7 @@ const loading = ref(true)
 const fStatus = ref('')
 const fCategory = ref('')
 const keyword = ref('')
+const pinTarget = ref(null)
 
 const statusFilters = [{ value: '', label: '全部' }, ...FOOD_STATUSES]
 const categoryFilters = [{ value: '', label: '全部' }, ...FOOD_CATEGORIES]
@@ -113,30 +115,44 @@ defineExpose({ load })
       <article v-for="f in filtered" :key="f.id"
         class="glass cursor-pointer p-4 transition-colors hover:bg-white/5"
         @click="router.push(`/foods/${f.id}`)">
-        <div class="flex flex-wrap items-center gap-2">
-          <h3 class="font-medium">{{ f.name }}</h3>
-          <span class="rounded-full px-2 py-0.5 text-[11px]" :class="STATUS_CLASSES[f.status]">{{ STATUS_LABELS[f.status] }}</span>
-          <span class="text-[11px] text-theme-tertiary">{{ CATEGORY_LABELS[f.category] }}</span>
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <h3 class="font-medium">{{ f.name }}</h3>
+              <span v-if="f.pin_scope" class="text-[11px] text-accent" title="已置顶">📌</span>
+              <span class="rounded-full px-2 py-0.5 text-[11px]" :class="STATUS_CLASSES[f.status]">{{ STATUS_LABELS[f.status] }}</span>
+              <span class="text-[11px] text-theme-tertiary">{{ CATEGORY_LABELS[f.category] }}</span>
+            </div>
+
+            <FoodRating v-if="f.rating" :model-value="f.rating" readonly class="mt-1" />
+
+            <p v-if="f.dishes?.length" class="mt-1.5 flex flex-wrap gap-1.5">
+              <span v-for="d in f.dishes.slice(0, 3)" :key="d.id"
+                class="rounded-full border border-white/10 px-2 py-0.5 text-[11px] text-theme-secondary">
+                {{ d.name }}<template v-if="d.rating"> · {{ d.rating }}★</template>
+              </span>
+              <span v-if="f.dishes.length > 3" class="self-center text-[11px] text-theme-tertiary">+{{ f.dishes.length - 3 }}</span>
+            </p>
+
+            <p class="mt-1.5 text-[11px] text-theme-tertiary">
+              <template v-if="f.location">📍 {{ f.location }}</template>
+              <template v-if="f.avg_price != null"> · 人均 ¥{{ f.avg_price }}</template>
+              <template v-if="f.hours"> · {{ f.hours }}</template>
+            </p>
+
+            <div v-if="f.comment_count" class="mt-2">
+              <CommentCountBadge :count="f.comment_count" :unread="f.unread_comment_count" />
+            </div>
+          </div>
+
+          <button class="min-h-10 min-w-10 shrink-0 transition-colors"
+            :class="pinTarget?.id === f.id ? 'text-accent' : 'text-theme-tertiary hover:text-accent'"
+            title="设置置顶" @click.stop="pinTarget = pinTarget?.id === f.id ? null : f">📌</button>
         </div>
 
-        <FoodRating v-if="f.rating" :model-value="f.rating" readonly class="mt-1" />
-
-        <p v-if="f.dishes?.length" class="mt-1.5 flex flex-wrap gap-1.5">
-          <span v-for="d in f.dishes.slice(0, 3)" :key="d.id"
-            class="rounded-full border border-white/10 px-2 py-0.5 text-[11px] text-theme-secondary">
-            {{ d.name }}<template v-if="d.rating"> · {{ d.rating }}★</template>
-          </span>
-          <span v-if="f.dishes.length > 3" class="self-center text-[11px] text-theme-tertiary">+{{ f.dishes.length - 3 }}</span>
-        </p>
-
-        <p class="mt-1.5 text-[11px] text-theme-tertiary">
-          <template v-if="f.location">📍 {{ f.location }}</template>
-          <template v-if="f.avg_price != null"> · 人均 ¥{{ f.avg_price }}</template>
-          <template v-if="f.hours"> · {{ f.hours }}</template>
-        </p>
-
-        <div v-if="f.comment_count" class="mt-2">
-          <CommentCountBadge :count="f.comment_count" :unread="f.unread_comment_count" />
+        <div v-if="pinTarget?.id === f.id" @click.stop>
+          <PinMenu target-type="food" :target-id="f.id" :scope="f.pin_scope || 'none'"
+            @close="pinTarget = null" @change="load" />
         </div>
       </article>
     </div>

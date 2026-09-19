@@ -1,6 +1,6 @@
 import { AppError } from '../../common/errors/AppError.js'
 
-const TARGET_TYPES = ['care', 'rule']
+const TARGET_TYPES = ['care', 'rule', 'food']
 const SCOPES = ['none', 'list', 'global']
 
 export function validateSetPin(body = {}) {

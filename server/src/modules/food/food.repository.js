@@ -53,21 +53,27 @@ function buildWhere({ status, category, keyword, authorIds } = {}) {
   return { where: conds.length ? `WHERE ${conds.join(' AND ')}` : '', args }
 }
 
-// 排序：常去优先，再按最近更新时间倒序；id 兜底翻页稳定
+// 列表 / 详情：LEFT JOIN 置顶表取 pin_scope，排序 global > list > 常去 > 最近更新
+const LIST_SELECT = `
+  SELECT f.*, p.pin_scope
+  FROM food_places f
+  LEFT JOIN pinned_items p ON p.target_type = 'food' AND p.target_id = f.id`
 const LIST_ORDER = `
-  ORDER BY CASE status WHEN 'favorite' THEN 0 ELSE 1 END,
-    datetime(updated_at) DESC,
-    id DESC`
+  ORDER BY
+    CASE p.pin_scope WHEN 'global' THEN 0 WHEN 'list' THEN 1 ELSE 2 END,
+    CASE f.status WHEN 'favorite' THEN 0 ELSE 1 END,
+    datetime(f.updated_at) DESC,
+    f.id DESC`
 
 export function findById(id) {
-  return toVO(db.prepare('SELECT * FROM food_places WHERE id = ?').get(id))
+  return toVO(db.prepare(`${LIST_SELECT} WHERE f.id = ?`).get(id))
 }
 
 export function list(opts = {}) {
   const { where, args } = buildWhere(opts)
   const paging = opts.limit !== undefined ? 'LIMIT ? OFFSET ?' : ''
   const queryArgs = opts.limit !== undefined ? [...args, opts.limit, opts.offset ?? 0] : args
-  return db.prepare(`SELECT * FROM food_places ${where} ${LIST_ORDER} ${paging}`)
+  return db.prepare(`${LIST_SELECT} ${where} ${LIST_ORDER} ${paging}`)
     .all(...queryArgs)
     .map(toVO)
 }

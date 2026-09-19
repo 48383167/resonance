@@ -5,5 +5,5 @@ export async function setPin(req, res, next) {
 }
 
 export async function listGlobal(req, res, next) {
-  try { res.success(pinService.listGlobal()) } catch (e) { next(e) }
+  try { res.success(pinService.listGlobal(req.user.id)) } catch (e) { next(e) }
 }

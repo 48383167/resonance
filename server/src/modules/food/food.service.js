@@ -5,6 +5,7 @@ import { assertSamePair, getUserCouple } from '../couple/couple.service.js'
 import { softDeleteQuietly } from '../file/file.service.js'
 import * as momentRepository from '../moment/moment.repository.js'
 import * as commentService from '../comment/comment.service.js'
+import * as pinRepository from '../pin/pin.repository.js'
 import * as foodRepository from './food.repository.js'
 import * as foodSchema from './food.schema.js'
 import { emitFoodCreated, emitFoodUpdated, emitFoodDeleted } from '../../infrastructure/socket/food.socket.js'
@@ -103,6 +104,7 @@ export function remove(id, userId) {
   transaction(() => {
     foodRepository.removeMomentLinks(id)
     commentService.removeByTarget('food', id)
+    pinRepository.removeByTarget('food', id)
     foodRepository.remove(id)
   })
   broadcast(userId, (pairCode) => emitFoodDeleted(pairCode, { id }))
