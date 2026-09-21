@@ -13,6 +13,7 @@ const props = defineProps({
   multiple: { type: Boolean, default: true },
   accept: { type: String, default: 'all' }, // 'image' | 'all'
   max: { type: Number, default: 20 },
+  compact: { type: Boolean, default: false }, // 紧凑宫格模式（菜品图片等行内场景）
 })
 const emit = defineEmits(['update:modelValue'])
 
@@ -51,6 +52,8 @@ const list = computed(() => {
 })
 
 const acceptAttr = computed(() => (props.accept === 'image' ? 'image/*' : 'image/*,video/*,application/pdf,.zip,.doc,.docx,.xls,.xlsx,.txt'))
+
+const uploadingCount = computed(() => tasks.value.filter((t) => t.status === 'uploading').length)
 
 const nameOf = (u) => u.name || decodeURIComponent((u.url || '').split('/').pop() || '附件')
 
@@ -144,8 +147,31 @@ function remove(i) {
 
 <template>
   <div>
+    <!-- 紧凑宫格模式：缩略图 + 上传进度 + 添加块（菜品图片） -->
+    <div v-if="compact" class="flex flex-wrap items-center gap-2">
+      <div v-for="(u, i) in list" :key="u.url || u.id || i" class="relative h-16 w-16 shrink-0">
+        <div class="h-full w-full cursor-zoom-in overflow-hidden rounded-lg bg-white/5" @click="preview(u)">
+          <img v-if="u.type === 'image' || mediaTypeOf(u.url || '') === 'image'" :src="u.url" class="h-full w-full object-cover" />
+          <video v-else-if="u.type === 'video' || mediaTypeOf(u.url || '') === 'video'" :src="u.url" class="h-full w-full object-cover" muted />
+          <div v-else class="flex h-full w-full items-center justify-center text-xl">📄</div>
+        </div>
+        <button type="button" title="移除"
+          class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-xs text-white/80 transition-colors hover:bg-rose-500/90 hover:text-white"
+          @click.stop="remove(i)">×</button>
+      </div>
+      <div v-for="t in tasks.filter((x) => x.status === 'uploading')" :key="t.name"
+        class="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-white/5 text-[10px] text-white/60">
+        {{ t.progress }}%
+      </div>
+      <button v-if="list.length + uploadingCount < max" type="button" title="添加图片"
+        class="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-dashed text-xl transition-colors"
+        :class="dragging ? 'border-accent bg-accent-soft text-accent' : 'border-white/25 text-white/55 hover:border-white/40 hover:text-white/80'"
+        @click="fileInput.click()"
+        @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="onDrop">＋</button>
+    </div>
+
     <!-- 已有附件预览（点击可查看） -->
-    <div v-if="list.length" class="mb-3 space-y-2">
+    <div v-if="!compact && list.length" class="mb-3 space-y-2">
       <div v-for="(u, i) in list" :key="u.url || u.id || i"
          class="group flex min-w-0 items-center gap-3 rounded-xl bg-white/5 p-2 transition-colors hover:bg-white/10">
         <!-- 缩略图 -->
@@ -168,29 +194,32 @@ function remove(i) {
       </div>
     </div>
 
-    <!-- 上传中进度 -->
-    <div v-for="t in tasks.filter((x) => x.status === 'uploading')" :key="t.name"
-      class="mb-1.5 rounded-lg bg-white/5 px-3 py-1.5 text-xs">
-      <div class="flex justify-between text-white/60">
-        <span class="min-w-0 break-anywhere">{{ t.name }}</span>
-        <span>{{ t.progress }}%</span>
+    <template v-if="!compact">
+      <!-- 上传中进度 -->
+      <div v-for="t in tasks.filter((x) => x.status === 'uploading')" :key="t.name"
+        class="mb-1.5 rounded-lg bg-white/5 px-3 py-1.5 text-xs">
+        <div class="flex justify-between text-white/60">
+          <span class="min-w-0 break-anywhere">{{ t.name }}</span>
+          <span>{{ t.progress }}%</span>
+        </div>
+        <div class="mt-1 h-1 overflow-hidden rounded-full bg-white/10">
+          <div class="h-full rounded-full transition-all" style="background: linear-gradient(90deg,var(--accent),var(--accent-2))"
+            :style="{ width: `${t.progress}%` }" />
+        </div>
       </div>
-      <div class="mt-1 h-1 overflow-hidden rounded-full bg-white/10">
-        <div class="h-full rounded-full transition-all" style="background: linear-gradient(90deg,var(--accent),var(--accent-2))"
-          :style="{ width: `${t.progress}%` }" />
-      </div>
-    </div>
 
-    <!-- 拖拽/点击区域 -->
+      <!-- 拖拽/点击区域 -->
+      <button type="button"
+        class="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-3 text-center text-sm transition-colors"
+            :class="dragging ? 'border-accent bg-accent-soft text-accent' : 'border-white/25 text-white/55 hover:border-white/40 hover:text-white/80'"
+        @click="fileInput.click()"
+        @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="onDrop">
+        <span class="text-base">📎</span>
+        {{ accept === 'image' ? '点击或拖拽图片到这里上传' : '点击或拖拽文件到这里（照片 / 视频 / 附件）' }}
+      </button>
+    </template>
+
     <input ref="fileInput" type="file" :accept="acceptAttr" :multiple="multiple" class="hidden"
       @change="handleFiles($event.target.files)" />
-    <button type="button"
-      class="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-dashed px-4 py-3 text-center text-sm transition-colors"
-          :class="dragging ? 'border-accent bg-accent-soft text-accent' : 'border-white/25 text-white/55 hover:border-white/40 hover:text-white/80'"
-      @click="fileInput.click()"
-      @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="onDrop">
-      <span class="text-base">📎</span>
-      {{ accept === 'image' ? '点击或拖拽图片到这里上传' : '点击或拖拽文件到这里（照片 / 视频 / 附件）' }}
-    </button>
   </div>
 </template>

@@ -519,7 +519,55 @@ const gz = await fetch(`${BASE}/api/timeline`, {
 })
 assert('时间线响应启用 gzip', gz.headers.get('content-encoding') === 'gzip', gz.headers.get('content-encoding') || 'none')
 
-console.log('== 18. 导出时光机 ==')
+console.log('== 18. 美食（菜品与菜品图片） ==')
+const fdDish = new FormData()
+fdDish.append('file', new Blob([png], { type: 'image/png' }), 'dish.png')
+const dishUp = await http('POST', '/api/upload', fdDish, tokenA, true)
+const fdPlace = new FormData()
+fdPlace.append('file', new Blob([png], { type: 'image/png' }), 'place.png')
+const placeUp = await http('POST', '/api/upload', fdPlace, tokenA, true)
+assert('美食图片上传成功', dishUp.ok && placeUp.ok)
+
+const foodCreated = await http('POST', '/api/foods', {
+  name: '老陈家炒河粉', category: 'snack', status: 'want', rating: 4, location: '小南门', hours: '10:30-21:00',
+  note: '锅气足',
+  dishes: [
+    { name: '炒河粉', rating: 5, note: '必点', price: 10, photos: [dishUp.data.id] },
+    { name: '牛腩粉' },
+  ],
+  photos: [placeUp.data.id],
+}, tokenA)
+assert('创建美食并保存手填菜品', foodCreated.ok && foodCreated.data.dishes.length === 2)
+assert('菜品图片落库并解析为文件对象', foodCreated.data.dishes[0].photos.length === 1
+  && String(foodCreated.data.dishes[0].photos[0].url).startsWith('/media/')
+  && foodCreated.data.dishes[0].photoIds.length === 1)
+
+const foodDetail = await http('GET', `/api/foods/${foodCreated.data.id}`, null, tokenA)
+assert('详情读回菜品与图片', foodDetail.ok && foodDetail.data.dishes.length === 2
+  && foodDetail.data.dishes[0].photos.length === 1 && foodDetail.data.photos.length === 1)
+
+const foodList = await http('GET', '/api/foods', null, tokenB)
+assert('伴侣可见同一家店', foodList.ok && foodList.data.some((item) => item.id === foodCreated.data.id))
+
+const keptPhotoUrl = foodCreated.data.dishes[0].photos[0].url
+const removedPhotoUrl = foodCreated.data.photos[0].url
+const foodUpdated = await http('PUT', `/api/foods/${foodCreated.data.id}`, {
+  dishes: [{ id: foodCreated.data.dishes[0].id, name: '炒河粉', rating: 5, note: '必点', price: 10, photos: [dishUp.data.id] }],
+  photos: [],
+}, tokenA)
+assert('更新时全量替换菜品与店铺图片', foodUpdated.ok && foodUpdated.data.dishes.length === 1
+  && foodUpdated.data.photos.length === 0)
+const keptRes = await fetch(BASE + keptPhotoUrl)
+assert('保留的菜品图片仍可访问', keptRes.status === 200)
+const removedRes = await fetch(BASE + removedPhotoUrl)
+assert('被移除的店铺图片已墓碑', removedRes.status === 404)
+
+const foodDeleted = await http('DELETE', `/api/foods/${foodCreated.data.id}`, null, tokenB)
+assert('同空间伴侣可删除该店', foodDeleted.ok === true)
+const afterFoodDelete = await fetch(BASE + keptPhotoUrl)
+assert('删除店后菜品图片一并墓碑', afterFoodDelete.status === 404)
+
+console.log('== 19. 导出时光机 ==')
 const exp = await fetch(BASE + '/api/export')
 const buf = await exp.arrayBuffer()
 assert('导出 zip 非空', exp.status === 200 && buf.byteLength > 0, `bytes=${buf.byteLength}`)

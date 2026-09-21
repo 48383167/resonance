@@ -1,6 +1,7 @@
 <script setup>
 import { nextTick, onMounted, ref } from 'vue'
-import { MAX_DISHES } from '../food.constants.js'
+import { MAX_DISHES, MAX_DISH_PHOTOS } from '../food.constants.js'
+import ImageUpload from '../../../shared/components/ImageUpload.vue'
 import FoodRating from './FoodRating.vue'
 
 // 菜品行编辑器：每道菜两行（名称/价格 + 备注/评分），可增删
@@ -16,12 +17,15 @@ const rowKey = () => `dish_${Date.now().toString(36)}_${++seq}`
 const listEl = ref(null)
 
 onMounted(() => {
-  for (const dish of props.dishes) if (!dish._key) dish._key = rowKey()
+  for (const dish of props.dishes) {
+    if (!dish._key) dish._key = rowKey()
+    if (!Array.isArray(dish.photos)) dish.photos = []
+  }
 })
 
 function addDish() {
   if (props.dishes.length >= props.max) return
-  props.dishes.push({ _key: rowKey(), name: '', rating: null, note: '', price: null })
+  props.dishes.push({ _key: rowKey(), name: '', rating: null, note: '', price: null, photos: [] })
   nextTick(() => {
     const inputs = listEl.value?.querySelectorAll('input[data-dish-name]')
     inputs?.[inputs.length - 1]?.focus()
@@ -54,6 +58,9 @@ function removeDish(index) {
             maxlength="50" placeholder="备注（可空）：锅气足 / 有点咸" />
           <FoodRating v-model="dish.rating" />
         </div>
+        <div class="mt-2 pl-7">
+          <ImageUpload v-model="dish.photos" compact accept="image" :max="MAX_DISH_PHOTOS" />
+        </div>
       </div>
 
       <p v-if="!dishes.length" class="px-1 py-2 text-center text-xs text-theme-tertiary">
@@ -62,7 +69,7 @@ function removeDish(index) {
     </div>
 
     <div class="mt-2 flex items-center justify-between">
-      <button class="min-h-10 rounded-lg px-2 text-sm text-accent" @click="addDish">＋ 添加一道菜</button>
+      <button type="button" class="min-h-10 rounded-lg px-2 text-sm text-accent" @click="addDish">＋ 添加一道菜</button>
       <span class="text-xs" :class="dishes.length >= max ? 'danger-link' : 'text-theme-tertiary'">
         已 {{ dishes.length }} 道（最多 {{ max }} 道）
       </span>

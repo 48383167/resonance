@@ -7,10 +7,16 @@ function newId() {
   return `food_${randomUUID().slice(0, 12)}`
 }
 
+// 菜品行：存储的 photos 是 fileId 数组，读侧先转成 photoIds（再由 toVO 解析文件对象）
 function parseDishes(raw) {
   try {
     const arr = JSON.parse(raw || '[]')
-    return Array.isArray(arr) ? arr : []
+    if (!Array.isArray(arr)) return []
+    return arr.map((dish) => ({
+      ...dish,
+      photoIds: Array.isArray(dish?.photos) ? dish.photos.filter((id) => typeof id === 'string' && id) : [],
+      photos: [],
+    }))
   } catch {
     return []
   }
@@ -25,13 +31,21 @@ function parsePhotoIds(raw) {
   }
 }
 
-// 输出形态：dishes 解析为数组；photos 解析成文件对象（photoIds 保留原始 fileId，供更新时回收旧图）
+// 输出形态：dishes 解析为数组；photos（店与菜品）解析成文件对象
+// photoIds 保留原始 fileId，供更新时回收旧图
 function toVO(row) {
   if (!row) return null
   const photoIds = parsePhotoIds(row.photos)
+  const dishes = parseDishes(row.dishes)
+  const items = new Map(
+    resolveItems([...photoIds, ...dishes.flatMap((dish) => dish.photoIds)]).map((file) => [file.id, file])
+  )
   row.photoIds = photoIds
-  row.photos = resolveItems(photoIds)
-  row.dishes = parseDishes(row.dishes)
+  row.photos = photoIds.map((id) => items.get(id)).filter(Boolean)
+  row.dishes = dishes.map((dish) => ({
+    ...dish,
+    photos: dish.photoIds.map((id) => items.get(id)).filter(Boolean),
+  }))
   row.author = findUserById(row.author_id)
   return row
 }

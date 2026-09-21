@@ -169,10 +169,6 @@ onUnmounted(() => {
       <!-- 信息 -->
       <div class="glass mt-4 space-y-2 p-4 text-sm">
         <p v-if="place.hours" class="text-theme-secondary">🕐 {{ place.hours }}</p>
-        <p v-if="place.phone" class="text-theme-secondary">
-          ☎ <a class="text-accent hover:underline" :href="`tel:${place.phone}`">{{ place.phone }}</a>
-        </p>
-        <p v-if="place.avg_price != null" class="text-theme-secondary">💰 人均 ¥{{ place.avg_price }}</p>
         <p v-if="place.location" class="text-theme-secondary">📍 {{ place.location }}</p>
         <p v-if="place.visited_at" class="text-theme-secondary">📅 {{ place.visited_at }}</p>
         <p v-if="place.note" class="whitespace-pre-wrap text-theme-secondary">{{ place.note }}</p>
@@ -199,6 +195,11 @@ onUnmounted(() => {
               <span v-if="dish.price != null" class="text-[11px] text-theme-tertiary">¥{{ dish.price }}</span>
             </div>
             <p v-if="dish.note" class="mt-0.5 text-xs text-theme-tertiary">{{ dish.note }}</p>
+            <div v-if="dish.photos?.length" class="mt-2 flex flex-wrap gap-2">
+              <img v-for="(p, i) in dish.photos" :key="p.id || i" :src="p.url"
+                class="h-16 w-16 cursor-zoom-in rounded-lg object-cover" loading="lazy"
+                @click="openLightbox(dish.photos.map((x) => x.url), i)" />
+            </div>
           </li>
         </ul>
         <p v-else class="py-2 text-center text-xs text-theme-tertiary">还没有记录菜品</p>

@@ -66,15 +66,16 @@ function normalizeDishes(raw) {
       rating: normalizeRating(entry?.rating),
       note: normalizeText(entry?.note, 50, '菜品备注'),
       price: normalizePrice(entry?.price),
+      photos: normalizePhotos(entry?.photos ?? [], '菜品图片'),
     })
   }
   return dishes
 }
 
-function normalizePhotos(raw) {
-  if (!Array.isArray(raw)) throw new BadRequestError('图片格式不合法')
+function normalizePhotos(raw, label = '图片') {
+  if (!Array.isArray(raw)) throw new BadRequestError(`${label}格式不合法`)
   const photos = raw.filter((id) => typeof id === 'string' && id)
-  if (photos.length > MAX_PHOTOS) throw new BadRequestError(`最多上传 ${MAX_PHOTOS} 张图片`)
+  if (photos.length > MAX_PHOTOS) throw new BadRequestError(`最多上传 ${MAX_PHOTOS} 张${label}`)
   return photos
 }
 

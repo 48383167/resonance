@@ -41,7 +41,9 @@ export function usePopupAnchor({ gap = 6, estimateHeight = 260, estimateWidth = 
     close()
   }
 
-  function onScroll() {
+  function onScroll(event) {
+    // 弹层内部滚动（如分类列表、日期网格）不应关闭弹层；页面滚动才关闭
+    if (event.target instanceof Element && event.target.closest('[data-popup]')) return
     if (open.value) close()
   }
 

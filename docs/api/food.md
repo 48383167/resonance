@@ -1,8 +1,11 @@
 # 美食（Food）契约
 
 > 记录「哪家的什么好吃」：一家店一条记录，菜品存在店下（JSON 数组）；
-> 支持 想去/去过/常去、评分、营业时间、电话、人均、地图坐标与照片。
+> 支持 想去/去过/常去、评分、营业时间、地图坐标、店铺照片与菜品照片。
 > 双人空间共享，所有读写都校验情侣关系。
+>
+> 兼容说明：`phone` / `avg_price` 字段保留在库与接口中（旧客户端仍可提交），
+> 但前端自 2026-09 起不再录入与展示，AI 提取也不再输出这两个字段。
 
 ## 数据模型
 
@@ -19,16 +22,18 @@
 | location | TEXT | 地点描述（≤80 字，可由地图反查填入） |
 | longitude / latitude | REAL | 坐标，可空（为空不出现在地图） |
 | hours | TEXT | 营业时间，自由文本（≤80 字） |
-| phone | TEXT | 电话（≤30 字） |
-| avg_price | INTEGER | 人均（元，0~9999，可空） |
+| phone | TEXT | 电话（≤30 字，兼容保留，前端不再录入） |
+| avg_price | INTEGER | 人均（元，0~9999，可空，兼容保留，前端不再录入） |
 | note | TEXT | 总评（≤1000 字） |
-| dishes | TEXT | JSON `[{ id, name, rating, note, price }]`，最多 20 道 |
+| dishes | TEXT | JSON `[{ id, name, rating, note, price, photos }]`，最多 20 道；`photos` 为 fileId 数组，每道菜 ≤9 张 |
 | photos | TEXT | JSON fileId 数组，最多 9 张（读侧解析为文件对象） |
 | visited_at | TEXT | 最近去 / 想去的日期 `YYYY-MM-DD`，可空 |
 | created_at / updated_at | TEXT | ISO8601 UTC |
 
 - 图片沿用文件体系：落库存 `files.id`，读侧返回 `photos: [{ id, url, type, name }]`，
   同时附带 `photoIds`（原始 fileId，供更新时回收被移除的图片）。
+- 菜品图片同店图片：每个 dish 读侧为 `{ id, name, rating, note, price, photoIds, photos }`，
+  其中 `photoIds` 为原始 fileId 数组、`photos` 为文件对象数组；旧数据无 `photos` 时返回空数组。
 - 排序：`常去` 优先，其后按最近更新倒序，`id` 兜底。
 
 ## 双人空间权限
@@ -65,25 +70,24 @@
   "longitude": 108.94,
   "latitude": 34.26,
   "hours": "10:30-21:00 周一休",
-  "phone": "13800000000",
-  "avgPrice": 15,
   "note": "锅气足",
   "visitedAt": "2026-09-18",
-  "dishes": [{ "name": "炒河粉", "rating": 5, "note": "必点", "price": 10 }],
+  "dishes": [{ "name": "炒河粉", "rating": 5, "note": "必点", "price": 10, "photos": ["1234567890123456"] }],
   "photos": ["1234567890123456"]
 }
 ```
 
-- 校验：店名必填 ≤40；枚举合法；评分 1~5；人均 0~9999；日期 `YYYY-MM-DD`；
-  菜品 ≤20（名 ≤20、备注 ≤50）；图片 ≤9；坐标范围合法
+- 校验：店名必填 ≤40；枚举合法；评分 1~5；人均 0~9999（兼容字段）；日期 `YYYY-MM-DD`；
+  菜品 ≤20（名 ≤20、备注 ≤50）；店图片 ≤9；每道菜图片 ≤9；坐标范围合法
 - 菜品 `id` 缺省由服务端生成（`fd_` + uuid 前 12 位）
+- 店铺坐标由恋爱地图/旧客户端提交；当前美食表单不再提供地图选点，新记录一般为 `null`
 
 ### 4. PUT /api/foods/:id
 
 局部更新；未提交字段保持原值。`dishes` / `photos` 为**全量替换**：
 
 - `photos` 被替换时，移除的图片会走文件墓碑软删（不阻断主流程）
-- 菜品替换时保留已提交的 `id`
+- 菜品替换时保留已提交的 `id`；菜品被移除或菜品图片被替换时，对应图片同样软删
 
 ### 5. PUT /api/foods/:id/status
 
@@ -113,7 +117,7 @@
 - 输入 ≤ 800 字（`FOOD_EXTRACT_MAX_LENGTH`），否则 `400`
 - 政策唯一来源：`server/src/modules/food/food.policy.js`；出站数据只有这段粘贴文本，
   不读取库内任何资源；不受「AI 建议」开关影响（显式动作触发）
-- 模型输出经 `food.draft.js` 白名单校验：分类枚举、评分 1~5、人均 0~9999、菜品 ≤10、长度截断；
+- 模型输出经 `food.draft.js` 白名单校验：分类枚举、评分 1~5、菜品 ≤10、长度截断；
   未提及字段留空，脏 JSON → `502 AI_RESPONSE_INVALID`
 - 未配置密钥 → `503 AI_NOT_CONFIGURED`；调用失败 → `503 AI_UNAVAILABLE`
 
@@ -124,8 +128,6 @@
     "category": "snack",
     "rating": 5,
     "hours": "18:00 开门",
-    "phone": "",
-    "avgPrice": 15,
     "location": "",
     "note": "",
     "dishes": [
@@ -150,7 +152,7 @@
 |---|---|---|
 | `FOOD_NOT_FOUND` | 404 | 店不存在 |
 | `FORBIDDEN` | 403 | 不是本人 / 同空间伴侣的资源 |
-| `BAD_REQUEST` | 400 | 字段校验失败（店名/评分/人均/坐标/日期/菜品/图片等） |
+| `BAD_REQUEST` | 400 | 字段校验失败（店名/评分/人均/坐标/日期/菜品/图片/菜品图片等） |
 
 ## 前端路由
 

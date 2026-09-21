@@ -10,11 +10,10 @@ import { confirmDialog } from '../../../stores/confirm'
 import AppSelect from '../../../shared/components/AppSelect.vue'
 import AppDatePicker from '../../../shared/components/AppDatePicker.vue'
 import ImageUpload from '../../../shared/components/ImageUpload.vue'
-import MapPicker from '../../moment/components/MapPicker.vue'
 import FoodRating from '../components/FoodRating.vue'
 import FoodDishRows from '../components/FoodDishRows.vue'
 
-// 新增 / 编辑美食：店名、分类、状态、评分、营业信息、选点、照片、菜品
+// 新增 / 编辑美食：店名、分类、状态、评分、营业信息、照片、菜品（含菜品图片）
 const route = useRoute()
 const router = useRouter()
 const editingId = route.params.id || null
@@ -31,8 +30,6 @@ function initialForm() {
     rating: null,
     location: '',
     hours: '',
-    phone: '',
-    avgPrice: '',
     note: '',
     visitedAt: '',
     dishes: [],
@@ -41,7 +38,6 @@ function initialForm() {
 }
 
 const form = ref(initialForm())
-const point = ref({ lat: null, lng: null, location: '' })
 const draftRestored = ref(false)
 
 if (!editingId) {
@@ -54,11 +50,6 @@ if (!editingId) {
 watch(form, (value) => {
   if (editingId) return
   saveFormDraft(DRAFT_KEY, value)
-}, { deep: true })
-
-// 选点反查到的地名：地点为空时自动填入
-watch(point, (p) => {
-  if (p?.location && !form.value.location.trim()) form.value.location = p.location
 }, { deep: true })
 
 function discardDraft() {
@@ -79,8 +70,6 @@ function applyDraft(draft) {
   if (draft.category && draft.category !== 'other' && f.category === 'snack') f.category = draft.category
   if (draft.rating && !f.rating) f.rating = draft.rating
   if (draft.hours && !f.hours.trim()) f.hours = draft.hours
-  if (draft.phone && !f.phone.trim()) f.phone = draft.phone
-  if (draft.avgPrice != null && (f.avgPrice === '' || f.avgPrice === null)) f.avgPrice = draft.avgPrice
   if (draft.location && !f.location.trim()) f.location = draft.location
   if (draft.note && !f.note.trim()) f.note = draft.note
   if (draft.dishes?.length) {
@@ -90,7 +79,7 @@ function applyDraft(draft) {
       const key = String(dish.name || '').trim().toLowerCase()
       if (!key || existing.has(key)) continue
       existing.add(key)
-      f.dishes.push({ _key: `ai_${Date.now().toString(36)}_${++seq}`, name: dish.name, rating: dish.rating, note: dish.note, price: dish.price })
+      f.dishes.push({ _key: `ai_${Date.now().toString(36)}_${++seq}`, name: dish.name, rating: dish.rating, note: dish.note, price: dish.price, photos: [] })
     }
   }
 }
@@ -130,14 +119,11 @@ onMounted(async () => {
       rating: place.rating,
       location: place.location || '',
       hours: place.hours || '',
-      phone: place.phone || '',
-      avgPrice: place.avg_price ?? '',
       note: place.note || '',
       visitedAt: place.visited_at || '',
       dishes: (place.dishes || []).map((d) => ({ ...d })),
       photos: (place.photos || []).map((p) => ({ ...p })),
     }
-    point.value = { lat: place.latitude, lng: place.longitude, location: place.location || '' }
   } catch (e) {
     toast(e.message)
     goBack()
@@ -151,11 +137,7 @@ function payload() {
     status: form.value.status,
     rating: form.value.rating,
     location: form.value.location.trim(),
-    longitude: point.value.lng,
-    latitude: point.value.lat,
     hours: form.value.hours.trim(),
-    phone: form.value.phone.trim(),
-    avgPrice: form.value.avgPrice === '' || form.value.avgPrice === null ? null : Number(form.value.avgPrice),
     note: form.value.note.trim(),
     visitedAt: form.value.visitedAt || null,
     dishes: form.value.dishes
@@ -166,6 +148,7 @@ function payload() {
         rating: d.rating ?? null,
         note: String(d.note || '').trim(),
         price: d.price === '' || d.price === null || d.price === undefined ? null : Number(d.price),
+        photos: (d.photos || []).map((p) => p.id).filter(Boolean),
       })),
     photos: form.value.photos.map((p) => p.id).filter(Boolean),
   }
@@ -177,6 +160,7 @@ async function save() {
   busy.value = true
   try {
     const data = payload()
+    const missedDishes = form.value.dishes.length - data.dishes.length
     if (editingId) {
       await updateFood(editingId, data)
     } else {
@@ -187,6 +171,7 @@ async function save() {
       draftRestored.value = false
     }
     toast(editingId ? '已更新' : '已记下')
+    if (missedDishes > 0) toast(`有 ${missedDishes} 道菜还没填菜名，未保存`, 'error')
     router.push('/foods')
   } catch (e) {
     toast(e.message)
@@ -277,14 +262,6 @@ const categoryOptions = computed(() => FOOD_CATEGORIES)
           <input v-model="form.hours" class="input-dark" maxlength="80" placeholder="10:30-21:00 周一休" />
         </div>
         <div>
-          <label class="mb-1 block text-xs text-theme-tertiary">电话（可点拨打）</label>
-          <input v-model="form.phone" class="input-dark" maxlength="30" placeholder="138…" inputmode="tel" />
-        </div>
-        <div>
-          <label class="mb-1 block text-xs text-theme-tertiary">人均（元）</label>
-          <input v-model="form.avgPrice" type="number" min="0" max="9999" class="input-dark" placeholder="15" />
-        </div>
-        <div>
           <label class="mb-1 block text-xs text-theme-tertiary">最近去 / 想去的日期</label>
           <AppDatePicker v-model="form.visitedAt" placeholder="选择日期（可空）" />
         </div>
@@ -293,10 +270,6 @@ const categoryOptions = computed(() => FOOD_CATEGORIES)
       <div>
         <label class="mb-1 block text-xs text-theme-tertiary">地点</label>
         <input v-model="form.location" class="input-dark" maxlength="80" placeholder="店铺位置 / 商场几楼" />
-        <p class="mt-1 text-[11px] text-theme-tertiary">也可以直接在地图上点选，自动填入地名与坐标</p>
-        <div class="mt-2">
-          <MapPicker v-model="point" />
-        </div>
       </div>
 
       <div>

@@ -94,8 +94,8 @@ defineExpose({ load })
       </button>
     </div>
 
-    <!-- 分类筛选 -->
-    <div class="flex gap-2 overflow-x-auto pb-1">
+    <!-- 分类筛选：换行平铺，避免窄屏下最后一项滑不到 -->
+    <div class="flex flex-wrap gap-2">
       <button v-for="c in categoryFilters" :key="c.value"
         class="min-h-11 shrink-0 rounded-full px-3 text-sm transition-colors"
         :class="fCategory === c.value ? 'bg-accent-soft text-accent' : 'surface-soft text-theme-secondary'"
@@ -136,7 +136,6 @@ defineExpose({ load })
 
             <p class="mt-1.5 text-[11px] text-theme-tertiary">
               <template v-if="f.location">📍 {{ f.location }}</template>
-              <template v-if="f.avg_price != null"> · 人均 ¥{{ f.avg_price }}</template>
               <template v-if="f.hours"> · {{ f.hours }}</template>
             </p>
 

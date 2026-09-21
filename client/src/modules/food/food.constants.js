@@ -1,6 +1,7 @@
 // 美食模块共享常量：分类 / 状态 / 数量上限
 export const MAX_DISHES = 20
 export const MAX_PHOTOS = 9
+export const MAX_DISH_PHOTOS = 9
 export const PAGE_SIZE = 20
 
 export const FOOD_CATEGORIES = [

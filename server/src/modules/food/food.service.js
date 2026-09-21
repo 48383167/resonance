@@ -94,6 +94,15 @@ export function update(id, userId, raw) {
       if (!keep.has(fileId)) softDeleteQuietly(fileId, userId)
     }
   }
+  // 菜品被移除或菜品图片被替换时同样回收
+  if (fields.dishes !== undefined) {
+    const keep = new Set(fields.dishes.flatMap((dish) => dish.photos))
+    for (const dish of existing.dishes) {
+      for (const fileId of dish.photoIds || []) {
+        if (!keep.has(fileId)) softDeleteQuietly(fileId, userId)
+      }
+    }
+  }
   const place = foodRepository.update(id, fields)
   broadcast(userId, (pairCode) => emitFoodUpdated(pairCode, place))
   return place
@@ -112,6 +121,9 @@ export function remove(id, userId) {
   const existing = findOrThrow(id)
   assertAccessible(userId, existing.author_id)
   for (const fileId of existing.photoIds) softDeleteQuietly(fileId, userId)
+  for (const dish of existing.dishes) {
+    for (const fileId of dish.photoIds || []) softDeleteQuietly(fileId, userId)
+  }
   transaction(() => {
     foodRepository.removeMomentLinks(id)
     commentService.removeByTarget('food', id)

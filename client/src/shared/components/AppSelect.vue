@@ -12,7 +12,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 const { open, anchorEl, position, close, toggle } = usePopupAnchor({
-  estimateHeight: 240,
+  estimateHeight: 320,
   estimateWidth: (rect) => rect.width,
 })
 

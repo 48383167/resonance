@@ -151,13 +151,13 @@ onUnmounted(() => {
     <div ref="mapEl" class="h-[55svh] min-h-64 max-h-[38rem] w-full overflow-hidden rounded-2xl border border-white/10 sm:h-[60vh]" />
 
     <div v-if="!moments.length && !foods.length" class="glass p-6 text-center text-sm text-white/50">
-      地图还空着 —— 在「恋爱瞬间」记录足迹，或在「美食」里记一家店并在地图上点选位置
+      地图还空着 —— 在「恋爱瞬间」记录足迹，或把美食的足迹点亮在这里
     </div>
     <div v-else-if="layer === 'moment' && !moments.length" class="glass p-6 text-center text-sm text-white/50">
       还没有足迹 —— 在「恋爱瞬间」里创建带坐标的记录即可点亮地图
     </div>
     <div v-else-if="layer === 'food' && !foods.length" class="glass p-6 text-center text-sm text-white/50">
-      还没有带坐标的美食 —— 在「美食」里记一家店并在地图上点选位置吧
+      还没有带坐标的美食 —— 有坐标的店会显示在这一层
     </div>
   </div>
 </template>

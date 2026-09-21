@@ -42,8 +42,6 @@ export function parseFoodDraft(raw) {
     category: CATEGORY_VALUES.has(parsed.category) ? parsed.category : 'other',
     rating: rating(parsed.rating),
     hours: text(parsed.hours, 80),
-    phone: text(parsed.phone, 30),
-    avgPrice: draftPrice(parsed.avgPrice),
     location: text(parsed.location, 80),
     note: text(parsed.note, 1000),
     dishes: dishes
