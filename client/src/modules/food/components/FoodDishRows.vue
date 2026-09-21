@@ -4,7 +4,7 @@ import { MAX_DISHES, MAX_DISH_PHOTOS } from '../food.constants.js'
 import ImageUpload from '../../../shared/components/ImageUpload.vue'
 import FoodRating from './FoodRating.vue'
 
-// 菜品行编辑器：每道菜两行（名称/价格 + 备注/评分），可增删
+// 菜品行编辑器：每道菜（名称/价格 + 备注 + 评分/图片），可增删
 // 约定：dishes 由父组件持有，本组件直接增删改其中的行
 const props = defineProps({
   dishes: { type: Array, required: true },
@@ -35,31 +35,56 @@ function addDish() {
 function removeDish(index) {
   props.dishes.splice(index, 1)
 }
+
+// 菜名回车 → 跳到同一行价格（手机键盘「下一项」）
+function focusPrice(event) {
+  if (event.isComposing) return
+  event.preventDefault()
+  event.target.nextElementSibling?.focus()
+}
+
+// 保存被拦截时定位到指定菜名输入
+function focusRow(index) {
+  nextTick(() => {
+    const inputs = listEl.value?.querySelectorAll('input[data-dish-name]')
+    inputs?.[index]?.focus()
+  })
+}
+
+defineExpose({ focusRow })
 </script>
 
 <template>
   <div>
-    <label class="mb-1 block text-xs text-theme-tertiary">招牌菜 / 吃过什么</label>
-
-    <div ref="listEl" class="surface-soft space-y-2 rounded-xl p-2.5 sm:p-3">
+    <div ref="listEl" class="space-y-3">
       <div v-for="(dish, i) in dishes" :key="dish._key || dish.id || i"
-        class="rounded-xl bg-white/[0.04] p-2.5">
+        class="group surface-card rounded-2xl border border-theme p-3 shadow-sm transition sm:p-4">
+        <!-- 名称、备注、评分/图片分层，避免桌面端长输入挤压备注信息 -->
         <div class="flex items-center gap-2">
-          <span class="w-5 shrink-0 text-right text-[10px] tabular-nums text-theme-tertiary">{{ i + 1 }}</span>
-          <input v-model="dish.name" data-dish-name class="input-dark !min-h-10 min-w-0 flex-1 !px-3 !py-1.5 text-sm"
-            maxlength="20" placeholder="菜名，比如：炒河粉" />
-          <input v-model.number="dish.price" type="number" min="0" max="9999"
-            class="input-dark !min-h-10 w-20 shrink-0 !px-2 !py-1.5 text-center text-sm" placeholder="¥" />
-          <button class="min-h-10 min-w-8 shrink-0 text-base text-theme-tertiary transition-colors hover:text-accent"
+          <span
+            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[11px] font-medium tabular-nums text-accent group-focus-within:hidden">
+            {{ i + 1 }}
+          </span>
+          <div class="min-w-0 flex-1 sm:w-64 sm:flex-none">
+            <input v-model="dish.name" data-dish-name
+              class="input-dark !min-h-10 w-full touch-manipulation scroll-mb-32 !px-3 !py-1.5 text-sm"
+              maxlength="20" placeholder="菜名，比如：炒河粉" enterkeyhint="next" @keydown.enter="focusPrice" />
+          </div>
+          <input v-model.number="dish.price" type="number" min="0" max="9999" inputmode="decimal" enterkeyhint="done"
+            class="input-dark !min-h-10 !w-20 shrink-0 touch-manipulation scroll-mb-32 !px-2 !py-1.5 text-center text-sm"
+            placeholder="价格" />
+          <button type="button"
+            class="min-h-10 min-w-9 shrink-0 touch-manipulation text-base text-theme-tertiary transition-colors hover:text-accent active:scale-90"
             title="删除这道菜" @click="removeDish(i)">⊖</button>
         </div>
-        <div class="mt-2 flex items-center gap-2 pl-7">
-          <input v-model="dish.note" class="input-dark !min-h-9 min-w-0 flex-1 !px-3 !py-1 text-xs"
-            maxlength="50" placeholder="备注（可空）：锅气足 / 有点咸" />
-          <FoodRating v-model="dish.rating" />
-        </div>
         <div class="mt-2 pl-7">
-          <ImageUpload v-model="dish.photos" compact accept="image" :max="MAX_DISH_PHOTOS" />
+          <input v-model="dish.note" enterkeyhint="done"
+            class="input-dark !min-h-9 min-w-0 w-full touch-manipulation scroll-mb-32 !px-3 !py-1 text-xs"
+            maxlength="50" placeholder="备注（可空）：锅气足 / 有点咸" />
+        </div>
+        <div class="mt-2 flex flex-wrap items-center gap-3 pl-7">
+          <FoodRating v-model="dish.rating" dense class="shrink-0" />
+          <ImageUpload v-model="dish.photos" compact accept="image" :max="MAX_DISH_PHOTOS" class="min-w-0" />
         </div>
       </div>
 
@@ -69,7 +94,7 @@ function removeDish(index) {
     </div>
 
     <div class="mt-2 flex items-center justify-between">
-      <button type="button" class="min-h-10 rounded-lg px-2 text-sm text-accent" @click="addDish">＋ 添加一道菜</button>
+      <button type="button" class="min-h-10 rounded-lg px-2 text-sm text-accent touch-manipulation active:scale-95" @click="addDish">＋ 添加一道菜</button>
       <span class="text-xs" :class="dishes.length >= max ? 'danger-link' : 'text-theme-tertiary'">
         已 {{ dishes.length }} 道（最多 {{ max }} 道）
       </span>

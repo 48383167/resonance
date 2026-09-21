@@ -132,6 +132,20 @@ body {
 }
 .input-dark:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgb(var(--accent-rgb) / 0.15); }
 
+/* 触控优化：可交互元素禁用双击缩放（保留双指缩放），减少快速连点误触；
+   放在 base 层，业务里的 touch-none 等工具类仍可覆盖 */
+@layer base {
+  button, a, label, input, textarea, select { touch-action: manipulation; }
+}
+
+/* 移动端表单：输入字号提到 16px，避免 iOS 聚焦时自动放大页面（美食编辑页） */
+@media (max-width: 640px) {
+  .food-form input,
+  .food-form textarea {
+    font-size: 16px;
+  }
+}
+
 ::selection { background: rgb(var(--accent-rgb) / 0.35); }
 
 /* 主题语义色：页面只依赖这些固定接口，不直接拼接主题类名。 */

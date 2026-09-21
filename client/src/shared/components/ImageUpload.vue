@@ -156,7 +156,7 @@ function remove(i) {
           <div v-else class="flex h-full w-full items-center justify-center text-xl">📄</div>
         </div>
         <button type="button" title="移除"
-          class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-xs text-white/80 transition-colors hover:bg-rose-500/90 hover:text-white"
+          class="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-rose-500 text-sm leading-none text-white shadow-md touch-manipulation transition active:scale-90 hover:bg-rose-600"
           @click.stop="remove(i)">×</button>
       </div>
       <div v-for="t in tasks.filter((x) => x.status === 'uploading')" :key="t.name"
@@ -164,7 +164,7 @@ function remove(i) {
         {{ t.progress }}%
       </div>
       <button v-if="list.length + uploadingCount < max" type="button" title="添加图片"
-        class="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-dashed text-xl transition-colors"
+        class="flex h-16 w-16 shrink-0 touch-manipulation items-center justify-center rounded-lg border border-dashed text-xl transition active:scale-95"
         :class="dragging ? 'border-accent bg-accent-soft text-accent' : 'border-white/25 text-white/55 hover:border-white/40 hover:text-white/80'"
         @click="fileInput.click()"
         @dragover.prevent="dragging = true" @dragleave.prevent="dragging = false" @drop.prevent="onDrop">＋</button>

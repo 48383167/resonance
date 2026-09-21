@@ -126,7 +126,7 @@ onUnmounted(() => {
         <h1 class="serif text-xl">{{ place.name }}</h1>
         <span class="rounded-full px-2 py-0.5 text-[11px]" :class="STATUS_CLASSES[place.status]">{{ STATUS_LABELS[place.status] }}</span>
         <span class="text-[11px] text-theme-tertiary">{{ CATEGORY_LABELS[place.category] }}</span>
-        <button class="ml-auto min-h-10 min-w-10 transition-colors"
+        <button class="ml-auto min-h-11 min-w-11 touch-manipulation transition active:scale-90"
           :class="pinOpen || place.pin_scope ? 'text-accent' : 'text-theme-tertiary hover:text-accent'"
           title="设置置顶" @click="pinOpen = !pinOpen">📌</button>
       </div>
@@ -175,7 +175,7 @@ onUnmounted(() => {
 
         <div class="flex flex-wrap items-center gap-2 pt-1">
           <button v-for="s in FOOD_STATUSES" :key="s.value" :disabled="busy"
-            class="min-h-9 rounded-full px-3 text-xs transition-colors"
+            class="min-h-10 rounded-full px-3 text-xs touch-manipulation transition active:scale-95"
             :class="place.status === s.value ? 'bg-accent-soft text-accent' : 'surface-soft text-theme-secondary'"
             @click="changeStatus(s.value)">
             {{ place.status === s.value ? '✓ ' : '' }}{{ s.label }}
@@ -186,16 +186,17 @@ onUnmounted(() => {
       <!-- 菜品 -->
       <div class="glass mt-4 p-4">
         <p class="mb-2 text-sm text-theme-secondary">🍜 菜品 · {{ (place.dishes || []).length }} 道</p>
-        <ul v-if="place.dishes?.length" class="space-y-2">
-          <li v-for="dish in place.dishes" :key="dish.id"
-            class="rounded-xl px-2 py-2" :class="'surface-soft'">
+        <ul v-if="place.dishes?.length" class="space-y-3">
+          <li v-for="(dish, i) in place.dishes" :key="dish.id"
+            class="surface-card rounded-2xl border border-theme p-3 shadow-sm">
             <div class="flex flex-wrap items-center gap-2">
-              <span class="text-sm">{{ dish.name }}</span>
+              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-soft text-[11px] font-medium tabular-nums text-accent">{{ i + 1 }}</span>
+              <span class="text-sm font-medium">{{ dish.name }}</span>
               <FoodRating :model-value="dish.rating" readonly />
-              <span v-if="dish.price != null" class="text-[11px] text-theme-tertiary">¥{{ dish.price }}</span>
+              <span v-if="dish.price != null" class="ml-auto text-xs text-theme-tertiary">¥{{ dish.price }}</span>
             </div>
-            <p v-if="dish.note" class="mt-0.5 text-xs text-theme-tertiary">{{ dish.note }}</p>
-            <div v-if="dish.photos?.length" class="mt-2 flex flex-wrap gap-2">
+            <p v-if="dish.note" class="mt-1 pl-9 text-xs text-theme-tertiary">{{ dish.note }}</p>
+            <div v-if="dish.photos?.length" class="mt-2 flex flex-wrap gap-2 pl-9">
               <img v-for="(p, i) in dish.photos" :key="p.id || i" :src="p.url"
                 class="h-16 w-16 cursor-zoom-in rounded-lg object-cover" loading="lazy"
                 @click="openLightbox(dish.photos.map((x) => x.url), i)" />

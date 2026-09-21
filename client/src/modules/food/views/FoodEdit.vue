@@ -39,6 +39,7 @@ function initialForm() {
 
 const form = ref(initialForm())
 const draftRestored = ref(false)
+const dishRows = ref(null)
 
 if (!editingId) {
   const draft = loadFormDraft(DRAFT_KEY)
@@ -157,10 +158,14 @@ function payload() {
 async function save() {
   if (busy.value) return
   if (!form.value.name.trim()) return toast('请填写店名')
+  const blankDish = form.value.dishes.findIndex((d) => !String(d.name || '').trim())
+  if (blankDish >= 0) {
+    dishRows.value?.focusRow(blankDish)
+    return toast(`第 ${blankDish + 1} 道菜还没填菜名，请填写或删除该行`, 'error')
+  }
   busy.value = true
   try {
     const data = payload()
-    const missedDishes = form.value.dishes.length - data.dishes.length
     if (editingId) {
       await updateFood(editingId, data)
     } else {
@@ -171,7 +176,6 @@ async function save() {
       draftRestored.value = false
     }
     toast(editingId ? '已更新' : '已记下')
-    if (missedDishes > 0) toast(`有 ${missedDishes} 道菜还没填菜名，未保存`, 'error')
     router.push('/foods')
   } catch (e) {
     toast(e.message)
@@ -205,7 +209,9 @@ const categoryOptions = computed(() => FOOD_CATEGORIES)
       <button class="shrink-0 text-xs hover:text-theme-primary" @click="discardDraft">清空草稿</button>
     </div>
 
-    <div class="glass space-y-4 p-4 sm:p-5">
+    <div class="food-form glass space-y-4 p-4 sm:p-5">
+      <p class="text-sm font-medium text-theme-secondary">🏪 店铺信息</p>
+
       <!-- AI 粘贴成店（仅新建） -->
       <div v-if="!editingId" class="surface-soft rounded-xl p-3">
         <div class="flex items-center justify-between gap-2">
@@ -214,7 +220,7 @@ const categoryOptions = computed(() => FOOD_CATEGORIES)
         </div>
         <div v-if="aiOpen" class="mt-2 space-y-2">
           <textarea v-model="aiText" class="input-dark !px-3 !py-2 text-sm resize-none" rows="4" maxlength="800"
-            placeholder="例如：老陈家炒河粉，晚上六点开门，炒河粉和牛腩粉超好吃，人均 15 左右…" />
+            placeholder="例如：老陈家炒河粉，晚上六点开门，炒河粉和牛腩粉超好吃…" />
           <div class="flex items-center justify-between gap-2">
             <span class="text-[11px] leading-4 text-theme-tertiary">只把这段文字发给 DeepSeek，结果仅预填、不自动保存</span>
             <button class="btn-ghost !min-h-9 shrink-0 !px-3 text-xs"
@@ -230,46 +236,40 @@ const categoryOptions = computed(() => FOOD_CATEGORIES)
         <input v-model="form.name" class="input-dark" maxlength="40" placeholder="比如：老陈家炒河粉" />
       </div>
 
-      <div>
-        <label class="mb-1 block text-xs text-theme-tertiary">分类</label>
-        <AppSelect v-model="form.category" :options="categoryOptions" placeholder="选择分类" />
-      </div>
-
-      <div>
-        <label class="mb-1 block text-xs text-theme-tertiary">状态</label>
-        <div class="flex gap-2">
-          <button v-for="s in FOOD_STATUSES" :key="s.value"
-            class="min-h-11 flex-1 rounded-xl transition-colors"
-            :class="form.status === s.value ? 'bg-accent-soft text-accent' : 'surface-soft text-theme-secondary'"
-            @click="form.status = s.value">
-            {{ s.label }}
-          </button>
-        </div>
-      </div>
-
-      <div>
-        <label class="mb-1 block text-xs text-theme-tertiary">总体评分</label>
-        <div class="flex min-h-11 items-center">
-          <FoodRating v-model="form.rating" />
-        </div>
-      </div>
-
-      <FoodDishRows :dishes="form.dishes" />
-
       <div class="grid gap-3 sm:grid-cols-2">
         <div>
-          <label class="mb-1 block text-xs text-theme-tertiary">营业时间</label>
-          <input v-model="form.hours" class="input-dark" maxlength="80" placeholder="10:30-21:00 周一休" />
+          <label class="mb-1 block text-xs text-theme-tertiary">分类</label>
+          <AppSelect v-model="form.category" :options="categoryOptions" placeholder="选择分类" />
+        </div>
+        <div>
+          <label class="mb-1 block text-xs text-theme-tertiary">状态</label>
+          <div class="flex gap-2">
+            <button v-for="s in FOOD_STATUSES" :key="s.value"
+              class="min-h-11 flex-1 touch-manipulation rounded-xl transition active:scale-95"
+              :class="form.status === s.value ? 'bg-accent-soft text-accent' : 'surface-soft text-theme-secondary'"
+              @click="form.status = s.value">
+              {{ s.label }}
+            </button>
+          </div>
+        </div>
+        <div>
+          <label class="mb-1 block text-xs text-theme-tertiary">总体评分</label>
+          <div class="flex min-h-11 items-center">
+            <FoodRating v-model="form.rating" />
+          </div>
         </div>
         <div>
           <label class="mb-1 block text-xs text-theme-tertiary">最近去 / 想去的日期</label>
           <AppDatePicker v-model="form.visitedAt" placeholder="选择日期（可空）" />
         </div>
-      </div>
-
-      <div>
-        <label class="mb-1 block text-xs text-theme-tertiary">地点</label>
-        <input v-model="form.location" class="input-dark" maxlength="80" placeholder="店铺位置 / 商场几楼" />
+        <div>
+          <label class="mb-1 block text-xs text-theme-tertiary">营业时间</label>
+          <input v-model="form.hours" class="input-dark" maxlength="80" placeholder="10:30-21:00 周一休" />
+        </div>
+        <div>
+          <label class="mb-1 block text-xs text-theme-tertiary">地点</label>
+          <input v-model="form.location" class="input-dark" maxlength="80" placeholder="店铺位置 / 商场几楼" />
+        </div>
       </div>
 
       <div>
@@ -282,6 +282,12 @@ const categoryOptions = computed(() => FOOD_CATEGORIES)
         <textarea v-model="form.note" class="input-dark resize-none" rows="3" maxlength="1000"
           placeholder="锅气足，出餐快；下次想试牛腩粉" />
       </div>
+    </div>
+
+    <div class="food-form glass mt-4 p-4 sm:p-5">
+      <p class="mb-1 text-sm font-medium text-theme-secondary">🍜 菜品</p>
+      <p class="mb-3 text-[11px] text-theme-tertiary">招牌菜、吃过的都记在这里；每道菜可填价格、备注、评分与图片</p>
+      <FoodDishRows ref="dishRows" :dishes="form.dishes" />
     </div>
 
     <div class="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3">

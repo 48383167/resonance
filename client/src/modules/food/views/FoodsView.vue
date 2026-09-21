@@ -87,7 +87,7 @@ defineExpose({ load })
     <!-- 状态筛选 -->
     <div class="flex gap-2 overflow-x-auto pb-1">
       <button v-for="s in statusFilters" :key="s.value"
-        class="min-h-11 shrink-0 rounded-full px-3 text-sm transition-colors"
+        class="min-h-11 shrink-0 touch-manipulation rounded-full px-3 text-sm transition active:scale-95"
         :class="fStatus === s.value ? 'bg-accent-soft text-accent' : 'surface-soft text-theme-secondary'"
         @click="fStatus = s.value">
         {{ s.label }}
@@ -97,7 +97,7 @@ defineExpose({ load })
     <!-- 分类筛选：换行平铺，避免窄屏下最后一项滑不到 -->
     <div class="flex flex-wrap gap-2">
       <button v-for="c in categoryFilters" :key="c.value"
-        class="min-h-11 shrink-0 rounded-full px-3 text-sm transition-colors"
+        class="min-h-11 shrink-0 touch-manipulation rounded-full px-3 text-sm transition active:scale-95"
         :class="fCategory === c.value ? 'bg-accent-soft text-accent' : 'surface-soft text-theme-secondary'"
         @click="fCategory = c.value">
         {{ c.label }}
@@ -111,9 +111,9 @@ defineExpose({ load })
 
     <div v-if="loading" class="py-10 text-center text-sm text-theme-tertiary">加载中…</div>
 
-    <div v-else-if="filtered.length" class="space-y-3">
+    <div v-else-if="filtered.length" class="grid gap-3 sm:grid-cols-2">
       <article v-for="f in filtered" :key="f.id"
-        class="glass cursor-pointer p-4 transition-colors hover:bg-white/5"
+        class="glass cursor-pointer p-4 transition-colors hover:bg-white/5 active:bg-white/10"
         @click="router.push(`/foods/${f.id}`)">
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0 flex-1">
@@ -144,7 +144,7 @@ defineExpose({ load })
             </div>
           </div>
 
-          <button class="min-h-10 min-w-10 shrink-0 transition-colors"
+          <button class="min-h-11 min-w-11 shrink-0 touch-manipulation transition active:scale-90"
             :class="pinTarget?.id === f.id ? 'text-accent' : 'text-theme-tertiary hover:text-accent'"
             title="设置置顶" @click.stop="pinTarget = pinTarget?.id === f.id ? null : f">📌</button>
         </div>
@@ -160,6 +160,6 @@ defineExpose({ load })
       {{ items.length ? '没有符合条件的美食，换个筛选试试。' : '还没有记录，去过或想去的店都记下来吧。' }}
     </div>
 
-    <button class="btn-primary w-full" @click="router.push('/foods/new')">＋ 记一家店</button>
+    <button class="btn-primary w-full touch-manipulation active:scale-[0.98]" @click="router.push('/foods/new')">＋ 记一家店</button>
   </div>
 </template>

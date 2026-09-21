@@ -4,6 +4,27 @@ import { lightbox, closeLightbox, stepLightbox } from '../../stores/lightbox'
 
 let onKey = null
 let previousOverflow = ''
+let touchStartX = null
+let touchStartY = null
+
+// 触屏左右滑动切图：水平位移足够且明显大于垂直位移才生效，避免与缩放/滚动冲突
+function onTouchStart(event) {
+  if (event.touches.length !== 1) return
+  touchStartX = event.touches[0].clientX
+  touchStartY = event.touches[0].clientY
+}
+
+function onTouchEnd(event) {
+  if (touchStartX == null) return
+  const touch = event.changedTouches[0]
+  const dx = touch.clientX - touchStartX
+  const dy = touch.clientY - touchStartY
+  touchStartX = null
+  touchStartY = null
+  if (lightbox.images.length < 2) return
+  if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+  stepLightbox(dx < 0 ? 1 : -1)
+}
 
 function unlockBody() {
   if (onKey) window.removeEventListener('keydown', onKey)
@@ -31,8 +52,8 @@ onUnmounted(unlockBody)
 
 <template>
   <Transition name="lb">
-    <div v-if="lightbox.open" class="theme-inverse image-lightbox fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4 sm:p-6"
-      @click.self="closeLightbox">
+    <div v-if="lightbox.open" class="theme-inverse image-lightbox fixed inset-0 z-[60] flex touch-pan-y items-center justify-center bg-black/85 p-4 sm:p-6"
+      @click.self="closeLightbox" @touchstart.passive="onTouchStart" @touchend="onTouchEnd">
       <button class="lightbox-close absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xl hover:bg-white/20 sm:right-5 sm:top-5"
         aria-label="关闭图片预览"
         @click="closeLightbox">×</button>
