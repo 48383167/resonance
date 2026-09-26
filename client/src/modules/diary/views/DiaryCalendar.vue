@@ -3,7 +3,9 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { calendarDiary } from '../diary.api.js'
 import { session } from '../../../stores/session'
+import { markContentRead } from '../../../stores/contentUnread'
 import CommentCountBadge from '../../../shared/components/CommentCountBadge.vue'
+import UnreadDot from '../../../shared/components/UnreadDot.vue'
 
 // 日记日历：按月份展示有日记的日期，点日期看当天日记
 const router = useRouter()
@@ -38,7 +40,10 @@ const cells = computed(() => {
 async function load() {
   entries.value = await calendarDiary(year.value, month.value)
 }
-onMounted(load)
+onMounted(() => {
+  // 日历同属日记模块：先取数再标记已读，清掉入口角标
+  load().then(() => markContentRead('entry'))
+})
 
 function shift(delta) {
   let m = month.value + delta
@@ -102,6 +107,7 @@ const todayStr = (() => {
           @click="router.push(`/entry/${e.id}`)">
           <div class="flex min-w-0 flex-wrap items-center gap-2 text-xs">
             <span class="rounded-full bg-white/10 px-2 py-0.5 text-white/60">日记</span>
+            <UnreadDot :show="Boolean(e.is_unread)" label="新" />
             <span class="break-words text-white/50">{{ e.title || '无题日记' }}</span>
             <span class="text-white/35">by {{ e.contents.find((c) => c.user_id === session.userId)?.content ? session.me?.nickname : session.partner?.nickname }}</span>
             <CommentCountBadge :count="e.comment_count" :unread="e.unread_comment_count" />

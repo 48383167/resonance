@@ -337,6 +337,16 @@ CREATE TABLE IF NOT EXISTS comment_reads (
     PRIMARY KEY (user_id, target_type, target_id)
 );
 
+-- 内容已读水位：每个用户对每个模块（日记/瞬间/相册/心愿/胶囊/纪念日/美食/档案/规矩）
+-- 最后一次「打开列表」的时间点；Ta 在该时间之后新增的内容即视为未读。
+-- 情书不走水位（逐封已读，见 love_letters.is_read）。
+CREATE TABLE IF NOT EXISTS module_reads (
+    user_id TEXT NOT NULL,
+    module TEXT NOT NULL,            -- 模块键，见 modules/read/read.registry.js
+    last_read_at TEXT NOT NULL,      -- ISO8601，与各业务表 created_at 同格式
+    PRIMARY KEY (user_id, module)
+);
+
 -- 文件表：每个文件的元信息（ID 为雪花 ID 十进制字符串，见 common/utils/snowflake.js）
 -- path 为相对 MEDIA_DIR 的路径（yyyy/MM/dd/哈希名.ext），对外 URL = /media/{path}
 -- 软删除 + 墓碑：删除时物理文件移入 .trash，status 置 0，原 URL 立即失效且文件可恢复
@@ -506,5 +516,8 @@ ensureColumns('comments', {
   reply_to_comment_id: 'TEXT',
   deleted_at: 'TEXT',
 })
+// 未读判定需要"谁新增的"：相册与纪念日早期无作者列，补上（旧数据为 NULL，按"非未读"处理）
+ensureColumns('albums', { author_id: 'TEXT' })
+ensureColumns('anniversaries', { author_id: 'TEXT' })
 // parent_id 索引须在补列之后创建（老库 comments 表可能尚无该列）
 db.exec('CREATE INDEX IF NOT EXISTS idx_comments_parent ON comments(parent_id)')

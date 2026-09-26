@@ -1,5 +1,6 @@
 import { NotFoundError } from '../../common/errors/NotFoundError.js'
 import { localDateStr } from '../../common/utils/date.js'
+import * as readService from '../read/read.service.js'
 import * as anniversaryRepository from './anniversary.repository.js'
 import * as anniversarySchema from './anniversary.schema.js'
 
@@ -21,8 +22,8 @@ function toVO(a) {
   return { ...a, daysUntil, daysSince: Math.max(0, daysSince), isToday }
 }
 
-export function list() {
-  return anniversaryRepository.list().map(toVO)
+export function list(userId) {
+  return readService.attachUnread('anniversary', userId, anniversaryRepository.list().map(toVO))
 }
 
 export function getDetail(id) {
@@ -31,8 +32,8 @@ export function getDetail(id) {
   return toVO(a)
 }
 
-export function create(raw) {
-  return toVO(anniversaryRepository.create(anniversarySchema.validateCreate(raw)))
+export function create(userId, raw) {
+  return toVO(anniversaryRepository.create({ ...anniversarySchema.validateCreate(raw), authorId: userId }))
 }
 
 export function update(id, raw) {

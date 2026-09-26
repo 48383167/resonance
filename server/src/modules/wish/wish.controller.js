@@ -1,7 +1,7 @@
 import * as wishService from './wish.service.js'
 
 export async function list(req, res, next) {
-  try { res.success(wishService.list()) } catch (e) { next(e) }
+  try { res.success(wishService.list(req.user.id)) } catch (e) { next(e) }
 }
 
 export async function detail(req, res, next) {

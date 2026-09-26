@@ -3,7 +3,7 @@ import { onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getDashboard, getTreeState, setFirstMeetAt } from '../misc.api.js'
 import { session, initSession } from '../../../stores/session'
-import { commentUnread } from '../../../stores/commentUnread'
+import { navUnread, badgeText } from '../../../shared/unread.js'
 import { socket } from '../../../socket'
 import { toast } from '../../../stores/toast'
 import { useGreeting } from '../../../composables/useTime'
@@ -116,12 +116,9 @@ const statCards = (s) => [
   { icon: '🍜', label: '美食', value: s.foods || 0, route: '/foods' },
 ]
 
-// 评论未读角标：日记 / 恋爱瞬间 / 美食模块入口
+// 模块入口角标：与底部导航同一口径（内容未读 + 评论未读）
 function unreadOfModule(name) {
-  if (name === 'diary-list') return commentUnread.entry
-  if (name === 'moments') return commentUnread.moment
-  if (name === 'foods') return commentUnread.food
-  return 0
+  return navUnread(name)
 }
 
 // 全站置顶点击：美食直达详情，其余回小本本对应 Tab
@@ -240,7 +237,7 @@ function openPin(item) {
         </div>
         <span v-if="unreadOfModule(m.name)"
           class="absolute right-3 top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white">
-          {{ unreadOfModule(m.name) }}
+          {{ badgeText(unreadOfModule(m.name)) }}
         </span>
       </button>
     </div>

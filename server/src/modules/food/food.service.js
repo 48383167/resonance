@@ -6,6 +6,7 @@ import { assertSamePair, getUserCouple } from '../couple/couple.service.js'
 import { softDeleteQuietly } from '../file/file.service.js'
 import * as momentRepository from '../moment/moment.repository.js'
 import * as commentService from '../comment/comment.service.js'
+import * as readService from '../read/read.service.js'
 import * as pinRepository from '../pin/pin.repository.js'
 import * as foodRepository from './food.repository.js'
 import * as foodSchema from './food.schema.js'
@@ -44,9 +45,14 @@ export function list(query = {}, userId) {
     keyword: (query.keyword || '').trim() || undefined,
     authorIds: memberIdsOf(userId),
   }
-  if (!paginated) return commentService.attachCounts('food', foodRepository.list(opts), userId)
-  const items = commentService.attachCounts('food', foodRepository.list({ ...opts, offset, limit }), userId)
-  return { items, total: foodRepository.count(opts) }
+  if (!paginated) {
+    const items = foodRepository.list(opts)
+    commentService.attachCounts('food', items, userId)
+    return readService.attachUnread('food', userId, items)
+  }
+  const items = foodRepository.list({ ...opts, offset, limit })
+  commentService.attachCounts('food', items, userId)
+  return { items: readService.attachUnread('food', userId, items), total: foodRepository.count(opts) }
 }
 
 export function getDetail(id, userId) {

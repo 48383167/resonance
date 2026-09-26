@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import { listAlbums, removeAlbum as removeAlbumApi } from '../album.api.js'
 import { toast } from '../../../stores/toast'
 import { confirmDialog } from '../../../stores/confirm'
+import { markContentRead } from '../../../stores/contentUnread'
+import UnreadDot from '../../../shared/components/UnreadDot.vue'
 
 const router = useRouter()
 const albums = ref([])
@@ -11,7 +13,10 @@ const albums = ref([])
 async function load() {
   albums.value = await listAlbums()
 }
-onMounted(load)
+onMounted(() => {
+  // 先取数据（保留未读标记），再标记本模块已读
+  load().then(() => markContentRead('album'))
+})
 
 async function removeAlbum(a) {
   const ok = await confirmDialog({
@@ -58,7 +63,9 @@ const coverOf = (a) => a.cover_url || a.firstPhotoUrl || ''
           </div>
           <div class="p-3">
             <div class="flex min-w-0 items-start justify-between gap-2">
-              <span class="min-w-0 break-words font-medium">{{ a.name }}</span>
+              <span class="min-w-0 break-words font-medium">
+                <UnreadDot :show="Boolean(a.is_unread)" label="新" class="mr-1 align-middle" />{{ a.name }}
+              </span>
               <span class="text-xs text-white/45">{{ a.photoCount }} 张</span>
             </div>
             <p v-if="a.description" class="mt-1 line-clamp-1 text-xs text-white/45">{{ a.description }}</p>

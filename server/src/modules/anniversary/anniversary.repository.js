@@ -18,10 +18,10 @@ export function listPublic() {
   return db.prepare('SELECT * FROM anniversaries WHERE show_in_share = 1 ORDER BY date ASC').all()
 }
 
-export function create({ title, type, date, description }) {
+export function create({ title, type, date, description, authorId }) {
   const id = newId('ann')
-  db.prepare('INSERT INTO anniversaries (id, title, type, date, description) VALUES (?, ?, ?, ?, ?)')
-    .run(id, title, type || 'custom', date, description || '')
+  db.prepare('INSERT INTO anniversaries (id, title, type, date, description, author_id) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(id, title, type || 'custom', date, description || '', authorId || null)
   return findById(id)
 }
 

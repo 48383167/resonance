@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import { listCapsules, removeCapsule } from '../capsule.api.js'
 import { toast } from '../../../stores/toast'
 import { confirmDialog } from '../../../stores/confirm'
+import { markContentRead } from '../../../stores/contentUnread'
+import UnreadDot from '../../../shared/components/UnreadDot.vue'
 
 const router = useRouter()
 const capsules = ref([])
@@ -17,7 +19,10 @@ const sortedCapsules = computed(() => [...capsules.value].sort((a, b) => {
 async function load() {
   capsules.value = await listCapsules()
 }
-onMounted(load)
+onMounted(() => {
+  // 先取数据（保留未读标记），再标记本模块已读
+  load().then(() => markContentRead('capsule'))
+})
 
 async function remove(c) {
   const ok = await confirmDialog({ title: '销毁胶囊', message: `确定销毁「${c.title || '无题胶囊'}」吗？销毁后无法恢复。` })
@@ -61,7 +66,9 @@ const unlockText = (c) => {
         class="glass cursor-pointer p-5 transition-colors hover:bg-white/10"
         @click="router.push(`/capsules/${c.id}`)">
         <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <span class="break-words text-sm text-white/70">{{ c.title || '无题胶囊' }}</span>
+          <span class="break-words text-sm text-white/70">
+            <UnreadDot :show="Boolean(c.is_unread)" label="新" class="mr-1 align-middle" />{{ c.title || '无题胶囊' }}
+          </span>
           <span class="rounded-full px-2.5 py-0.5 text-xs"
               :class="c.isUnlocked ? 'bg-emerald-400/20 text-emerald-200'
                 : (c.unlock_date === todayStr() ? 'bg-sky-400/25 text-sky-200' : 'bg-amber-400/15 text-amber-200')">

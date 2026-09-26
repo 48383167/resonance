@@ -6,6 +6,7 @@ import EntryCard from '../components/EntryCard.vue'
 import { useInfiniteScroll } from '../../../composables/useInfiniteScroll'
 import { socket } from '../../../socket'
 import { session } from '../../../stores/session'
+import { markContentRead } from '../../../stores/contentUnread'
 
 // 日记列表：分页 + 触底自动加载
 const router = useRouter()
@@ -73,7 +74,8 @@ function onCommentDeleted(payload) {
 }
 
 onMounted(() => {
-  load()
+  // 先取数据（此时条目上还带着未读标记），再把本模块标为已读，清掉入口角标
+  load().then(() => markContentRead('entry'))
   socket.on('comment:created', onCommentCreated)
   socket.on('comment:deleted', onCommentDeleted)
 })

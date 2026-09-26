@@ -2,8 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { navigationGroups, navigationItems } from '../navigation.js'
-import { commentUnread } from '../../stores/commentUnread'
-import { notebookUnread } from '../../stores/notebookUnread'
+import { navUnread, badgeText } from '../unread.js'
 import { dock, DEFAULT_DOCK_ITEMS } from '../../stores/dock'
 
 const route = useRoute()
@@ -20,14 +19,15 @@ const primaryItems = computed(() => {
 })
 const moreActive = computed(() => navigationItems.some((item) => !primaryItems.value.includes(item) && isItemActive(item)))
 
-// 评论未读角标：日记在主导航，瞬间/美食在「更多」里（••• 按钮上同步提示）
+// 未读角标口径统一在 shared/unread.js：内容未读 + 评论未读（+ 待我认同的规矩）
 function unreadOf(item) {
-  if (item.name === 'diary-list') return commentUnread.entry
-  if (item.name === 'moments') return commentUnread.moment
-  if (item.name === 'foods') return commentUnread.food
-  if (item.name === 'notebook') return notebookUnread.pendingRules
-  return 0
+  return navUnread(item.name)
 }
+
+// 「••• 更多」按钮上的合计：只算收在更多面板里的入口，主导航已各自展示
+const moreUnread = computed(() => navigationItems
+  .filter((item) => !primaryItems.value.includes(item))
+  .reduce((sum, item) => sum + unreadOf(item), 0))
 
 function isItemActive(item) {
   return item.activeRoutes.includes(route.name)
@@ -67,7 +67,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
               :aria-current="isItemActive(item) ? 'page' : undefined" @click="closeMore">
               <span class="flex h-6 w-6 items-center justify-center rounded-md bg-white/[0.06] text-sm">{{ item.icon }}</span>
               <span>{{ item.label }}</span>
-              <span v-if="unreadOf(item)" class="app-dock__badge">{{ unreadOf(item) }}</span>
+              <span v-if="unreadOf(item)" class="app-dock__badge">{{ badgeText(unreadOf(item)) }}</span>
             </router-link>
           </div>
         </div>
@@ -80,7 +80,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
         :aria-label="item.label" :title="item.label" :aria-current="isItemActive(item) ? 'page' : undefined">
         <span class="app-dock__icon">{{ item.icon }}</span>
         <span class="app-dock__tooltip">{{ item.label }}</span>
-        <span v-if="unreadOf(item)" class="app-dock__badge">{{ unreadOf(item) }}</span>
+        <span v-if="unreadOf(item)" class="app-dock__badge">{{ badgeText(unreadOf(item)) }}</span>
       </router-link>
       <router-link :to="{ name: 'write-solo' }" class="app-dock__item app-dock__item--create group"
         :class="{ 'app-dock__item--active': route.name === 'write-solo' }" aria-label="写日记" title="写日记">
@@ -91,7 +91,7 @@ onUnmounted(() => document.removeEventListener('click', onDocumentClick))
         aria-label="更多功能" title="更多功能" :aria-expanded="moreOpen" @click="moreOpen = !moreOpen">
         <span class="app-dock__icon text-xl tracking-widest">•••</span>
         <span class="app-dock__tooltip">更多功能</span>
-        <span v-if="commentUnread.moment + commentUnread.food + notebookUnread.pendingRules" class="app-dock__badge">{{ commentUnread.moment + commentUnread.food + notebookUnread.pendingRules }}</span>
+        <span v-if="moreUnread" class="app-dock__badge">{{ badgeText(moreUnread) }}</span>
       </button>
     </div>
   </div>

@@ -7,11 +7,13 @@ import { confirmDialog } from '../../../stores/confirm'
 import { openLightbox } from '../../../stores/lightbox'
 import { socket } from '../../../socket'
 import { session } from '../../../stores/session'
+import { markContentRead } from '../../../stores/contentUnread'
 import { mediaTypeOf } from '../../../utils/media'
 import AppDatePicker from '../../../shared/components/AppDatePicker.vue'
 import AppSelect from '../../../shared/components/AppSelect.vue'
 import CommentCountBadge from '../../../shared/components/CommentCountBadge.vue'
 import CommentSection from '../../comment/components/CommentSection.vue'
+import UnreadDot from '../../../shared/components/UnreadDot.vue'
 
 const router = useRouter()
 const list = ref([])
@@ -104,7 +106,8 @@ function onCommentsRead({ targetId }) {
 }
 
 onMounted(() => {
-  load()
+  // 先取数据（保留未读标记），再标记本模块已读，清掉入口角标
+  load().then(() => markContentRead('moment'))
   socket.on('comment:created', onCommentCreated)
   socket.on('comment:deleted', onCommentDeleted)
 })
@@ -200,6 +203,7 @@ function openMomentPhoto(photos, photo) {
         <div class="flex items-start justify-between gap-3">
           <div class="flex min-w-0 flex-wrap items-center gap-2 text-sm">
             <span class="text-lg">{{ moodOf(m.mood).emoji }}</span>
+            <UnreadDot :show="Boolean(m.is_unread)" label="新" />
             <span class="text-accent">{{ m.author?.nickname || 'Ta' }}</span>
             <span class="text-xs text-white/40">· {{ dateText(m) }}</span>
             <span v-if="m.location" class="break-words text-xs text-accent-2">📍 {{ m.location }}</span>

@@ -3,6 +3,7 @@ import { BadRequestError } from '../../common/errors/BadRequestError.js'
 import { transaction } from '../../config/database.js'
 import { parsePage } from '../../common/utils/paging.js'
 import { getUserCouple } from '../couple/couple.service.js'
+import * as readService from '../read/read.service.js'
 import * as ruleRepository from './rule.repository.js'
 import * as ruleSchema from './rule.schema.js'
 import * as ruleItems from './rule.items.js'
@@ -71,9 +72,11 @@ export function list(query = {}, userId) {
     pending: query.pending === '1' || query.pending === 'true' || query.pending === true,
     userId,
   }
-  if (!paginated) return ruleRepository.list(opts).map(serialize)
+  if (!paginated) {
+    return readService.attachUnread('rule', userId, ruleRepository.list(opts).map(serialize))
+  }
   const { items, total } = ruleRepository.listPage({ ...opts, offset, limit })
-  return { items: items.map(serialize), total }
+  return { items: readService.attachUnread('rule', userId, items.map(serialize)), total }
 }
 
 export function getDetail(id) {

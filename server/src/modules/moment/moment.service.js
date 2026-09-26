@@ -5,6 +5,7 @@ import { emitMomentCreated, emitMomentUpdated, emitMomentDeleted } from '../../i
 import { emitFoodUpdated } from '../../infrastructure/socket/food.socket.js'
 import { softDeleteQuietly } from '../file/file.service.js'
 import * as commentService from '../comment/comment.service.js'
+import * as readService from '../read/read.service.js'
 import * as foodRepository from '../food/food.repository.js'
 import * as momentRepository from './moment.repository.js'
 import * as momentSchema from './moment.schema.js'
@@ -36,7 +37,9 @@ function markPlacesVisited(userId, placeIds, momentDate, coupleId) {
 }
 
 export function list(query, userId) {
-  return commentService.attachCounts('moment', momentRepository.list(query), userId)
+  const items = momentRepository.list(query)
+  commentService.attachCounts('moment', items, userId)
+  return readService.attachUnread('moment', userId, items)
 }
 
 export function listMap() {

@@ -5,6 +5,7 @@ import { getLetter, removeLetter } from '../letter.api.js'
 import { session } from '../../../stores/session'
 import { toast } from '../../../stores/toast'
 import { confirmDialog } from '../../../stores/confirm'
+import { loadContentUnread } from '../../../stores/contentUnread'
 
 // 读信：独立页面，信纸随内容自然展开（不再用固定窗体的弹窗）
 const route = useRoute()
@@ -20,6 +21,8 @@ function goBack() {
 async function load() {
   try {
     letter.value = await getLetter(route.params.id)
+    // 打开即已读（服务端已标记），顺手刷新未读情书角标
+    loadContentUnread()
   } catch (e) {
     toast(e.message)
     router.push('/letters')

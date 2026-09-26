@@ -3,6 +3,7 @@ import { transaction } from '../../config/database.js'
 import { parsePage } from '../../common/utils/paging.js'
 import { findById as findUserById } from '../auth/auth.repository.js'
 import { getUserCouple } from '../couple/couple.service.js'
+import * as readService from '../read/read.service.js'
 import * as careRepository from './care.repository.js'
 import * as careSchema from './care.schema.js'
 import * as pinRepository from '../pin/pin.repository.js'
@@ -29,15 +30,17 @@ function broadcast(couple, fn) {
 }
 
 // 列表：带 limit/offset 时返回 { items, total }（新分页契约）；否则保持旧数组形态
-export function list(query = {}) {
+export function list(query = {}, userId) {
   const { offset, limit, paginated } = parsePage(query)
   const opts = {
     category: query.category || undefined,
     subjectId: query.subjectId || undefined,
   }
-  if (!paginated) return careRepository.list(opts)
+  if (!paginated) {
+    return readService.attachUnread('care', userId, careRepository.list(opts))
+  }
   return {
-    items: careRepository.list({ ...opts, offset, limit }),
+    items: readService.attachUnread('care', userId, careRepository.list({ ...opts, offset, limit })),
     total: careRepository.count(opts),
   }
 }

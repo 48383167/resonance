@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import PinMenu from '../../../shared/components/PinMenu.vue'
+import UnreadDot from '../../../shared/components/UnreadDot.vue'
 import { highlightParts } from '../../../utils/highlight.js'
 import { session } from '../../../stores/session'
 
@@ -29,6 +30,7 @@ const subjectText = computed(() =>
     <div class="flex items-start gap-2">
       <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <UnreadDot :show="Boolean(item.is_unread)" label="新" />
           <h4 class="text-sm font-medium">
             <template v-for="(part, i) in titleParts" :key="i"><mark v-if="part.hit"
               class="bg-accent-soft text-accent rounded-sm px-0.5">{{ part.text }}</mark><template v-else>{{ part.text }}</template></template>

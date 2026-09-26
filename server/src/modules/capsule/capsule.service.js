@@ -1,6 +1,7 @@
 import { NotFoundError } from '../../common/errors/NotFoundError.js'
 import { localDateStr } from '../../common/utils/date.js'
 import { softDeleteQuietly } from '../file/file.service.js'
+import * as readService from '../read/read.service.js'
 import * as capsuleRepository from './capsule.repository.js'
 import * as capsuleSchema from './capsule.schema.js'
 
@@ -19,8 +20,8 @@ function toVO(c) {
   }
 }
 
-export function list() {
-  return capsuleRepository.list().map(toVO)
+export function list(userId) {
+  return readService.attachUnread('capsule', userId, capsuleRepository.list().map(toVO))
 }
 
 export function getDetail(id) {

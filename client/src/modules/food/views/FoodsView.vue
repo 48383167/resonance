@@ -5,10 +5,12 @@ import { listFoods } from '../food.api.js'
 import { toast } from '../../../stores/toast'
 import { socket } from '../../../socket'
 import { session } from '../../../stores/session'
+import { markContentRead } from '../../../stores/contentUnread'
 import { FOOD_CATEGORIES, FOOD_STATUSES, CATEGORY_LABELS, STATUS_LABELS, STATUS_CLASSES } from '../food.constants.js'
 import FoodRating from '../components/FoodRating.vue'
 import CommentCountBadge from '../../../shared/components/CommentCountBadge.vue'
 import PinMenu from '../../../shared/components/PinMenu.vue'
+import UnreadDot from '../../../shared/components/UnreadDot.vue'
 
 // 美食列表：状态 / 分类筛选 + 关键词搜索（店名 / 菜名 / 地点 / 笔记），数据量小走本地过滤
 const router = useRouter()
@@ -62,7 +64,8 @@ function onCommentDeleted(payload) {
 }
 
 onMounted(() => {
-  load()
+  // 先取数据（保留未读标记），再标记本模块已读，清掉入口角标
+  load().then(() => markContentRead('food'))
   socket.on('comment:created', onCommentCreated)
   socket.on('comment:deleted', onCommentDeleted)
 })
@@ -118,6 +121,7 @@ defineExpose({ load })
         <div class="flex items-start justify-between gap-2">
           <div class="min-w-0 flex-1">
             <div class="flex flex-wrap items-center gap-2">
+              <UnreadDot :show="Boolean(f.is_unread)" label="新" />
               <h3 class="font-medium">{{ f.name }}</h3>
               <span v-if="f.pin_scope" class="text-[11px] text-accent" title="已置顶">📌</span>
               <span class="rounded-full px-2 py-0.5 text-[11px]" :class="STATUS_CLASSES[f.status]">{{ STATUS_LABELS[f.status] }}</span>

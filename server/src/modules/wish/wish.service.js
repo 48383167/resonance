@@ -1,9 +1,10 @@
 import { NotFoundError } from '../../common/errors/NotFoundError.js'
+import * as readService from '../read/read.service.js'
 import * as wishRepository from './wish.repository.js'
 import * as wishSchema from './wish.schema.js'
 
-export function list() {
-  return wishRepository.list()
+export function list(userId) {
+  return readService.attachUnread('wish', userId, wishRepository.list())
 }
 
 export function getDetail(id) {

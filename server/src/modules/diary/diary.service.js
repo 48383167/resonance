@@ -6,6 +6,7 @@ import * as coupleService from '../couple/couple.service.js'
 import { emitDiaryCreated, emitDiaryUpdated, emitDiaryDeleted } from '../../infrastructure/socket/diary.socket.js'
 import { softDeleteQuietly } from '../file/file.service.js'
 import * as commentService from '../comment/comment.service.js'
+import * as readService from '../read/read.service.js'
 import * as diaryRepository from './diary.repository.js'
 import * as diarySchema from './diary.schema.js'
 
@@ -13,22 +14,28 @@ function coupleIdOf(userId) {
   return coupleService.getUserCouple(userId)?.pairCode || null
 }
 
+// 列表装饰：评论未读 + 内容未读（Ta 新写、我还没打开过日记列表）
+function decorateEntries(entries, userId) {
+  commentService.attachCounts('entry', entries, userId)
+  return readService.attachUnread('entry', userId, entries)
+}
+
 // 列表：带 limit/offset 时返回 { items, total }（新分页契约）；否则保持旧数组形态
 export function getList(userId, query = {}) {
   const { offset, limit, paginated } = parsePage(query)
   if (!paginated) {
     const entries = diaryRepository.attachContentsBatch(diaryRepository.listAll())
-    return commentService.attachCounts('entry', entries, userId)
+    return decorateEntries(entries, userId)
   }
   const { items, total } = diaryRepository.listPage(offset, limit)
   diaryRepository.attachContentsBatch(items)
-  return { items: commentService.attachCounts('entry', items, userId), total }
+  return { items: decorateEntries(items, userId), total }
 }
 
 export function getCalendar(query, userId) {
   const { year, month } = diarySchema.validateCalendar(query)
   const entries = diaryRepository.attachContentsBatch(diaryRepository.listByMonth(year, month))
-  return commentService.attachCounts('entry', entries, userId)
+  return decorateEntries(entries, userId)
 }
 
 export function getDetail(id) {

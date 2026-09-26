@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import { listAnniversaries, removeAnniversary, updateAnniversaryShareVisibility } from '../anniversary.api.js'
 import { toast } from '../../../stores/toast'
 import { confirmDialog } from '../../../stores/confirm'
+import { markContentRead } from '../../../stores/contentUnread'
+import UnreadDot from '../../../shared/components/UnreadDot.vue'
 
 const router = useRouter()
 const items = ref([])
@@ -20,7 +22,10 @@ const typeLabel = (k) => TYPES.find((t) => t.key === k)?.label || '自定义'
 async function load() {
   items.value = await listAnniversaries()
 }
-onMounted(load)
+onMounted(() => {
+  // 先取数据（保留未读标记），再标记本模块已读
+  load().then(() => markContentRead('anniversary'))
+})
 
 async function remove(a) {
   const ok = await confirmDialog({ title: '删除纪念日', message: `确定删除纪念日「${a.title}」吗？` })
@@ -79,6 +84,7 @@ const countText = (a) => {
         </div>
         <div class="min-w-0 flex-1">
           <div class="flex flex-wrap items-center gap-2">
+            <UnreadDot :show="Boolean(a.is_unread)" label="新" />
             <span class="break-words font-medium">{{ a.title }}</span>
             <span class="rounded-full bg-white/10 px-2 py-0.5 text-xs text-white/55">{{ typeLabel(a.type) }}</span>
           </div>

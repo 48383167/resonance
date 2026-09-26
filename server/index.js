@@ -36,6 +36,7 @@ import notificationRoutes from './src/modules/notification/notification.routes.j
 import navigationRoutes from './src/modules/navigation/navigation.routes.js'
 import suggestionRoutes from './src/modules/suggestion/suggestion.routes.js'
 import foodRoutes from './src/modules/food/food.routes.js'
+import readRoutes from './src/modules/read/read.routes.js'
 import { backfillConversationTitles } from './src/modules/companion/companion.service.js'
 import { startScheduler } from './src/infrastructure/scheduler/index.js'
 
@@ -83,6 +84,7 @@ app.use('/api/notifications', notificationRoutes)
 app.use('/api/navigation', navigationRoutes)
 app.use('/api/suggestions', suggestionRoutes)
 app.use('/api/foods', foodRoutes)
+app.use('/api/reads', readRoutes)
 app.use('/api/music', musicRoutes)
 app.use('/api/users/me/theme', themeRoutes)
 app.use('/api', fileRoutes)

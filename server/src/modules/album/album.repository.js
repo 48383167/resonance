@@ -74,10 +74,10 @@ export function list() {
   })
 }
 
-export function create({ name, coverFileId, description }) {
+export function create({ name, coverFileId, description, authorId }) {
   const id = newId('a')
-  db.prepare('INSERT INTO albums (id, name, cover_file_id, description) VALUES (?, ?, ?, ?)')
-    .run(id, name, coverFileId || null, description || '')
+  db.prepare('INSERT INTO albums (id, name, cover_file_id, description, author_id) VALUES (?, ?, ?, ?, ?)')
+    .run(id, name, coverFileId || null, description || '', authorId || null)
   return findById(id)
 }
 

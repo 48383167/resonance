@@ -5,8 +5,10 @@ import { listRules } from '../rule.api.js'
 import { useInfiniteScroll } from '../../../composables/useInfiniteScroll'
 import { session } from '../../../stores/session'
 import { toast } from '../../../stores/toast'
+import { markContentRead } from '../../../stores/contentUnread'
 import PinMenu from '../../../shared/components/PinMenu.vue'
 import SuggestionCard from '../../suggestion/components/SuggestionCard.vue'
+import UnreadDot from '../../../shared/components/UnreadDot.vue'
 
 // 相处规矩列表：只读预览 + 查看 / 编辑 / 认同 三个入口（列表内不做修改，避免误触）
 const router = useRouter()
@@ -129,7 +131,10 @@ function itemDotTitle(item) {
   return item.agreedIds?.includes(session.userId) ? '待 Ta 认同' : '待你认同'
 }
 
-onMounted(() => load(true))
+onMounted(() => {
+  // 先取数据（保留未读标记），再标记本模块已读
+  load(true).then(() => markContentRead('rule'))
+})
 defineExpose({ load })
 </script>
 
@@ -156,6 +161,7 @@ defineExpose({ load })
               <span class="rounded-full px-2 py-1 text-xs" :class="TYPE_CLASSES[rule.type]">
                 {{ TYPE_LABELS[rule.type] }}
               </span>
+              <UnreadDot :show="Boolean(rule.is_unread)" label="新" />
               <h3 class="font-medium">{{ rule.title }}</h3>
               <span v-if="rule.itemStats?.total" class="rounded-full surface-soft px-2 py-0.5 text-[11px] text-theme-tertiary">
                 {{ rule.itemStats.total }} 条<template v-if="rule.itemStats.archived"> · {{ rule.itemStats.archived }} 条已停用</template>

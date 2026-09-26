@@ -8,7 +8,7 @@ import * as miscSchema from './misc.schema.js'
 import { emitProfileUpdated } from '../../infrastructure/socket/profile.socket.js'
 
 export function getDashboard(user) {
-  const s = statsRepository.stats()
+  const s = statsRepository.stats({ userId: user.id })
   const partner = user.pair_code ? authRepository.findPartnerOf(user.id, user.pair_code) : null
   const anniversaries = anniversaryRepository.list()
   const today = new Date().toISOString().slice(0, 10)

@@ -5,6 +5,8 @@ import { listWishes, setWishStatus, removeWish } from '../wish.api.js'
 import { toast } from '../../../stores/toast'
 import { confirmDialog, promptDateDialog } from '../../../stores/confirm'
 import { localDateStr } from '../../../utils/date'
+import { markContentRead } from '../../../stores/contentUnread'
+import UnreadDot from '../../../shared/components/UnreadDot.vue'
 
 const router = useRouter()
 const wishes = ref([])
@@ -29,7 +31,10 @@ const dateOf = (iso) => (iso ? new Date(iso).toLocaleDateString('zh-CN', { month
 async function load() {
   wishes.value = await listWishes()
 }
-onMounted(load)
+onMounted(() => {
+  // 先取数据（保留未读标记），再标记本模块已读
+  load().then(() => markContentRead('wish'))
+})
 
 async function move(w, dir) {
   const order = ['todo', 'doing', 'done']
@@ -87,7 +92,8 @@ async function remove(w) {
             @click="router.push(`/wishes/${w.id}`)">
             <div class="flex items-start justify-between gap-2">
               <span class="min-w-0 break-words text-sm font-medium">
-                <span v-if="w.priority >= 2" title="非常想">⭐ </span>{{ w.title }}
+                <span v-if="w.priority >= 2" title="非常想">⭐ </span>
+                <UnreadDot :show="Boolean(w.is_unread)" label="新" class="mr-1 align-middle" />{{ w.title }}
               </span>
               <div class="flex shrink-0 gap-1.5 text-xs">
                 <button v-if="col.key !== 'done'" class="text-accent-2 hover-text-accent-2" title="下一阶段" @click.stop="move(w, 1)">→</button>

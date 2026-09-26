@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { weatherLabel } from '../../../composables/useAmbient'
 import CommentCountBadge from '../../../shared/components/CommentCountBadge.vue'
+import UnreadDot from '../../../shared/components/UnreadDot.vue'
 
 // 日记卡片：手机端紧凑行卡（标题单行 + 摘要单行），桌面恢复舒适样式
 const props = defineProps({
@@ -27,6 +28,7 @@ const dateText = computed(() => new Date(props.entry.created_at).toLocaleString(
         {{ entry.title || '无题日记' }}
       </h3>
       <div class="flex shrink-0 items-center gap-2">
+        <UnreadDot :show="Boolean(entry.is_unread)" label="新" />
         <CommentCountBadge :count="entry.comment_count" :unread="entry.unread_comment_count" />
         <button class="text-sm transition-opacity hover:opacity-70"
           :title="entry.is_public ? '公开中（观测台可见）' : '私密'"

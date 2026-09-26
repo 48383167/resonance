@@ -5,6 +5,7 @@ import { listCareItems, removeCareItem } from '../care.api.js'
 import { session } from '../../../stores/session'
 import { toast } from '../../../stores/toast'
 import { confirmDialog } from '../../../stores/confirm'
+import { markContentRead } from '../../../stores/contentUnread'
 import CareItemRow from './CareItemRow.vue'
 import SuggestionCard from '../../suggestion/components/SuggestionCard.vue'
 
@@ -256,7 +257,10 @@ async function copyConclusion() {
   await copyText(text, '已复制结论')
 }
 
-onMounted(load)
+onMounted(() => {
+  // 先取数据（保留未读标记），再标记本模块已读
+  load().then(() => markContentRead('care'))
+})
 defineExpose({ load })
 </script>
 

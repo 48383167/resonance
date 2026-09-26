@@ -1,7 +1,7 @@
 import * as capsuleService from './capsule.service.js'
 
 export async function list(req, res, next) {
-  try { res.success(capsuleService.list()) } catch (e) { next(e) }
+  try { res.success(capsuleService.list(req.user.id)) } catch (e) { next(e) }
 }
 
 export async function detail(req, res, next) {

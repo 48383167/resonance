@@ -5,6 +5,7 @@ import { listLetters, removeLetter } from '../letter.api.js'
 import { session } from '../../../stores/session'
 import { toast } from '../../../stores/toast'
 import { confirmDialog } from '../../../stores/confirm'
+import { loadContentUnread } from '../../../stores/contentUnread'
 
 const router = useRouter()
 const letters = ref([])
@@ -17,6 +18,8 @@ const sortedLetters = computed(() => [...letters.value].sort((a, b) => {
 
 async function load() {
   letters.value = await listLetters()
+  // 情书逐封已读，这里只刷新角标，不整批标记已读
+  loadContentUnread()
 }
 onMounted(load)
 

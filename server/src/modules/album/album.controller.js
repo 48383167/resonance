@@ -1,7 +1,7 @@
 import * as albumService from './album.service.js'
 
 export async function list(req, res, next) {
-  try { res.success(albumService.list()) } catch (e) { next(e) }
+  try { res.success(albumService.list(req.user.id)) } catch (e) { next(e) }
 }
 
 export async function detail(req, res, next) {
@@ -9,7 +9,7 @@ export async function detail(req, res, next) {
 }
 
 export async function create(req, res, next) {
-  try { res.success(albumService.create(req.body)) } catch (e) { next(e) }
+  try { res.success(albumService.create(req.user.id, req.body)) } catch (e) { next(e) }
 }
 
 export async function update(req, res, next) {

@@ -16,6 +16,7 @@ import { toasts, toast } from './stores/toast'
 import { loadCommentUnread, resetCommentUnread, bumpCommentUnread } from './stores/commentUnread'
 import { loadGlobalPins, resetPins } from './stores/pins'
 import { loadNotebookUnread, resetNotebookUnread, bumpNotebookUnread } from './stores/notebookUnread'
+import { loadContentUnread, resetContentUnread } from './stores/contentUnread'
 import { loadDock, resetDock, applyDock } from './stores/dock'
 import { currentTheme, loadTheme, resetTheme } from './stores/theme'
 
@@ -28,11 +29,27 @@ watch(() => [session.me?.id, route.meta.auth], ([userId, isPrivateRoute]) => {
   else resetTheme()
 }, { immediate: true })
 
-// 登录后拉取评论未读角标，退出时清零
+// 登录后拉取各类未读角标，退出时清零
 watch(() => session.userId, (userId) => {
-  if (userId) { loadCommentUnread(); loadGlobalPins(); loadNotebookUnread(); loadDock() }
-  else { resetCommentUnread(); resetPins(); resetNotebookUnread(); resetDock() }
+  if (userId) { loadCommentUnread(); loadGlobalPins(); loadNotebookUnread(); loadContentUnread(); loadDock() }
+  else {
+    resetCommentUnread(); resetPins(); resetNotebookUnread(); resetContentUnread(); resetDock()
+  }
 }, { immediate: true })
+
+// 换页时刷新内容未读：相册 / 心愿 / 胶囊 / 纪念日等模块没有实时事件，
+// 靠这一次轻量汇总请求保证角标不会停在旧值（列表页标记已读后也会被这里纠正）
+watch(() => route.fullPath, () => { if (session.userId) loadContentUnread() })
+
+// 对方新增内容 → 未读角标立刻反映（payload 里取作者，自己发的不用动）
+function onPartnerCreated(event) {
+  const payload = event
+  if (!payload || typeof payload !== 'object') return
+  const authorId = payload.author_id || payload.user_id || payload.sender_id
+    || payload.contents?.[0]?.user_id || null
+  if (authorId && authorId === session.userId) return
+  loadContentUnread()
+}
 
 // 对方的新评论让角标 +1；删除后重新拉取（负载不含作者与已读状态）
 function onCommentCreated(comment) {
@@ -44,6 +61,17 @@ function onCommentDeleted() {
   loadCommentUnread()
 }
 function onPinUpdated() { loadGlobalPins() }
+
+// 内容新增事件（评论另有更细的未读逻辑，走 onCommentCreated）
+const CONTENT_CREATED_EVENTS = [
+  'diary:created',
+  'moment:created',
+  'letter:received',
+  'food:created',
+  'care:created',
+  'care:batch_created',
+  'rule:created',
+]
 function onRuleCreated(rule) {
   if (rule?.author_id !== session.userId) { bumpNotebookUnread(); toast('Ta 提出了新规矩，去小本本看看') }
 }
@@ -109,6 +137,7 @@ onMounted(() => {
   socket.on('comment:created', onCommentCreated)
   socket.on('comment:deleted', onCommentDeleted)
   socket.on('pin:updated', onPinUpdated)
+  for (const e of CONTENT_CREATED_EVENTS) socket.on(e, onPartnerCreated)
   socket.on('rule:created', onRuleCreated)
   socket.on('rule:updated', onRuleChanged)
   socket.on('rule:deleted', onRuleChanged)
@@ -124,6 +153,7 @@ onUnmounted(() => {
   socket.off('comment:created', onCommentCreated)
   socket.off('comment:deleted', onCommentDeleted)
   socket.off('pin:updated', onPinUpdated)
+  for (const e of CONTENT_CREATED_EVENTS) socket.off(e, onPartnerCreated)
   socket.off('rule:created', onRuleCreated)
   socket.off('rule:updated', onRuleChanged)
   socket.off('rule:deleted', onRuleChanged)

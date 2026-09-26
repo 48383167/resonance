@@ -118,6 +118,16 @@ client/ 仅放前端代码。
 
 docs/api/
 
+## 内容未读（Ta 新增、我还没看过）
+
+- 唯一政策来源 `server/src/modules/read/read.registry.js`；接口契约 `docs/api/reads.md`。
+- 语义：除情书外，`未读 = 作者不是我 且 created_at > module_reads.last_read_at`；
+  情书沿用逐封已读（`love_letters.is_read`），不参与水位。
+- 新增内容模块时必须在该 registry 里登记（表名 / 作者列 / 时间列），
+  否则角标与列表小圆点都会漏掉该模块。
+- 前端角标口径统一在 `client/src/shared/unread.js`（内容未读 + 评论未读 + 待我认同的规矩），
+  不要在导航或首页里另写一套判断。
+
 ## AI 功能
 
 - 小本本 AI 整理建议（档案 / 规矩）：唯一政策来源

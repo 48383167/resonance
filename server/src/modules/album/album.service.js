@@ -2,11 +2,12 @@ import { NotFoundError } from '../../common/errors/NotFoundError.js'
 import { BadRequestError } from '../../common/errors/BadRequestError.js'
 import * as coupleService from '../couple/couple.service.js'
 import { softDeleteQuietly } from '../file/file.service.js'
+import * as readService from '../read/read.service.js'
 import * as albumRepository from './album.repository.js'
 import * as albumSchema from './album.schema.js'
 
-export function list() {
-  return albumRepository.list()
+export function list(userId) {
+  return readService.attachUnread('album', userId, albumRepository.list())
 }
 
 export function getDetail(id) {
@@ -15,9 +16,9 @@ export function getDetail(id) {
   return album
 }
 
-export function create(raw) {
+export function create(userId, raw) {
   const data = albumSchema.validateCreate(raw)
-  return albumRepository.create(data)
+  return albumRepository.create({ ...data, authorId: userId })
 }
 
 export function update(id, raw) {
